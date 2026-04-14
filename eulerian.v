@@ -1,5 +1,5 @@
 (* Layer 3: Eulerian numbers and their properties. *)
-From mathcomp Require Import all_ssreflect fingroup perm binomial.
+From mathcomp Require Import all_ssreflect fingroup perm binomial ssrint ssralg.
 From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent.
 
 Set Implicit Arguments.
@@ -501,3 +501,62 @@ case E1: (des t == k); case E2: (des t == k.+1); rewrite /= ?addn0 ?add0n ?mul0n
 - by move/eqP: E2 => ->; rewrite muln1 addn0 addn1.
 - by [].
 Qed.
+
+(* ========================================================================= *)
+(* Worpitzky's identity                                                       *)
+(*   x^(n+1) = \sum_(k < n+1) eulerian n k * C(x+k, n+1)                      *)
+(* ========================================================================= *)
+
+(* Key algebraic identity (valid for k <= n): *)
+(*   x * C(x+k, n+1) = (k+1) * C(x+k, n+2) + (n+1-k) * C(x+k+1, n+2)         *)
+Lemma worpitzky_binom_id x k n : k <= n ->
+  x * 'C(x + k, n.+1) =
+    k.+1 * 'C(x + k, n.+2) + (n.+1 - k) * 'C(x + k.+1, n.+2).
+Proof.
+move=> kle.
+rewrite addnS binS mulnDr addnA -mulnDl.
+have -> : k.+1 + (n.+1 - k) = n.+2 by rewrite addSn subnKC// ltnW.
+rewrite mul_bin_left -mulnDl.
+case: (leqP n.+1 (x + k)) => h.
+- symmetry; rewrite addnBA; first by rewrite subnK // addnK.
+  exact: ltnW.
+- by rewrite !bin_small ?muln0 //; exact: (leq_trans h (leqnSn _)).
+Qed.
+
+Lemma worpitzky n x :
+  x ^ n.+1 = \sum_(k < n.+1) eulerian n k * 'C(x + k, n.+1).
+Proof.
+elim: n x => [|n IH] x.
+  by rewrite big_ord1 eulerian_n_0 mul1n bin1 addn0 expn1.
+rewrite expnS IH big_distrr /=.
+under eq_bigr => k _.
+  rewrite mulnA (mulnC x) -mulnA.
+  rewrite (worpitzky_binom_id _ _ (n := n)); last by rewrite -ltnS.
+  rewrite mulnDr.
+  over.
+rewrite big_split /=.
+rewrite big_ord_recl eulerian_n_0 mul1n addn0.
+rewrite [RHS]big_ord_recl eulerian_n_0 mul1n addn0.
+under [X in _ = _ + X]eq_bigr => i _ do rewrite eulerian_rec mulnDl.
+rewrite big_split /=.
+rewrite mul1n -addnA.
+congr (_ + _).
+congr (_ + _); last first.
+- by apply: eq_bigr => i _; rewrite mulnCA /bump /= add1n mulnA.
+rewrite [RHS]big_ord_recr /= eulerian_out_of_range ?ltnSn // muln0 mul0n addn0.
+apply: eq_bigr => i _.
+by rewrite /bump /= !add1n mulnCA mulnA.
+Qed.
+
+(* ========================================================================= *)
+(* Closed form (Eulerian explicit formula):                                   *)
+(*   eulerian n k = \sum_(j <= k) (-1)^j C(n+2, j) (k+1-j)^(n+1)  [in int]    *)
+(* ========================================================================= *)
+
+Import GRing.Theory.
+Local Open Scope ring_scope.
+
+Lemma eulerian_explicit n k :
+  (eulerian n k)%:Z =
+    \sum_(j < k.+1) (-1) ^ j *+ 'C(n.+2, j) *+ (k.+1 - j) ^ n.+1.
+Admitted.
