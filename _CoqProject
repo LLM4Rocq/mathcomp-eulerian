@@ -7,3 +7,5 @@ ordinal_reindex.v
 perm_compress.v
 descent.v
 eulerian.v
+beta.v
+beta_swap.v
