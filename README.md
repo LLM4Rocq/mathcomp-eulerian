@@ -21,7 +21,7 @@ ordinal_reindex.v  →  perm_compress.v  →  descent.v  →  eulerian.v
 | `ordinal_reindex.v` | 54 | Monotonicity of `lift`/`unlift` on `'I_n` |
 | `perm_compress.v` | 115 | `drop_perm` / `lift_perm` bijection on `{perm 'I_n}` |
 | `descent.v` | 122 | Descent set, descent/ascent counts, reversal symmetry |
-| `eulerian.v` | 718 | Eulerian numbers: base cases, recurrence, symmetry, Worpitzky, closed form |
+| `eulerian.v` | 746 | Eulerian numbers: base cases, recurrence, symmetry, Worpitzky, closed form |
 
 ## Results
 
