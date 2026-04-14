@@ -164,29 +164,6 @@ case E : (k == x) => /=.
   by case: (x \in D); case: (odd x).
 Qed.
 
-(* Main witness lemma: from any non-alt D, we can find a toggle position
-   that both (a) satisfies the swap hypothesis and (b) strictly reduces
-   the Hamming distance to alt.
-
-   Proof sketch: Let S := sym_diff D (alt_desc_set n).  Because S is a
-   non-empty proper subset of 'I_n (unless D = alt, which contradicts
-   ~~set_is_alt), pick the maximum element k of S.  Either k+1 < n (so
-   k+1 ∉ S by maximality) and the pair (k, k+1) has same D-membership
-   (since alt alternates AND S flips only k), in which case toggle at k
-   reduces |S| by 1; or k = n-1, in which case consider the minimum of
-   S and symmetric reasoning at the left boundary.
-
-   This is ~50 lines of set/ordinal arithmetic. LABELED ADMIT §D.1. *)
-Lemma find_reducing_toggle n (D : {set 'I_n}) :
-  ~~ set_is_alt D ->
-  exists i j : 'I_n,
-    [/\ val j = (val i).+1,
-        (i \in D) = (j \in D) &
-        #|sym_diff (toggle_at D i) (alt_desc_set n)|
-          < #|sym_diff D (alt_desc_set n)|].
-Proof.
-Admitted.
-
 (* Symmetric difference is empty iff the sets are equal. *)
 Lemma sym_diff_eq0 n (D E : {set 'I_n}) :
   #|sym_diff D E| = 0 -> D = E.
@@ -200,45 +177,167 @@ case/andP => H1 H2; apply/idP/idP => H.
 - case/orP: H2 => //; by rewrite H.
 Qed.
 
-(* Strong induction driver. *)
+(* ========================================================================= *)
+(* §E. Value-complement bijection                                             *)
+(* ========================================================================= *)
+
+(* The "value-complement" perm: replace every value v by rev_ord v.
+   Effect on descents: every descent becomes ascent and vice versa.
+   This is the second symmetry (along with rev_perm) needed to identify
+   the two set-alternating descent sets. *)
+Definition compl_perm n (s : {perm 'I_n.+1}) : {perm 'I_n.+1} :=
+  s * rev_perm_ord n.
+
+Lemma compl_permE n (s : {perm 'I_n.+1}) (i : 'I_n.+1) :
+  compl_perm s i = rev_ord (s i).
+Proof. by rewrite /compl_perm permM rev_perm_ordE. Qed.
+
+Lemma compl_perm_inj n : injective (@compl_perm n).
+Proof. by move=> s1 s2 H; apply: (mulIg (rev_perm_ord n)). Qed.
+
+Lemma compl_perm_involutive n : involutive (@compl_perm n).
+Proof.
+move=> s; rewrite /compl_perm -mulgA.
+have -> : (rev_perm_ord n * rev_perm_ord n)%g = 1%g.
+  apply/permP => i; rewrite permM perm1 !rev_perm_ordE.
+  exact: rev_ordK.
+by rewrite mulg1.
+Qed.
+
+Lemma is_descent_compl n (s : {perm 'I_n.+1}) (i : 'I_n) :
+  is_descent (compl_perm s) i = ~~ is_descent s i.
+Proof.
+rewrite /is_descent !compl_permE.
+set a := s _; set b := s _.
+have arg_ne : widen_ord (leqnSn n) i != lift ord0 i.
+  by rewrite -val_eqE /= /bump /= add1n neq_ltn ltnSn.
+have ab_ne : (val a) != (val b).
+  rewrite val_eqE.
+  by apply: contra arg_ne; rewrite /a /b => /eqP /perm_inj ->.
+have rev_lt : (rev_ord a < rev_ord b) = (val b < val a).
+  by rewrite /= ltn_sub2lE //; apply: ltnW; apply: ltn_ord.
+rewrite rev_lt -leqNgt [in RHS]leq_eqVlt.
+case Hba : (b == a).
+  by move/eqP: Hba ab_ne => ->; rewrite eqxx.
+by have -> : (b == a) || (b < a) = (b < a) by rewrite Hba.
+Qed.
+
+Lemma descent_set_compl n (s : {perm 'I_n.+1}) :
+  descent_set (compl_perm s) = ~: descent_set s.
+Proof.
+by apply/setP => i; rewrite !inE is_descent_compl.
+Qed.
+
+Lemma beta_compl n (D : {set 'I_n}) : beta D = beta (~: D).
+Proof.
+rewrite /beta.
+rewrite -(card_imset _ (@compl_perm_inj n)).
+congr #|pred_of_set _|; apply/setP => s; rewrite !inE.
+apply/imsetP/idP.
+- by case=> t; rewrite inE => /eqP <- ->; rewrite descent_set_compl.
+- move=> /eqP Hs.
+  exists (compl_perm s); last by rewrite compl_perm_involutive.
+  by rewrite inE descent_set_compl Hs setCK.
+Qed.
+
+(* ========================================================================= *)
+(* §F. Classification of set-alternating sets                                *)
+(* ========================================================================= *)
+
+(* A set_is_alt set on 'I_n is determined by its membership at 0:
+   either alt_desc_set (= even positions) or its complement (= odd). *)
+
+Lemma set_is_alt_classify n (D : {set 'I_n}) :
+  set_is_alt D -> D = alt_desc_set n \/ D = ~: alt_desc_set n.
+Proof.
+(* Proof by induction on val i: if D is set_is_alt, then membership at i
+   alternates with parity of val i, fully determined by membership at ord0
+   (or by emptiness if n = 0). *)
+Admitted.
+
+(* Helper for the second-alt branch: if D' is set_is_alt then β(D') = β(alt). *)
+Lemma beta_set_is_alt_eq n (D' : {set 'I_n}) :
+  set_is_alt D' -> beta D' = beta (alt_desc_set n).
+Proof.
+move=> /set_is_alt_classify [-> //|->].
+by rewrite beta_compl setCK.
+Qed.
+
+(* ========================================================================= *)
+(* §G. β-based induction driver                                              *)
+(* ========================================================================= *)
+
+(* The right well-founded measure is `n.+1`! - β D` (decreases under
+   beta_swap_lt because β strictly increases). The original `find_reducing_toggle`
+   used Hamming distance to alt, which is NOT monotone under beta_swap_lt
+   — see counter-example D = {0, 2, 3} on 'I_4 where the only same-pair
+   toggle increases the Hamming distance but β does increase. *)
+
+(* From ~~set_is_alt D, the existence of a same-pair forces n ≥ 2;
+   hence [set: 'I_n] and set0 are distinct, both have β ≥ 1, so β D < n.+1`!. *)
+Lemma not_set_is_alt_n_ge2 n (D : {set 'I_n}) :
+  ~~ set_is_alt D -> 1 < n.
+Proof.
+move=> /set_not_altP [i [j [Hj _]]].
+have Hjn : (val j < n)%N := ltn_ord j.
+rewrite Hj in Hjn.
+by apply: leq_ltn_trans Hjn; apply: ltn0Sn.
+Qed.
+
+Lemma beta_lt_fact n (D : {set 'I_n}) :
+  ~~ set_is_alt D -> beta D < n.+1`!.
+Proof.
+move=> Hnalt.
+have Hn2 := not_set_is_alt_n_ge2 Hnalt.
+pose D' : {set 'I_n} := if D == set0 then [set: 'I_n] else set0.
+have HD'_full_or_0 : D' = [set: 'I_n] \/ D' = set0.
+  by rewrite /D'; case: (D == set0); [left|right].
+have HD'D : D' != D.
+  rewrite /D'; case Heq : (D == set0).
+  - move/eqP: Heq => ->; apply/eqP/setP => /(_ (@Ordinal n 0 (ltnW Hn2))).
+    by rewrite !inE.
+  - by rewrite eq_sym Heq.
+have HbD' : 1 <= beta D'.
+  rewrite /D'; case: (D == set0).
+  - by rewrite beta_full.
+  - by rewrite beta0.
+have Hsum : (beta D + beta D' <= n.+1`!)%N.
+  rewrite -sum_beta_eq_fact (bigD1 D) //= leq_add2l.
+  rewrite (bigD1 D' HD'D) //=.
+  exact: leq_addr.
+have Hkey : (beta D + 1 <= n.+1`!)%N.
+  apply: leq_trans Hsum.
+  by rewrite leq_add2l.
+by rewrite -addn1.
+Qed.
+
 Lemma beta_alt_max_bounded n :
   forall k (D : {set 'I_n}),
-  #|sym_diff D (alt_desc_set n)| <= k ->
+  (n.+1`! - beta D <= k)%N ->
   ~~ set_is_alt D ->
   beta D < beta (alt_desc_set n).
 Proof.
-elim => [|k IH] D.
-- rewrite leqn0 => /eqP /sym_diff_eq0 HD Hnalt.
-  by rewrite HD alt_desc_set_is_alt in Hnalt.
-- move=> Hcard Hnalt.
-  case: (find_reducing_toggle Hnalt) => i [j [Hj Hij Hred]].
+elim => [|k IH] D HM Hnalt.
+- (* Base m = 0: contradiction since β D < n.+1`! *)
+  exfalso.
+  have Hlt := beta_lt_fact Hnalt.
+  by move: HM; rewrite leqn0 subn_eq0 leqNgt Hlt.
+- (* Step: apply beta_swap_lt at any same-pair, then IH *)
+  case: (set_not_altP Hnalt) => i [j [Hj Hij]].
   have Hstrict : beta D < beta (toggle_at D i) := beta_swap_lt Hj Hij.
-  set D' := toggle_at D i.
-  case H' : (set_is_alt D').
-  + (* D' is set-alternating. *)
-    (* If D' = alt, we're done: beta D < beta D' = beta alt. *)
-    (* Otherwise D' is set-alt but ≠ alt, which means D' is the other
-       alternating pattern. But the theorem statement uses set_is_alt as
-       the hypothesis, so we only need to handle the D ≠ set-alt case.
-       For a clean Qed in this branch we show beta (toggle_at D i) equals
-       beta (alt_desc_set n) by reversal-complement symmetry (beta_rev). *)
-    case HD' : (D' == alt_desc_set n).
-    * by move/eqP: HD' => HD'; rewrite -HD'.
-    * (* D' is set-alt but ≠ alt: by a parity argument, D' must be the
-         complement-shift of alt, and so beta D' = beta alt. *)
-      (* This is another combinatorial case we leave as a "branch admit"
-         since it depends on classifying set-alt sets. *)
-      admit.
-  + (* D' not set-alt — apply IH. *)
+  case H' : (set_is_alt (toggle_at D i)).
+  + (* toggled set is set-alt: β(toggled) = β(alt) by classification + beta_compl *)
+    by rewrite (beta_set_is_alt_eq H') in Hstrict.
+  + (* toggled set still not set-alt: apply IH *)
     apply: (ltn_trans Hstrict).
-    apply: IH; last by rewrite H'.
-    by rewrite -ltnS; apply: leq_trans Hcard.
+    (* The bound chasing for IH; admitted for now *)
+    admit.
 Admitted.
 
-(* Spec-facing lemma (with set_is_alt as hypothesis — see discussion). *)
+(* Spec-facing lemma. *)
 Lemma beta_alt_max n (D : {set 'I_n}) :
   ~~ set_is_alt D -> beta D < beta (alt_desc_set n).
 Proof.
 move=> Hnalt.
-exact: (@beta_alt_max_bounded n #|sym_diff D (alt_desc_set n)| D (leqnn _)).
+exact: (@beta_alt_max_bounded n (n.+1`! - beta D) D (leqnn _)).
 Qed.
