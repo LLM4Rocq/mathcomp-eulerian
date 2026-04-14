@@ -556,6 +556,84 @@ Qed.
 Import GRing.Theory.
 Local Open Scope ring_scope.
 
+(* Alternating binomial convolution identity.                                *)
+(* \sum_j (-1)^j C(n+2, j) C(t-j, n+1) = [t == n+1]                          *)
+
+Lemma aux_id (n t : nat) :
+  \sum_(j < n.+3) (-1) ^ j *+ 'C(n.+2, j) *+ 'C(t - j, n.+1) =
+  (t == n.+1)%:Z.
+Proof.
+elim: n t => [|n IH] t.
+  (* base: n = 0.  sum over j < 3 of (-1)^j *+ C(2,j) *+ C(t-j, 1) *)
+  (* Rewrite C(t-j, 1) = t-j via bin1, then simplify. *)
+  under eq_bigr => j _ do rewrite bin1.
+  transitivity
+    ((t - 0)%:R + (-1 : int) *+ (2 * (t - 1)) + (t - 2)%N%:R : int).
+    rewrite 3!big_ord_recl big_ord0 addr0.
+    rewrite -!exprnP /=.
+    rewrite expr0 !exprS expr0 mulr1 mulrN1 opprK.
+    have -> : 'C(2, 0) = 1 :> nat by [].
+    have -> : 'C(2, 1) = 2 :> nat by [].
+    have -> : 'C(2, 2) = 1 :> nat by [].
+    rewrite !mulr1n -mulrnA addrA.
+    have b1 : bump 0 0 = 1 by [].
+    have b2 : bump 0 (bump 0 0) = 2 by [].
+    by rewrite b1 b2 (mulnC 2).
+  (* Goal: t%:R + (-1) *+ (2 * (t - 1)) + (t - 2)%:R = (t == 1) *)
+  rewrite subn0.
+  case: t => [|[|[|t]]].
+  all: rewrite /=.
+  - (* t=0 *) by rewrite !muln0 !mulr0n !add0r.
+  - (* t=1 *)
+    by rewrite !muln0 !mulr0n addr0.
+  - (* t=2 *)
+    rewrite !muln1 !mulr0n addr0.
+    have -> : (-1 : int) *+ 2 = -1 + -1 by rewrite mulr2n.
+    have -> : (2%N)%:R = 1 + 1 :> int by rewrite (_ : (2 = 1 + 1)%N) // natrD.
+    by rewrite !addrA addrK addrN.
+  - (* t>=3 *)
+    have -> : (2 * t.+2 = t.+3 + t.+1)%N.
+      by rewrite mul2n -addnn addSnnS addnC.
+    rewrite mulrnDr.
+    have N3 : (-1 : int) *+ t.+3 = - (t.+3%:R).
+      by rewrite mulNrn.
+    have N1 : (-1 : int) *+ t.+1 = - (t.+1%:R).
+      by rewrite mulNrn.
+    rewrite N3 N1.
+    rewrite -[(t.+3 == 1)%:Z]/(0 : int).
+    by rewrite !addrA addrN add0r addNr.
+(* Step case (TODO): the chain
+     aux_id(n.+1, t)
+       = [big_ord_recl on j=0]      C(t, n.+2)
+         + [reindex j = i.+1]       sum_(i < n.+3) (-1)^(i.+1) C(n.+3, i.+1) C(t-i.+1, n.+2)
+       = [Pascal on C(n.+3, i.+1)]  ... split into two sums P, Q
+       = [reindex P; cancel C(t, n.+2)]
+       = sum_(i < n.+3) (-1)^i C(n.+2, i) [C(t-i, n.+2) - C(t-i-1, n.+2)]
+       = [Pascal on C(t-i, n.+2)]   sum_(i < n.+3) (-1)^i C(n.+2, i) C(t-i-1, n.+1)
+       = [t-i-1 = t.-1 - i (nat)]   sum_(i < n.+3) (-1)^i C(n.+2, i) C(t.-1 - i, n.+1)
+       = IH applied at t.-1         (t.-1 == n.+1)%:Z
+       = (t == n.+2)%:Z.            *)
+admit.
+Admitted.
+
+(* ------------------------------------------------------------------------- *)
+(* Closed form (Eulerian explicit formula) — TODO                             *)
+(* ------------------------------------------------------------------------- *)
+(*                                                                            *)
+(* Given aux_id, the proof of eulerian_explicit follows by Worpitzky          *)
+(* inversion:                                                                 *)
+(*                                                                            *)
+(* RHS = sum_(j < k.+1) (-1)^j *+ C(n+2, j) *+ (k+1-j)^(n+1)                  *)
+(*     = sum_j (-1)^j *+ C(n+2, j) *+ sum_m eulerian n m * C(k+1-j+m, n+1)    *)
+(*       [Worpitzky at x = k+1-j]                                             *)
+(*     = sum_m eulerian n m *+ K(n, k, m)                                     *)
+(*       [exchange_big]                                                       *)
+(*  where K(n, k, m) := sum_j (-1)^j *+ C(n+2, j) *+ C(k+1+m-j, n+1)          *)
+(*                    = aux_id(n, k+1+m)  [extending sum bound]               *)
+(*                    = (k+1+m == n+1)%:Z = [m == n - k]                      *)
+(*     = eulerian n (n-k)%:Z                                                  *)
+(*     = eulerian n k       [eulerian_symm].                                  *)
+
 Lemma eulerian_explicit n k :
   (eulerian n k)%:Z =
     \sum_(j < k.+1) (-1) ^ j *+ 'C(n.+2, j) *+ (k.+1 - j) ^ n.+1.
