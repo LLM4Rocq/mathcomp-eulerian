@@ -21,7 +21,7 @@ ordinal_reindex.v  →  perm_compress.v  →  descent.v  →  eulerian.v
 | `ordinal_reindex.v` | 54 | Monotonicity of `lift`/`unlift` on `'I_n` |
 | `perm_compress.v` | 115 | `drop_perm` / `lift_perm` bijection on `{perm 'I_n}` |
 | `descent.v` | 122 | Descent set, descent/ascent counts, reversal symmetry |
-| `eulerian.v` | 612 | Eulerian numbers: base cases, recurrence, symmetry, Worpitzky |
+| `eulerian.v` | 718 | Eulerian numbers: base cases, recurrence, symmetry, Worpitzky, closed form |
 
 ## Results
 
@@ -99,11 +99,24 @@ Proof is by induction on `n` using `eulerian_rec` and the algebraic identity `wo
 x * 'C(x + k, n.+1) = k.+1 * 'C(x + k, n.+2) + (n.+1 - k) * 'C(x + k.+1, n.+2)   (k ≤ n)
 ```
 
+**Closed-form formula** (in `int`, opens `ring_scope` locally):
+
+```coq
+Lemma eulerian_explicit n k :
+  (eulerian n k)%:Z =
+    \sum_(j < k.+1) (-1) ^ j *+ 'C(n.+2, j) *+ (k.+1 - j) ^ n.+1.
+```
+
+Proved by **Worpitzky inversion**. Two supporting lemmas:
+
+- `binS'` — Pascal extension `'C(t, n.+2) = 'C(t.-1, n.+2) + 'C(t.-1, n.+1)` valid even when `t = 0` (saturating subtraction).
+- `aux_id` — the alternating-binomial Kronecker identity `\sum_(j < n.+3) (-1)^j *+ 'C(n.+2, j) *+ 'C(t - j, n.+1) = (t == n.+1)%:Z`. Proved by induction on `n` using a recurrence `aux_id_step` (the analog of Vandermonde's `fxx`): `aux_id(n.+1, t) = aux_id(n, t.-1)`, established via two applications of Pascal (one on each binomial factor) plus a reindex that telescopes.
+
+The main theorem then follows: substitute Worpitzky to expand `(k+1-j)^(n+1)`, swap sums (`exchange_big`), recognize the inner `j`-sum as `aux_id` at `t = k+1+m` (after extending the sum bound from `k.+1` to `maxn k.+1 n.+3` — the added terms vanish on each side for orthogonal reasons), use `bigD1` to pick out `m = n - k`, and apply `eulerian_symm`.
+
 ## Status
 
-All lemmas in Layers 0–3 are **closed under the global context** (verified by `Print Assumptions`), with one exception:
-
-- `eulerian_explicit` (closed form `(eulerian n k)%:Z = \sum_(j < k.+1) (-1)^j *+ 'C(n.+2, j) *+ (k.+1 - j)^n.+1`) — stated but **`Admitted`**. Proof outline (in the file) is by Worpitzky inversion: the key intermediate lemma is `aux_id`, the "alternating Vandermonde" identity `\sum_(j < n.+3) (-1)^j *+ 'C(n.+2, j) *+ 'C(t - j, n.+1) = (t == n.+1)%:Z`, whose inductive step on `n` requires two applications of Pascal's rule.
+All lemmas in Layers 0–3 are **closed under the global context** (verified by `Print Assumptions`). **No Admitteds anywhere in the project.**
 
 ## Conventions
 
@@ -116,6 +129,6 @@ All lemmas in Layers 0–3 are **closed under the global context** (verified by 
 The plan (`eulerian_mathcomp_plan.md`) described the layer structure but had two statement-level discrepancies, corrected here:
 
 1. **Recurrence**: plan stated `eulerian n.+1 k = k.+1 * eulerian n k + (n.+1 - k) * eulerian n k.-1`. This fails at `k = 0` (nat predecessor gives a wrong extra term) and has an off-by-one. The correct, total-on-nat statement is the one proved above, using `k.+1` on the LHS.
-2. **Closed form**: plan stated `(eulerian n k)%:Z = \sum_(j < k.+1) (-1)^j *+ 'C(n.+1, j) *+ (k.+1 - j)^n`. Both the binomial (`n.+1 → n.+2`) and the power (`n → n.+1`) are off by one. The statement in `eulerian.v` is the corrected version; verified numerically for `(n, k) ∈ {(0,0), (1,0), (1,1), (2,1), (2,2)}`.
+2. **Closed form**: plan stated `(eulerian n k)%:Z = \sum_(j < k.+1) (-1)^j *+ 'C(n.+1, j) *+ (k.+1 - j)^n`. Both the binomial (`n.+1 → n.+2`) and the power (`n → n.+1`) are off by one. The statement in `eulerian.v` is the corrected version; numerically verified for `(n, k) ∈ {(0,0), (1,0), (1,1), (2,1), (2,2)}`, formally proved via Worpitzky inversion.
 
 Also added beyond the plan: the `insert_max_perm` / `extract_max_perm` infrastructure (bijection by value insertion), which makes the recurrence proof self-contained.
