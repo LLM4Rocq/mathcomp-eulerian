@@ -569,87 +569,45 @@ Lemma aux_id_step (N u : nat) :
   \sum_(j < N.+4) (-1 : int) ^ j *+ 'C(N.+3, j) *+ 'C(u - j, N.+2) =
   \sum_(j < N.+3) (-1 : int) ^ j *+ 'C(N.+2, j) *+ 'C(u.-1 - j, N.+1).
 Proof.
-rewrite big_ord_recl.
-rewrite [(-1) ^ ord0]expr0 bin0 mulr1n subn0.
-under eq_bigr => i _.
-  have -> : (lift ord0 i : nat) = i.+1 by [].
-  rewrite binS mulrnDr mulrnDl.
-  over.
+rewrite big_ord_recl [(-1) ^ ord0]expr0 bin0 mulr1n subn0.
+under eq_bigr => i _ do rewrite binS mulrnDr mulrnDl.
 rewrite big_split /=.
 have beta_eq :
   \sum_(i < N.+3) ((-1 : int) ^ i.+1 *+ 'C(N.+2, i) *+ 'C(u - i.+1, N.+2)) =
   - \sum_(i < N.+3) ((-1 : int) ^ i *+ 'C(N.+2, i) *+ 'C(u.-1 - i, N.+2)).
   rewrite -sumrN; apply: eq_bigr => i _.
-  have sub_eq : (u - i.+1 = u.-1 - i)%N by case: u => [|u'].
-  by rewrite sub_eq exprSz mulN1r mulNrn mulNrn.
+  by case: u => [|u']//=; rewrite exprSz mulN1r !mulNrn.
 have alpha_eq :
   ('C(u, N.+2)%:R : int) +
   \sum_(i < N.+3) ((-1 : int) ^ i.+1 *+ 'C(N.+2, i.+1) *+ 'C(u - i.+1, N.+2)) =
   \sum_(j < N.+4) ((-1 : int) ^ j *+ 'C(N.+2, j) *+ 'C(u - j, N.+2)).
-  rewrite [RHS]big_ord_recl.
-  rewrite [(-1) ^ ord0]expr0 bin0 mulr1n subn0.
+  rewrite [RHS]big_ord_recl [(-1) ^ ord0]expr0 bin0 mulr1n subn0.
   by congr (_ + _); apply: eq_bigr => i _.
-rewrite addrA alpha_eq.
-rewrite [\sum_(j < N.+4) _]big_ord_recr /=.
-have C0 : ('C(N.+2, N.+3) = 0)%N by rewrite bin_small.
-rewrite C0 mul0rn addr0.
-rewrite beta_eq.
-rewrite -[_ + - _]/(_ - _) -sumrB.
-apply: eq_bigr => i _.
-have aux : forall u' : nat, ((u' - i).-1 = u'.-1 - i)%N.
-  case=> [|u''] /=; first by rewrite sub0n.
-  case: (leqP i u'') => Hi; first by rewrite subSn.
-  have -> : (u''.+1 - i)%N = 0 by apply/eqP; rewrite subn_eq0.
-  by rewrite (eqP (_ : u'' - i == 0)%N) // subn_eq0 ltnW.
-rewrite (binS' (u - i) N) (aux u) mulrnDr.
-by rewrite addrAC subrr add0r.
+rewrite addrA alpha_eq [\sum_(j < N.+4) _]big_ord_recr /= bin_small // mul0rn addr0 beta_eq.
+rewrite -[_ + - _]/(_ - _) -sumrB; apply: eq_bigr => i _.
+have aux v : ((v - i).-1 = v.-1 - i)%N by case: v => [|v']//=; rewrite -subnS.
+by rewrite (binS' (u - i) N) (aux u) mulrnDr addrAC subrr add0r.
 Qed.
 
 Lemma aux_id (n t : nat) :
   \sum_(j < n.+3) (-1) ^ j *+ 'C(n.+2, j) *+ 'C(t - j, n.+1) =
   (t == n.+1)%:Z.
 Proof.
-elim: n t => [|n IH] t.
-  (* base: n = 0.  sum over j < 3 of (-1)^j *+ C(2,j) *+ C(t-j, 1) *)
-  (* Rewrite C(t-j, 1) = t-j via bin1, then simplify. *)
-  under eq_bigr => j _ do rewrite bin1.
-  transitivity
-    ((t - 0)%:R + (-1 : int) *+ (2 * (t - 1)) + (t - 2)%N%:R : int).
-    rewrite 3!big_ord_recl big_ord0 addr0.
-    rewrite -!exprnP /=.
-    rewrite expr0 !exprS expr0 mulr1 mulrN1 opprK.
-    have -> : 'C(2, 0) = 1 :> nat by [].
-    have -> : 'C(2, 1) = 2 :> nat by [].
-    have -> : 'C(2, 2) = 1 :> nat by [].
-    rewrite !mulr1n -mulrnA addrA.
-    have b1 : bump 0 0 = 1 by [].
-    have b2 : bump 0 (bump 0 0) = 2 by [].
-    by rewrite b1 b2 (mulnC 2).
-  (* Goal: t%:R + (-1) *+ (2 * (t - 1)) + (t - 2)%:R = (t == 1) *)
-  rewrite subn0.
-  case: t => [|[|[|t]]].
-  all: rewrite /=.
-  - (* t=0 *) by rewrite !muln0 !mulr0n !add0r.
-  - (* t=1 *)
-    by rewrite !muln0 !mulr0n addr0.
-  - (* t=2 *)
-    rewrite !muln1 !mulr0n addr0.
-    have -> : (-1 : int) *+ 2 = -1 + -1 by rewrite mulr2n.
-    have -> : (2%N)%:R = 1 + 1 :> int by rewrite (_ : (2 = 1 + 1)%N) // natrD.
-    by rewrite !addrA addrK addrN.
-  - (* t>=3 *)
-    have -> : (2 * t.+2 = t.+3 + t.+1)%N.
-      by rewrite mul2n -addnn addSnnS addnC.
-    rewrite mulrnDr.
-    have N3 : (-1 : int) *+ t.+3 = - (t.+3%:R).
-      by rewrite mulNrn.
-    have N1 : (-1 : int) *+ t.+1 = - (t.+1%:R).
-      by rewrite mulNrn.
-    rewrite N3 N1.
-    rewrite -[(t.+3 == 1)%:Z]/(0 : int).
-    by rewrite !addrA addrN add0r addNr.
-rewrite aux_id_step IH.
-by case: t => [|t'].
+elim: n t => [|n IH] t; last by rewrite aux_id_step IH; case: t.
+under eq_bigr => j _ do rewrite bin1.
+transitivity ((t - 0)%:R + (-1 : int) *+ (2 * (t - 1)) + (t - 2)%N%:R : int).
+  rewrite 3!big_ord_recl big_ord0 addr0 -!exprnP /=.
+  by rewrite expr0 !exprS expr0 mulr1 mulrN1 opprK !mulr1n -mulrnA addrA (mulnC 2).
+rewrite subn0; case: t => [|[|[|t]]] /=.
+- by rewrite !muln0 !mulr0n !add0r.
+- by rewrite !muln0 !mulr0n addr0.
+- rewrite !muln1 !mulr0n addr0.
+  have -> : (-1 : int) *+ 2 = -1 + -1 by rewrite mulr2n.
+  have -> : (2%N)%:R = 1 + 1 :> int by rewrite (_ : (2 = 1 + 1)%N) // natrD.
+  by rewrite !addrA addrK addrN.
+- have -> : (2 * t.+2 = t.+3 + t.+1)%N by rewrite mul2n -addnn addSnnS addnC.
+  rewrite mulrnDr !mulNrn -[(t.+3 == 1)%:Z]/(0 : int).
+  by rewrite !addrA addrN add0r addNr.
 Qed.
 
 (* ------------------------------------------------------------------------- *)
@@ -674,73 +632,42 @@ Lemma eulerian_explicit n k :
   (eulerian n k)%:Z =
     \sum_(j < k.+1) (-1) ^ j *+ 'C(n.+2, j) *+ (k.+1 - j) ^ n.+1.
 Proof.
-under eq_bigr => j _ do rewrite -mulr_natr -mulr_natr.
-under eq_bigr => j _ do (rewrite worpitzky natr_sum).
-under eq_bigr => j _ do (rewrite big_distrr /=).
+under eq_bigr => j _ do rewrite -mulr_natr -mulr_natr worpitzky natr_sum big_distrr /=.
 rewrite exchange_big /=.
 under eq_bigr => m _.
   rewrite (eq_bigr (fun j : 'I_k.+1 => (eulerian n m)%:R *
-                     ((-1) ^ j * 'C(n.+2, j)%:R * 'C(k.+1 - j + m, n.+1)%:R))); last first.
-    move=> j _.
-    by rewrite natrM mulrCA -!mulrA mulrCA.
+                     ((-1) ^ j * 'C(n.+2, j)%:R * 'C(k.+1 - j + m, n.+1)%:R)));
+    last by move=> j _; rewrite natrM mulrCA -!mulrA mulrCA.
   rewrite -big_distrr /=.
-  over.
-under eq_bigr => m _.
   rewrite (eq_bigr (fun i : 'I_k.+1 =>
-    (-1 : int) ^ i *+ 'C(n.+2, i) *+ 'C(k.+1 + m - i, n.+1))); last first.
-    move=> i _.
-    rewrite mulr_natr mulr_natr.
-    do 2 f_equal.
-    by rewrite -addnBAC // ltnW // ltn_ord.
+    (-1 : int) ^ i *+ 'C(n.+2, i) *+ 'C(k.+1 + m - i, n.+1)));
+    last by move=> i _; rewrite !mulr_natr; do 2 f_equal;
+            rewrite -addnBAC // ltnW // ltn_ord.
   over.
 have inner_eq : forall m, m < n.+1 ->
   \sum_(i < k.+1) (-1 : int)^i *+ 'C(n.+2, i) *+ 'C(k.+1 + m - i, n.+1) =
   (k.+1 + m == n.+1)%:Z.
-  move=> m Hm.
-  rewrite -(aux_id n (k.+1 + m)).
+  move=> m Hm; rewrite -(aux_id n (k.+1 + m)).
   pose F (i : nat) := (-1 : int)^i *+ 'C(n.+2, i) *+ 'C(k.+1 + m - i, n.+1).
   rewrite -[LHS]/(\sum_(i < k.+1) F i) -[RHS]/(\sum_(i < n.+3) F i).
   pose N := maxn k.+1 n.+3.
-  have HkN : k.+1 <= N by exact: leq_maxl.
-  have HnN : n.+3 <= N by exact: leq_maxr.
-  rewrite (big_ord_widen N F HkN) (big_ord_widen N F HnN).
-  rewrite big_mkcond [RHS]big_mkcond /=.
-  apply: eq_bigr => i _.
+  rewrite (big_ord_widen N F (leq_maxl _ _)) (big_ord_widen N F (leq_maxr _ _)).
+  rewrite big_mkcond [RHS]big_mkcond /=; apply: eq_bigr => i _ /=; rewrite /F.
   case Hin: (i < n.+3); case Hik: (i < k.+1) => //=.
-  - rewrite /F.
-    have -> : 'C(k.+1 + m - i, n.+1) = 0%N.
-      apply: bin_small.
-      have H : (k.+1 + m - i <= m)%N.
-        by rewrite leq_subLR leq_add2r leqNgt Hik.
-      by apply: leq_ltn_trans Hm.
-    by rewrite mulr0n.
-  - rewrite /F.
-    have : 'C(n.+2, i) = 0%N by apply: bin_small; rewrite leqNgt Hin.
-    by move=> ->; rewrite mulr0n mul0rn.
+  - rewrite (_ : 'C(k.+1 + m - i, n.+1) = 0)%N ?mulr0n //.
+    by apply/bin_small/(leq_ltn_trans _ Hm); rewrite leq_subLR leq_add2r leqNgt Hik.
+  - by rewrite (_ : 'C(n.+2, i) = 0)%N ?mulr0n ?mul0rn //; apply: bin_small; rewrite leqNgt Hin.
 under eq_bigr => m _ do rewrite (inner_eq m (ltn_ord m)).
-case: (leqP k n) => Hkn.
-- have HmO : (n - k < n.+1)%N by rewrite ltnS leq_subr.
-  pose m0 := Ordinal HmO.
-  rewrite (bigD1 m0) //.
-  rewrite [in (k.+1 + m0 == n.+1)%N]/m0 /=.
-  have -> : (k.+1 + (n - k) == n.+1)%N = true.
-    by apply/eqP; rewrite addSn addnC subnK.
-  rewrite mulr1.
-  rewrite big1; last first.
-    move=> i Hi.
-    have -> : (k.+1 + i == n.+1) = false.
-      apply: contraNF Hi; move=> /eqP H.
-      apply/eqP/val_inj => /=.
-      apply: (@addnI k.+1).
-      have H' : (k.+1 + i)%N = n.+1 by exact: H.
-      by rewrite H' addSn addnC subnK.
-    by rewrite mulr0.
-  rewrite addr0 (eulerian_symm Hkn).
-  by rewrite natz.
-- rewrite eulerian_out_of_range // big1 //=.
-  move=> i _.
-  have -> : (k.+1 + i == n.+1) = false.
-    apply/negbTE; rewrite neq_ltn; apply/orP; right.
-    by rewrite ltnS (leq_trans Hkn) // leq_addr.
-  by rewrite mulr0.
+case: (leqP k n) => Hkn; last first.
+  rewrite eulerian_out_of_range // big1 // => i _.
+  rewrite (_ : (k.+1 + i == n.+1) = false) ?mulr0 //.
+  apply/negbTE; rewrite neq_ltn; apply/orP; right.
+  by rewrite ltnS (leq_trans Hkn) // leq_addr.
+have HmO : (n - k < n.+1)%N by rewrite ltnS leq_subr.
+pose m0 := Ordinal HmO.
+rewrite (bigD1 m0) //= [in (k.+1 + m0 == n.+1)%N]/m0 /= addSn addnC subnK // eqxx mulr1.
+rewrite big1 ?addr0 ?(eulerian_symm Hkn) ?natz // => i Hi.
+rewrite (_ : (k.+1 + i == n.+1) = false) ?mulr0 //.
+apply: contraNF Hi => /eqP H; apply/eqP/val_inj => /=.
+by apply: (@addnI k.+1); rewrite [RHS]addnC addnS subnK // -H.
 Qed.
