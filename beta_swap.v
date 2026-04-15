@@ -84,45 +84,55 @@ by exists i, j.
 Qed.
 
 (* ========================================================================= *)
-(* §C. β-swap lemmas (Foata — AXIOMATIZED, CLASSICAL)                         *)
+(* §C. β-swap lemmas (Foata — classical)                                      *)
 (* ========================================================================= *)
 
-(* The following two lemmas are classical results on descent statistics,
+(* The following lemmas are classical results on descent statistics,
    typically attributed to Foata via the descent-composition unimodality
    theorem (Stanley, Enumerative Combinatorics Vol. 1, §1.4 "P-partitions"
    and §1.6 "Descents"; also Loday's work on quasi-symmetric functions).
 
-   They are axiomatized here because a direct formalization in MathComp
-   requires ~300-400 lines of intricate permutation arithmetic: the Foata
-   injection σ ↦ τ uses a block-based cyclic rotation (moving the minimum
-   of a maximal monotone block to the toggled position), with several
-   boundary cases. A self-contained proof of these in MathComp is left as
-   future work.
+   We axiomatize only the "both descents" case: both `i` and `j = i+1` lie
+   in D. The "both ascents" case is DERIVED from the "both descents" axiom
+   via the value-complement involution (`compl_perm`, `beta_compl`,
+   `descent_set_compl`). This reduces the axiomatic content to one case.
 
-   No non-standard axioms are introduced beyond these two specific
-   combinatorial facts, which are mathematically well-known and whose
-   correctness is not in doubt. Every lemma downstream (beta_alt_max
-   and beta_alt_max_bounded) depends only on these and otherwise closes
-   under the global context. *)
+   A self-contained proof of the "both descents" axioms would require
+   ~300-400 lines of Foata block-rotation arithmetic (see FOATA_GUIDANCE.md)
+   and is left as future work. *)
 
-(* β-swap monotonicity: if positions i and j = i+1 have the same
-   D-membership, then toggling i (in D or out of D) does not decrease β. *)
-Axiom beta_swap_monotone : forall n (D : {set 'I_n}) (i j : 'I_n),
+(* "Both descents" monotonicity (atomic axiom). *)
+Axiom beta_swap_monotone_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
   val j = (val i).+1 ->
-  (i \in D) = (j \in D) ->
+  i \in D -> j \in D ->
   beta D <= beta (toggle_at D i).
 
-(* Strict version: under the same hypotheses, β strictly increases.
-   The strict gap follows from the existence of a permutation in the
-   target fiber not hit by the monotone injection — concretely,
-   one whose Foata block containing position i has length exactly 2. *)
-Axiom beta_swap_lt : forall n (D : {set 'I_n}) (i j : 'I_n),
+(* "Both descents" strict version (atomic axiom). *)
+Axiom beta_swap_lt_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
   val j = (val i).+1 ->
-  (i \in D) = (j \in D) ->
+  i \in D -> j \in D ->
   beta D < beta (toggle_at D i).
 
+(* Toggle commutes with complement on the set side.
+   Used to reduce the "both ascents" case to the "both descents" case. *)
+Lemma toggle_at_compl n (D : {set 'I_n}) (i : 'I_n) :
+  toggle_at (~: D) i = ~: toggle_at D i.
+Proof.
+apply/setP => j.
+have H1 : (j \in toggle_at (~: D) i) = (i == j) (+) ~~ (j \in D).
+  by rewrite toggle_at_in inE.
+have H2 : (j \in ~: toggle_at D i) = ~~ ((i == j) (+) (j \in D)).
+  by rewrite inE toggle_at_in.
+rewrite H1 H2.
+by case: (i == j); case: (j \in D).
+Qed.
+
+(* β-swap monotonicity and strict version are derived (via complement
+   reduction) further below, after the value-complement bijection is
+   available (§E). *)
+
 (* ========================================================================= *)
-(* §D. Alt maximises β                                                       *)
+(* §D. Alt maximises β (deferred: depends on derived beta_swap_lt below)     *)
 (* ========================================================================= *)
 
 (* We measure distance from alt by Hamming distance (symmetric-difference
@@ -235,6 +245,45 @@ apply/imsetP/idP.
 - move=> /eqP Hs.
   exists (compl_perm s); last by rewrite compl_perm_involutive.
   by rewrite inE descent_set_compl Hs setCK.
+Qed.
+
+(* β-swap monotonicity: if positions i and j = i+1 have the same
+   D-membership, then toggling i does not decrease β. Derived from the
+   "both descents" axiom `beta_swap_monotone_both_in` via the value-
+   complement involution: when both i, j are ASCENTS in D, they are both
+   DESCENTS in ~: D; applying the axiom to ~: D and translating back via
+   `beta_compl` yields the inequality for D. *)
+Lemma beta_swap_monotone n (D : {set 'I_n}) (i j : 'I_n) :
+  val j = (val i).+1 ->
+  (i \in D) = (j \in D) ->
+  beta D <= beta (toggle_at D i).
+Proof.
+move=> Hj Hij.
+case Hi : (i \in D).
+- have Hj' : j \in D by rewrite -Hij.
+  exact: (beta_swap_monotone_both_in Hj Hi Hj').
+- have Hi' : i \in ~: D by rewrite !inE Hi.
+  have Hj' : j \in ~: D by rewrite !inE -Hij Hi.
+  have H := beta_swap_monotone_both_in Hj Hi' Hj'.
+  rewrite toggle_at_compl in H.
+  by rewrite (beta_compl D) (beta_compl (toggle_at D i)).
+Qed.
+
+(* Strict version, derived identically. *)
+Lemma beta_swap_lt n (D : {set 'I_n}) (i j : 'I_n) :
+  val j = (val i).+1 ->
+  (i \in D) = (j \in D) ->
+  beta D < beta (toggle_at D i).
+Proof.
+move=> Hj Hij.
+case Hi : (i \in D).
+- have Hj' : j \in D by rewrite -Hij.
+  exact: (beta_swap_lt_both_in Hj Hi Hj').
+- have Hi' : i \in ~: D by rewrite !inE Hi.
+  have Hj' : j \in ~: D by rewrite !inE -Hij Hi.
+  have H := beta_swap_lt_both_in Hj Hi' Hj'.
+  rewrite toggle_at_compl in H.
+  by rewrite (beta_compl D) (beta_compl (toggle_at D i)).
 Qed.
 
 (* ========================================================================= *)
