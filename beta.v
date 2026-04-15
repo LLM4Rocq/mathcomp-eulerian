@@ -50,28 +50,21 @@ Qed.
 Lemma imset_rev_ord_inv n (D : {set 'I_n}) :
   [set rev_ord i | i in [set rev_ord i | i in D]] = D.
 Proof.
-apply/setP => x.
-apply/imsetP/idP.
+apply/setP => x; apply/imsetP/idP.
 - by case=> y /imsetP[z Hz ->] ->; rewrite rev_ordK.
-- move=> Hx; exists (rev_ord x); last by rewrite rev_ordK.
-  by apply/imsetP; exists x.
+- by move=> Hx; exists (rev_ord x); rewrite ?rev_ordK //; apply/imsetP; exists x.
 Qed.
 
 Lemma imset_rev_ord_compl n (D : {set 'I_n}) :
   [set rev_ord i | i in ~: D] = ~: [set rev_ord i | i in D].
 Proof.
-apply/setP => x; rewrite inE.
-apply/imsetP/idP.
+apply/setP => x; rewrite inE; apply/imsetP/idP.
 - case=> y; rewrite inE => HyND ->.
   apply/negP => /imsetP[z Hz Hrev].
-  have Eyz : y = z.
-    apply: (can_inj (@rev_ordK _)).
-    by apply/val_inj/(congr1 val Hrev).
+  have Eyz : y = z by apply: (can_inj (@rev_ordK _)); apply/val_inj/(congr1 val Hrev).
   by rewrite Eyz Hz in HyND.
-- move=> HnD; exists (rev_ord x); last by rewrite rev_ordK.
-  rewrite inE; apply/negP => Hx.
-  move: HnD => /negP; apply.
-  by apply/imsetP; exists (rev_ord x); rewrite // rev_ordK.
+- move=> HnD; exists (rev_ord x); rewrite ?rev_ordK //.
+  by rewrite inE; apply: contra HnD => Hx; apply/imsetP; exists (rev_ord x); rewrite ?rev_ordK.
 Qed.
 
 (* ========================================================================= *)
@@ -83,11 +76,8 @@ Lemma beta0 n : beta (set0 : {set 'I_n}) = 1.
 Proof.
 rewrite /beta -(cards1 (1%g : {perm 'I_n.+1})); apply: eq_card => s.
 rewrite !inE; apply/idP/idP.
-- move/eqP => Hds; apply/eqP.
-  have : des s = 0 by rewrite /des Hds cards0.
-  exact: des0_id.
-- move/eqP => ->.
-  apply/eqP/setP => i; rewrite !inE.
+- by move/eqP => Hds; apply/eqP/des0_id; rewrite /des Hds cards0.
+- move/eqP => ->; apply/eqP/setP => i; rewrite !inE.
   by rewrite /is_descent !perm1 ltnNge /= leqW.
 Qed.
 
@@ -98,10 +88,9 @@ Proof.
 move=> HD.
 have Hrev : descent_set (rev_perm s) = set0.
   rewrite descent_set_rev_perm HD setCT.
-  apply/setP => j; rewrite !inE.
-  by apply/negP => /imsetP[x]; rewrite inE.
-have : des (rev_perm s) = 0 by rewrite /des Hrev cards0.
-move/des0_id; rewrite /rev_perm => Hrp.
+  by apply/setP => j; rewrite !inE; apply/negP => /imsetP[x]; rewrite inE.
+have /des0_id : des (rev_perm s) = 0 by rewrite /des Hrev cards0.
+rewrite /rev_perm => Hrp.
 apply/permP => i.
 have Hi := congr1 (fun g : {perm 'I_n.+1} => g (rev_ord i)) Hrp.
 rewrite perm1 permM !rev_perm_ordE rev_ordK in Hi.
@@ -123,16 +112,9 @@ Qed.
 Lemma sum_beta_eq_fact n :
   \sum_(D : {set 'I_n}) beta D = n.+1`!.
 Proof.
-rewrite /beta.
-transitivity (\sum_(D : {set 'I_n})
-  \sum_(sigma : {perm 'I_n.+1} | descent_set sigma == D) 1).
-  by apply: eq_bigr => D _;
-     rewrite sum1_card; apply: eq_card => s; rewrite !inE.
-rewrite (exchange_big_dep predT) //=.
-rewrite -(card_Sn n.+1) -sum1_card.
-apply: eq_bigr => sigma _.
-rewrite (bigD1 (descent_set sigma)) //= big1 ?addn0 //.
-by move=> D /andP[/eqP -> /eqP].
+rewrite /beta -(card_Sn n.+1) -sum1_card.
+rewrite (partition_big (@descent_set n) xpredT) //=.
+by apply: eq_bigr => D _; rewrite -sum1dep_card.
 Qed.
 
 (* ========================================================================= *)
@@ -146,10 +128,9 @@ rewrite /beta /eulerian -sum1_card.
 rewrite (partition_big (@descent_set n) (fun D => #|D| == k)) /=;
   last by move=> sigma; rewrite inE => /eqP <-.
 apply: eq_bigr => D /eqP HD.
-rewrite -sum1_card; apply: eq_bigl => sigma.
-rewrite !inE /=.
+rewrite -sum1_card; apply: eq_bigl => sigma; rewrite !inE /=.
 case E : (descent_set sigma == D); last by rewrite andbF.
-by move/eqP: E => EE; rewrite /des EE HD eqxx.
+by rewrite /des (eqP E) HD eqxx.
 Qed.
 
 (* ========================================================================= *)
@@ -159,15 +140,9 @@ Qed.
 Lemma beta_rev n (D : {set 'I_n}) :
   beta D = beta ([set rev_ord i | i in ~: D]).
 Proof.
-rewrite /beta.
-rewrite -(card_imset _ (@rev_perm_inj n)).
-congr #|pred_of_set _|; apply/setP => s; rewrite !inE.
-apply/imsetP/idP.
-- case=> t; rewrite inE => /eqP Ht Hst; subst s.
-  by rewrite descent_set_rev_perm Ht.
-- move/eqP => Hs.
-  exists (rev_perm s); last by rewrite rev_perm_involutive.
-  rewrite inE descent_set_rev_perm Hs.
-  rewrite -imset_rev_ord_compl setCK.
-  by rewrite imset_rev_ord_inv.
+rewrite /beta -(card_imset _ (@rev_perm_inj n)).
+congr #|pred_of_set _|; apply/setP => s; rewrite !inE; apply/imsetP/idP.
+- by case=> t; rewrite inE => /eqP Ht ->; rewrite descent_set_rev_perm Ht.
+- move/eqP => Hs; exists (rev_perm s); last by rewrite rev_perm_involutive.
+  by rewrite inE descent_set_rev_perm Hs -imset_rev_ord_compl setCK imset_rev_ord_inv.
 Qed.

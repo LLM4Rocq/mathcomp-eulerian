@@ -213,15 +213,10 @@ rewrite /is_descent !compl_permE.
 set a := s _; set b := s _.
 have arg_ne : widen_ord (leqnSn n) i != lift ord0 i.
   by rewrite -val_eqE /= /bump /= add1n neq_ltn ltnSn.
-have ab_ne : (val a) != (val b).
-  rewrite val_eqE.
-  by apply: contra arg_ne; rewrite /a /b => /eqP /perm_inj ->.
-have rev_lt : (rev_ord a < rev_ord b) = (val b < val a).
-  by rewrite /= ltn_sub2lE //; apply: ltnW; apply: ltn_ord.
-rewrite rev_lt -leqNgt [in RHS]leq_eqVlt.
-case Hba : (b == a).
-  by move/eqP: Hba ab_ne => ->; rewrite eqxx.
-by have -> : (b == a) || (b < a) = (b < a) by rewrite Hba.
+have ab_ne : val a != val b.
+  by rewrite val_eqE; apply: contra arg_ne; rewrite /a /b => /eqP /perm_inj ->.
+rewrite /= ltn_sub2lE; last exact: ltn_ord.
+by rewrite ltnS ltn_neqAle [_ == _]eq_sym ab_ne /= -leqNgt.
 Qed.
 
 Lemma descent_set_compl n (s : {perm 'I_n.+1}) :
@@ -317,25 +312,16 @@ Proof.
 move=> Hnalt.
 have Hn2 := not_set_is_alt_n_ge2 Hnalt.
 pose D' : {set 'I_n} := if D == set0 then [set: 'I_n] else set0.
-have HD'_full_or_0 : D' = [set: 'I_n] \/ D' = set0.
-  by rewrite /D'; case: (D == set0); [left|right].
 have HD'D : D' != D.
-  rewrite /D'; case Heq : (D == set0).
-  - move/eqP: Heq => ->; apply/eqP/setP => /(_ (@Ordinal n 0 (ltnW Hn2))).
-    by rewrite !inE.
-  - by rewrite eq_sym Heq.
+  rewrite /D'; case Heq : (D == set0); last by rewrite eq_sym Heq.
+  by move/eqP: Heq => ->; apply/eqP/setP => /(_ (@Ordinal n 0 (ltnW Hn2)));
+     rewrite !inE.
 have HbD' : 1 <= beta D'.
-  rewrite /D'; case: (D == set0).
-  - by rewrite beta_full.
-  - by rewrite beta0.
-have Hsum : (beta D + beta D' <= n.+1`!)%N.
-  rewrite -sum_beta_eq_fact (bigD1 D) //= leq_add2l.
-  rewrite (bigD1 D' HD'D) //=.
-  exact: leq_addr.
-have Hkey : (beta D + 1 <= n.+1`!)%N.
-  apply: leq_trans Hsum.
+  by rewrite /D'; case: (D == set0); [rewrite beta_full | rewrite beta0].
+rewrite -addn1; apply: leq_trans (_ : beta D + beta D' <= n.+1`!).
   by rewrite leq_add2l.
-by rewrite -addn1.
+by rewrite -sum_beta_eq_fact (bigD1 D) //= leq_add2l (bigD1 D' HD'D) //=
+   leq_addr.
 Qed.
 
 Lemma beta_alt_max_bounded n :
