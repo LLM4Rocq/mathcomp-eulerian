@@ -87,19 +87,34 @@ Qed.
 (* §C. β-swap lemmas (Foata — classical)                                      *)
 (* ========================================================================= *)
 
-(* The following lemmas are classical results on descent statistics,
-   typically attributed to Foata via the descent-composition unimodality
-   theorem (Stanley, Enumerative Combinatorics Vol. 1, §1.4 "P-partitions"
-   and §1.6 "Descents"; also Loday's work on quasi-symmetric functions).
+(* The following axioms are a special case of a classical theorem:
 
-   We axiomatize only the "both descents" case: both `i` and `j = i+1` lie
-   in D. The "both ascents" case is DERIVED from the "both descents" axiom
-   via the value-complement involution (`compl_perm`, `beta_compl`,
-   `descent_set_compl`). This reduces the axiomatic content to one case.
+     Stanley, Enumerative Combinatorics Vol. 1 (2nd ed.), Proposition 1.6.4.
+     If ω(S) ⊂ ω(T), then βₙ(S) < βₙ(T).
 
-   A self-contained proof of the "both descents" axioms would require
-   ~300-400 lines of Foata block-rotation arithmetic (see FOATA_GUIDANCE.md)
-   and is left as future work. *)
+   (The ω-map of §1.6 sends S ⊆ [n-1] to the subset of i ∈ [n-2] for which
+   exactly one of i, i+1 lies in S.) When i, j = i+1 are both descents of D,
+   toggling i flips at least the ω-bit at position i, extending ω(D); this
+   is the strict-extension case of 1.6.4 (see §H below for the partial
+   ω-bridge already formalized).
+
+   Stanley's proof of 1.6.4 is non-trivial: it routes through the cd-index
+   of §1.6.3 (Theorem 1.6.3, "the ab-index Ψₙ can be written as a polynomial
+   in c = a+b and d = ab+ba with nonnegative integer coefficients"), which
+   in turn requires the min-max-tree machinery (Facts #1–#3) including the
+   commuting ψᵢ involutions and their descent-set effect.
+
+   No shorter self-contained combinatorial argument is known to us. Naïve
+   rotation-based bijections fail at block-boundary cases (an explicit S₉
+   counterexample is documented in AXIOMS_TODO.md). Formalizing 1.6.4
+   end-to-end is estimated at 3–5 weeks of MathComp development; see
+   AXIOMS_TODO.md for the preserved partial infrastructure (omega_set in
+   §H, Foata block endpoints in §I) and a roadmap for a future attempt.
+
+   We axiomatize only the "both descents" case (both i, j = i+1 ∈ D). The
+   "both ascents" case is DERIVED from this axiom via the value-complement
+   involution (compl_perm, beta_compl, descent_set_compl), reducing the
+   axiomatic content to one case. *)
 
 (* "Both descents" monotonicity (atomic axiom). *)
 Axiom beta_swap_monotone_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
@@ -406,3 +421,375 @@ Proof.
 move=> Hnalt.
 exact: (@beta_alt_max_bounded n (n.+1`! - beta D) D (leqnn _)).
 Qed.
+
+(* ========================================================================= *)
+(* §H. Milestone M4: Stanley ω-map and the toggle-at ω superset bridge.      *)
+(* ========================================================================= *)
+
+(* Stanley EC1 §1.6, Prop. 1.6.4: for S ⊆ [n-1], define ω(S) ⊆ [n-2] by
+   "i ∈ ω(S) iff exactly one of i, i+1 lies in S". We encode ω-maps as
+   functions {set 'I_n.+1} → {set 'I_n} (aligning with how `beta` sees
+   descent-sets for perms of 'I_n.+2 — the +1 shift matches Stanley's
+   "[n-2]" vs "[n-1]"). The target β-axioms in §C use descent-sets of type
+   {set 'I_n} (no .+1); callers bridge via the obvious `Ordinal` packaging.
+
+   NOTE ON THE PLAN: STANLEY_CDINDEX_PLAN.md §2 asserts that toggling any
+   "both-in-D" descent gives a strict ω-superset. Direct case-analysis
+   (mirrored in the proof below) shows this is TOO STRONG: toggling `i` also
+   flips the ω-bit at `i-1`, and that bit LEAVES ω(D) precisely when
+   (i-1) ∉ D. A concrete counterexample: D = {1,2} ⊆ 'I_3, i = 1:
+     ω(D) = {0}, ω(toggle D 1) = ω({2}) = {1}; neither contains the other.
+   The strict-superset statement is therefore accurate only under the extra
+   hypothesis that `i-1 ∈ D` (Case A of the flip analysis) OR that `i = 0`
+   (no predecessor bit to flip). We expose both the strong, correctly
+   hypothesised bridge (`toggle_at_omega_strict_superset`) and the always-
+   true "new bit" lemma (`toggle_at_omega_bit_i_new`). Closing the axioms
+   of §C via the bridge will therefore require either the full Stanley
+   cd-index nonneg theorem (M5/M6 of the plan) or a case split on
+   `(i-1) ∈ D` combined with an auxiliary argument for Case B.                  *)
+
+Definition omega_set (n : nat) (D : {set 'I_n.+1}) : {set 'I_n} :=
+  [set k : 'I_n | (widen_ord (leqnSn n) k \in D) != (lift ord0 k \in D)].
+
+Lemma mem_omega_set n (D : {set 'I_n.+1}) (k : 'I_n) :
+  (k \in omega_set D) =
+  ((widen_ord (leqnSn n) k \in D) != (lift ord0 k \in D)).
+Proof. by rewrite inE. Qed.
+
+(* The ω-bit at the descent position always enters ω after a both-in toggle. *)
+Lemma toggle_at_omega_bit_i_new n (D : {set 'I_n.+1}) (i j : 'I_n.+1) :
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  exists k : 'I_n,
+    [/\ widen_ord (leqnSn n) k = i,
+        lift ord0 k = j,
+        k \notin omega_set D &
+        k \in omega_set (toggle_at D i)].
+Proof.
+move=> Hj Hi Hj'.
+have Hik : val i < n.
+  by have := ltn_ord j; rewrite Hj -ltnS.
+pose k := Ordinal Hik.
+have Ewid : widen_ord (leqnSn n) k = i by apply/val_inj.
+have Elif : lift ord0 k = j by apply/val_inj; rewrite /= /bump /= add1n -Hj.
+have Hij : i != j by rewrite -val_eqE Hj /=; elim: (val i).
+exists k; split => //.
+  by rewrite mem_omega_set Ewid Elif Hi Hj'.
+by rewrite mem_omega_set Ewid Elif toggle_at_self Hi /= toggle_at_other // Hj'.
+Qed.
+
+(* Strict ω-superset under toggle — with the extra hypothesis that the
+   predecessor position (if any) is also in D. This is Case A of the
+   i-1-bit flip analysis, where both ω-bits i and i-1 become newly active
+   (if i > 0 and i-1 ∈ D) or i is the only new bit (if i = 0).                *)
+Lemma toggle_at_omega_strict_superset n
+  (D : {set 'I_n.+1}) (i j : 'I_n.+1) :
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  (forall p : 'I_n.+1, val p = (val i).-1 -> val i != 0 -> p \in D) ->
+  omega_set D \proper omega_set (toggle_at D i).
+Proof.
+move=> Hj Hi Hj' Hpred.
+have [k [Ewid Elif Hknot Hkin]] := toggle_at_omega_bit_i_new Hj Hi Hj'.
+apply/properP; split; last by exists k.
+apply/subsetP => x Hx.
+have Hij : i != j by rewrite -val_eqE Hj /=; elim: (val i).
+rewrite mem_omega_set in Hx *.
+have Hxk : x != k.
+  by apply/eqP => E; move: Hknot; rewrite -E mem_omega_set Hx.
+case E0 : (val i == 0).
+  have Hxwid : widen_ord (leqnSn n) x != i.
+    apply/eqP => Exi; move/eqP: Hxk; apply; apply/val_inj.
+    by move: (congr1 val Exi) (congr1 val Ewid); rewrite /= => <- <-.
+  have Hxlif : lift ord0 x != i.
+    by rewrite -val_eqE /= /bump /= add1n (eqP E0).
+  by rewrite mem_omega_set !toggle_at_other //; rewrite eq_sym.
+move/negbT: E0 => Hi0.
+have Hxwid : widen_ord (leqnSn n) x != i.
+  apply/eqP => Exi; move/eqP: Hxk; apply; apply/val_inj.
+  by move: (congr1 val Exi) (congr1 val Ewid); rewrite /= => <- <-.
+case Elxi : (lift ord0 x == i); last first.
+  move/negbT: Elxi => Hxlif.
+  by rewrite mem_omega_set !toggle_at_other //; rewrite eq_sym.
+move/eqP: Elxi => Elxi.
+have Hvx : val x = (val i).-1.
+  have H := congr1 val Elxi.
+  move: H; rewrite /= /bump /= add1n => H.
+  by rewrite -H /=.
+pose p := widen_ord (leqnSn n) x.
+have Hvp : val p = (val i).-1 by rewrite /=.
+have Hpd : p \in D by apply: Hpred.
+rewrite mem_omega_set toggle_at_other; last by rewrite eq_sym.
+rewrite Elxi toggle_at_self Hi /=.
+by rewrite -/p Hpd.
+Qed.
+
+(* ========================================================================= *)
+(* §I. Foata block endpoints (Phase 1 of Track C).                            *)
+(*                                                                            *)
+(* For σ : {perm 'I_n.+1} and i : 'I_n with `is_descent σ i`, the endpoints   *)
+(* [block_left σ i, block_right σ i] of the maximal run of consecutive        *)
+(* descent positions of σ containing i. Used by the Foata rotation in        *)
+(* Phase 2. Purely combinatorial — no reference to toggle_at.                *)
+(* ========================================================================= *)
+
+Section FoataBlocks.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+1}) (i : 'I_n).
+
+(* Predicate: every position in [val l, val i] is a descent. *)
+Definition left_ok s i (l : 'I_n) : bool :=
+  (val l <= val i)
+  && [forall k : 'I_n, (val l <= val k <= val i) ==> is_descent s k].
+
+(* Predicate: every position in [val i, val r] is a descent. *)
+Definition right_ok s i (r : 'I_n) : bool :=
+  (val i <= val r)
+  && [forall k : 'I_n, (val i <= val k <= val r) ==> is_descent s k].
+
+Lemma left_ok_self s i : is_descent s i -> left_ok s i i.
+Proof.
+move=> Hi; rewrite /left_ok leqnn /=.
+apply/forallP => k; apply/implyP; case/andP => H1 H2.
+have Eki : k = i by apply/val_inj; apply/eqP; rewrite eqn_leq H2 H1.
+by rewrite Eki.
+Qed.
+
+Lemma right_ok_self s i : is_descent s i -> right_ok s i i.
+Proof.
+move=> Hi; rewrite /right_ok leqnn /=.
+apply/forallP => k; apply/implyP; case/andP => H1 H2.
+have Eki : k = i by apply/val_inj; apply/eqP; rewrite eqn_leq H2 H1.
+by rewrite Eki.
+Qed.
+
+(* block_left: smallest l with left_ok s i l; defaults to i otherwise. *)
+Definition block_left s i : 'I_n :=
+  if is_descent s i then [arg min_(l < i | left_ok s i l) val l]
+  else i.
+
+Definition block_right s i : 'I_n :=
+  if is_descent s i then [arg max_(r > i | right_ok s i r) val r]
+  else i.
+
+Lemma block_left_left_ok s i : is_descent s i -> left_ok s i (block_left s i).
+Proof.
+move=> Hi; rewrite /block_left Hi.
+by case: arg_minnP; first exact: left_ok_self.
+Qed.
+
+Lemma block_right_right_ok s i :
+  is_descent s i -> right_ok s i (block_right s i).
+Proof.
+move=> Hi; rewrite /block_right Hi.
+by case: arg_maxnP; first exact: right_ok_self.
+Qed.
+
+Lemma block_left_min s i (l : 'I_n) :
+  is_descent s i -> left_ok s i l -> val (block_left s i) <= val l.
+Proof.
+move=> Hi Hl; rewrite /block_left Hi.
+by case: arg_minnP; [exact: left_ok_self | move=> ? _; apply].
+Qed.
+
+Lemma block_right_max s i (r : 'I_n) :
+  is_descent s i -> right_ok s i r -> val r <= val (block_right s i).
+Proof.
+move=> Hi Hr; rewrite /block_right Hi.
+by case: arg_maxnP; [exact: right_ok_self | move=> ? _; apply].
+Qed.
+
+Lemma block_left_le s i :
+  is_descent s i -> val (block_left s i) <= val i.
+Proof.
+move=> Hi; have := block_left_left_ok Hi.
+by rewrite /left_ok; case/andP.
+Qed.
+
+Lemma block_right_ge s i :
+  is_descent s i -> val i <= val (block_right s i).
+Proof.
+move=> Hi; have := block_right_right_ok Hi.
+by rewrite /right_ok; case/andP.
+Qed.
+
+(* Every position in [block_left, i] is a descent. *)
+Lemma block_left_descent s i (k : 'I_n) :
+  is_descent s i ->
+  val (block_left s i) <= val k <= val i -> is_descent s k.
+Proof.
+move=> Hi Hk.
+have /andP [_ /forallP /(_ k) /implyP /(_ Hk) //] := block_left_left_ok Hi.
+Qed.
+
+Lemma block_right_descent s i (k : 'I_n) :
+  is_descent s i ->
+  val i <= val k <= val (block_right s i) -> is_descent s k.
+Proof.
+move=> Hi Hk.
+have /andP [_ /forallP /(_ k) /implyP /(_ Hk) //] := block_right_right_ok Hi.
+Qed.
+
+(* Combined: every position in [block_left, block_right] is a descent. *)
+Lemma block_descent_chain s i (k : 'I_n) :
+  is_descent s i ->
+  val (block_left s i) <= val k <= val (block_right s i) ->
+  is_descent s k.
+Proof.
+move=> Hi Hk; case/andP: Hk => H1 H2.
+case: (leqP (val k) (val i)) => Hki.
+  have Hr : val (block_left s i) <= val k <= val i by rewrite H1 Hki.
+  exact: block_left_descent Hi Hr.
+have Hr : val i <= val k <= val (block_right s i) by rewrite (ltnW Hki) H2.
+exact: block_right_descent Hi Hr.
+Qed.
+
+Lemma block_left_le_right s i :
+  is_descent s i -> val (block_left s i) <= val (block_right s i).
+Proof.
+move=> Hi; apply: (leq_trans (block_left_le Hi) (block_right_ge Hi)).
+Qed.
+
+(* Minimality: one step left of block_left is NOT a descent (when >0). *)
+Lemma block_left_minimal s i :
+  is_descent s i ->
+  forall l' : 'I_n, val l' = (val (block_left s i)).-1 ->
+  val (block_left s i) > 0 -> ~~ is_descent s l'.
+Proof.
+move=> Hi l' Hl' Hpos; apply/negP => Hdes.
+(* If is_descent s l', then left_ok s i l', contradicting minimality. *)
+have Hok : left_ok s i l'.
+  rewrite /left_ok; apply/andP; split.
+    rewrite Hl'; apply: (leq_trans (leq_pred _) (block_left_le Hi)).
+  apply/forallP => k; apply/implyP; case/andP => Hk1 Hk2.
+  case: (leqP (val (block_left s i)) (val k)) => Hkb.
+    have Hr : val (block_left s i) <= val k <= val i by rewrite Hkb Hk2.
+    exact: block_left_descent Hi Hr.
+  (* val k < val (block_left s i), so val k <= val l' = pred of block_left *)
+  have Ek : k = l'.
+    apply/val_inj; apply/eqP; rewrite eqn_leq.
+    have Hkle : val k <= (val (block_left s i)).-1.
+      by rewrite -ltnS prednK.
+    by rewrite -Hl' in Hkle; rewrite Hkle Hk1.
+  by rewrite Ek.
+have := block_left_min Hi Hok; rewrite Hl' leqNgt => /negP; apply.
+by rewrite prednK.
+Qed.
+
+(* Maximality: one step right of block_right is NOT a descent (when <n). *)
+Lemma block_right_maximal s i :
+  is_descent s i ->
+  forall r' : 'I_n, val r' = (val (block_right s i)).+1 ->
+  ~~ is_descent s r'.
+Proof.
+move=> Hi r' Hr'; apply/negP => Hdes.
+have Hok : right_ok s i r'.
+  rewrite /right_ok; apply/andP; split.
+    by rewrite Hr'; apply: (leq_trans (block_right_ge Hi)).
+  apply/forallP => k; apply/implyP; case/andP => Hk1 Hk2.
+  case: (leqP (val k) (val (block_right s i))) => Hkb.
+    have Hr : val i <= val k <= val (block_right s i) by rewrite Hk1 Hkb.
+    exact: block_right_descent Hi Hr.
+  (* val k > val (block_right s i), so val k >= val r' *)
+  have Ek : k = r'.
+    apply/val_inj; apply/eqP; rewrite eqn_leq.
+    by rewrite Hr' Hkb /= -Hr' Hk2.
+  by rewrite Ek.
+have := block_right_max Hi Hok; rewrite Hr' leqNgt => /negP; apply.
+by rewrite ltnS.
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* Chain-of-values lemma: σ strictly decreases across the block.            *)
+(* For consecutive positions in 'I_n.+1 whose indices range over             *)
+(* [val (block_left σ i), (val (block_right σ i)).+1], σ is strictly          *)
+(* decreasing.                                                                *)
+(* ------------------------------------------------------------------------- *)
+
+(* One-step decrease: if k is a descent, then σ(widen k) > σ(lift k),        *)
+(* and the nat indices of widen_ord k and lift ord0 k are (val k) and        *)
+(* (val k).+1 respectively. We expose this as a chain statement over         *)
+(* positions in 'I_n.+1.                                                      *)
+
+Lemma block_chain_step s i (k : 'I_n) :
+  is_descent s i ->
+  val (block_left s i) <= val k <= val (block_right s i) ->
+  s (widen_ord (leqnSn n) k) > s (lift ord0 k).
+Proof. by move=> Hi Hk; have := block_descent_chain Hi Hk. Qed.
+
+(* Main chain-of-values lemma. For positions p q : 'I_n.+1 inside            *)
+(* [l, r+1], with val p < val q, we have s p > s q.                          *)
+
+Lemma block_chain_values s i (p q : 'I_n.+1) :
+  is_descent s i ->
+  val (block_left s i) <= val p -> val q <= (val (block_right s i)).+1 ->
+  val p < val q -> s p > s q.
+Proof.
+move=> Hi Hp Hq Hpq.
+suff H : forall d (p' q' : 'I_n.+1),
+    val q' = (val p' + d.+1)%N ->
+    val (block_left s i) <= val p' ->
+    val q' <= (val (block_right s i)).+1 ->
+    s p' > s q'.
+  pose d := (val q - val p).-1.
+  have Hd : val q = (val p + d.+1)%N.
+    have Hsub : val q - val p > 0 by rewrite subn_gt0.
+    rewrite /d prednK // addnBA; last exact: ltnW.
+    by rewrite addnC addnK.
+  exact: (H d p q Hd Hp Hq).
+move=> {p q Hp Hq Hpq}.
+(* Induction on q using position-based step. *)
+move=> d; elim: d => [|d IH] p q Hq Hp Hqr.
+  (* d = 0: q = p+1, so positions are "consecutive" in 'I_n.+1 *)
+  rewrite addn1 in Hq.
+  (* Need a descent witness k : 'I_n with val k = val p. *)
+  have Hp_lt : val p < n.
+    have Hle : (val p).+1 <= (val (block_right s i)).+1 by rewrite -Hq.
+    rewrite ltnS in Hle.
+    exact: (leq_ltn_trans Hle (ltn_ord _)).
+  pose k := Ordinal Hp_lt.
+  have Hk_range : val (block_left s i) <= val k <= val (block_right s i).
+    rewrite /= Hp /=.
+    have Hle : (val p).+1 <= (val (block_right s i)).+1 by rewrite -Hq.
+    by rewrite ltnS in Hle.
+  have Hstep := block_chain_step Hi Hk_range.
+  have Ep : p = widen_ord (leqnSn n) k by apply/val_inj.
+  have Eq : q = lift ord0 k.
+    by apply/val_inj; rewrite /= /bump /= add1n Hq.
+  by rewrite Ep Eq.
+(* d.+1 case: insert intermediate position p+1. *)
+have Hp1_lt : (val p).+1 < n.+1.
+  rewrite ltnS.
+  have Hle : val p + d.+2 <= (val (block_right s i)).+1 by rewrite -Hq.
+  have Hle2 : (val p).+1 <= (val (block_right s i)).+1.
+    by apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
+  rewrite ltnS in Hle2.
+  by apply: (leq_ltn_trans Hle2); apply: ltn_ord.
+pose p' := Ordinal Hp1_lt.
+have Hp'_val : val p' = (val p).+1 by [].
+(* step1: s p > s p' via block_chain_step (single descent). *)
+have Hp_lt_n : val p < n.
+  have Hle : val p + d.+2 <= (val (block_right s i)).+1 by rewrite -Hq.
+  have Hle2 : (val p).+1 <= (val (block_right s i)).+1.
+    by apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
+  rewrite ltnS in Hle2.
+  exact: (leq_ltn_trans Hle2 (ltn_ord _)).
+pose k := Ordinal Hp_lt_n.
+have Hk_range : val (block_left s i) <= val k <= val (block_right s i).
+  rewrite /= Hp /=.
+  have Hle : val p + d.+2 <= (val (block_right s i)).+1 by rewrite -Hq.
+  have Hle2 : (val p).+1 <= (val (block_right s i)).+1.
+    by apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
+  by rewrite ltnS in Hle2.
+have Hstep := block_chain_step Hi Hk_range.
+have Ep : p = widen_ord (leqnSn n) k by apply/val_inj.
+have Ep' : p' = lift ord0 k by apply/val_inj; rewrite /= /bump /= add1n.
+have step1 : s p > s p' by rewrite Ep Ep'.
+have step2 : s p' > s q.
+  apply: (IH p' q) => //.
+    by rewrite Hp'_val Hq addnS.
+  by apply: (leq_trans Hp); rewrite Hp'_val.
+exact: (ltn_trans step2 step1).
+Qed.
+
+End FoataBlocks.
+
+
