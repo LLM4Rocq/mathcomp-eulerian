@@ -250,10 +250,35 @@ Qed.
 Lemma set_is_alt_classify n (D : {set 'I_n}) :
   set_is_alt D -> D = alt_desc_set n \/ D = ~: alt_desc_set n.
 Proof.
-(* Proof by induction on val i: if D is set_is_alt, then membership at i
-   alternates with parity of val i, fully determined by membership at ord0
-   (or by emptiness if n = 0). *)
-Admitted.
+move=> HD.
+case: n D HD => [|n] D HD.
+  by left; apply/setP; case; case.
+have HD' : forall (i1 i2 : 'I_n.+1), val i2 = (val i1).+1 ->
+  (i1 \in D) != (i2 \in D).
+  move=> i1 i2 Hi12.
+  have := forallP (forallP HD i1) i2.
+  by rewrite Hi12 eqxx.
+have helper : forall v (i : 'I_n.+1), val i = v ->
+  (i \in D) = (ord0 \in D) (+) odd v.
+  elim/ltn_ind => v IHv i Hv.
+  case: v IHv Hv => [|v] IHv Hv.
+  - have -> : i = ord0 by apply/val_inj.
+    by rewrite addbF.
+  - have Hvn : v < n.+1 by rewrite -Hv; apply: ltnW; exact: ltn_ord.
+    have IHv' : (Ordinal Hvn \in D) = (ord0 \in D) (+) odd v.
+      by apply: (IHv v (ltnSn v) (Ordinal Hvn) erefl).
+    have Halt : val i = (val (Ordinal Hvn)).+1 by rewrite Hv.
+    have := HD' (Ordinal Hvn) i Halt.
+    rewrite IHv' /=.
+    by case: (ord0 \in D); case: (i \in D); case: (odd v).
+case Hord0 : (ord0 \in D).
+- left; apply/setP => i.
+  rewrite mem_alt_desc_set (helper (val i) i erefl) Hord0 /=.
+  by case: (odd i).
+- right; apply/setP => i.
+  rewrite inE mem_alt_desc_set (helper (val i) i erefl) Hord0 /=.
+  by case: (odd i).
+Qed.
 
 (* Helper for the second-alt branch: if D' is set_is_alt then β(D') = β(alt). *)
 Lemma beta_set_is_alt_eq n (D' : {set 'I_n}) :
@@ -330,9 +355,12 @@ elim => [|k IH] D HM Hnalt.
     by rewrite (beta_set_is_alt_eq H') in Hstrict.
   + (* toggled set still not set-alt: apply IH *)
     apply: (ltn_trans Hstrict).
-    (* The bound chasing for IH; admitted for now *)
-    admit.
-Admitted.
+    apply: IH; last by rewrite H'.
+    have HbDlt : beta D < (n.+1)`! := beta_lt_fact Hnalt.
+    apply: leq_trans (_ : (n.+1)`! - (beta D).+1 <= k).
+      by apply: leq_sub2l; exact: Hstrict.
+    by rewrite subnS -ltnS prednK ?subn_gt0.
+Qed.
 
 (* Spec-facing lemma. *)
 Lemma beta_alt_max n (D : {set 'I_n}) :
