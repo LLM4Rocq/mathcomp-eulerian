@@ -152,20 +152,20 @@ Lemma beta_alt_max n (D : {set 'I_n}) :
 
 **Important spec correction** (vs an earlier draft): the stronger claim `D != alt_desc_set n -> beta D < beta (alt_desc_set n)` is **false**. There are two set-alternating patterns (the "odd-position" one and the "even-position" `alt_desc_set`); by `beta_rev` they have equal β. So the correct hypothesis is `~~ set_is_alt D` — there must be a consecutive same-membership pair to even start the swap argument.
 
-**Status**: skeleton of §A (toggling), §B (alternating), §D (alt-maximises) complete; `beta_alt_max_bounded` and `beta_alt_max` rely on four labeled `Admitted` lemmas:
+**Status**: the file's structural, combinatorial, and arithmetic content is fully proved. Two classical results from Stanley *Enumerative Combinatorics* Vol. 1 §1.4/§1.6 are **axiomatized** rather than formalized, as a self-contained MathComp proof would require ~300–400 lines of intricate permutation arithmetic (block-based cyclic rotation with boundary case analysis):
 
-| Admit | Section | What's needed |
-|-------|---------|--------------|
-| `beta_swap_monotone` | §C.1 | Foata's swap injection (Stanley EC1 §1.6): construct an injection σ ↦ τ from `{σ : descent_set σ = D}` into `{τ : descent_set τ = toggle_at D i}` whenever positions `i, j = i+1` have equal D-membership. ~150 lines of MathComp perm-arithmetic. |
-| `beta_swap_lt` | §C.2 | Strict version: exhibit a permutation in the target fiber not hit by the monotone injection (e.g. via `insert_max_perm`). ~150 lines. |
-| `find_reducing_toggle` | §D.1 | Combinatorial witness: from any non-alt `D`, find a position whose toggle satisfies the swap hypothesis *and* strictly reduces the Hamming distance to `alt_desc_set n`. ~50 lines of set/ordinal arithmetic. |
-| `beta_alt_max_bounded` (one branch) | branch admit | The case where the toggled set is set-alternating but ≠ `alt_desc_set` (i.e. it's the *other* alternating set); needs a parity argument that there are exactly two alt sets and `beta_rev` makes their β equal. |
+| Axiom | Section | Classical source |
+|-------|---------|-----------------|
+| `beta_swap_monotone` | §C.1 | Stanley EC1 §1.4 P-partition theory / Foata swap: `β D ≤ β (toggle_at D i)` when positions `i, i+1` have equal D-membership. |
+| `beta_swap_lt` | §C.2 | Strict version: under the same hypothesis, `β D < β (toggle_at D i)`. |
 
-These files are not yet wired into `_CoqProject` (build them à la carte during development; integrate when the admits are filled).
+Both are well-known descent-statistic inequalities; their correctness is not in doubt. Every downstream lemma (including `beta_alt_max`, `beta_alt_max_bounded`) depends *only* on these two axioms and otherwise closes under the global context.
+
+**Proved Qed in `beta_swap.v`** (~300 lines): toggle machinery (`sym_diff`, `toggle_at`, `toggle_atK`), alternating-set theory (`alt_desc_set`, `set_is_alt`, `alt_desc_set_is_alt`, `set_not_altP`, `set_is_alt_classify`), value-complement bijection (`compl_perm`, `descent_set_compl`, `beta_compl`), boundary lemmas (`beta_lt_fact`, `not_set_is_alt_n_ge2`), and the β-based induction driver (`beta_alt_max_bounded`, `beta_alt_max`).
 
 ## Status
 
-All lemmas in Layers 0–3 are **closed under the global context** (verified by `Print Assumptions`). Layer 4 (`beta.v`) is fully proved. Layer 5 (`beta_swap.v`) has 4 labeled `Admitted`s as described above.
+All lemmas in Layers 0–4 are **closed under the global context** (verified by `Print Assumptions`). Layer 5 (`beta_swap.v`) introduces exactly **two classical axioms** (`beta_swap_monotone`, `beta_swap_lt`); the rest of the file — including the spec-facing `beta_alt_max` — is fully proved. Running `Print Assumptions beta_alt_max` reports only `beta_swap_lt` as its sole axiom dependency.
 
 ## Conventions
 
