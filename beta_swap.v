@@ -87,46 +87,79 @@ Qed.
 (* §C. β-swap lemmas (Foata — classical)                                      *)
 (* ========================================================================= *)
 
-(* The following axioms are a special case of a classical theorem:
+(* The two target lemmas — `beta_swap_monotone_both_in` (≤) and
+   `beta_swap_lt_both_in` (<) — are PROVED from two sub-axioms that
+   partition the argument into Case A (ω-containment) and Case B
+   (adjacent ω-swap).
 
-     Stanley, Enumerative Combinatorics Vol. 1 (2nd ed.), Proposition 1.6.4.
-     If ω(S) ⊂ ω(T), then βₙ(S) < βₙ(T).
+   Background: Stanley EC1 (2nd ed.), Proposition 1.6.4 states
+     ω(S) ⊂ ω(T) ⟹ βₙ(S) < βₙ(T).
+   When i, j = i+1 are both in D and we toggle j, the ω-bit analysis
+   (see §H below, `toggle_at_j_omega_bit_i_new`) gives two cases:
 
-   (The ω-map of §1.6 sends S ⊆ [n-1] to the subset of i ∈ [n-2] for which
-   exactly one of i, i+1 lies in S.) When i, j = i+1 are both descents of D,
-   toggling i flips at least the ω-bit at position i, extending ω(D); this
-   is the strict-extension case of 1.6.4 (see §H below for the partial
-   ω-bridge already formalized).
+   Case A (j at boundary or j+1 ∈ D): ω(D) ⊊ ω(D \ {j}).
+     Prop 1.6.4 yields β(D) < β(D \ {j}).
+     Proved seq-level in psi.v (omega_monotone_class_count +
+     strict_witness_exists); the finset-level bridge is axiomatized below.
 
-   Stanley's proof of 1.6.4 is non-trivial: it routes through the cd-index
-   of §1.6.3 (Theorem 1.6.3, "the ab-index Ψₙ can be written as a polynomial
-   in c = a+b and d = ab+ba with nonnegative integer coefficients"), which
-   in turn requires the min-max-tree machinery (Facts #1–#3) including the
-   commuting ψᵢ involutions and their descent-set effect.
+   Case B (j < n-1 and j+1 ∉ D): ω-sets differ by swapping bit j for
+     bit i. Neither contains the other, so Prop 1.6.4 does not apply
+     directly. The inequality requires a cd-index marginal-contribution
+     comparison (see M7_CLOSING_AXIOMS_INFORMAL.md §4.5).
 
-   No shorter self-contained combinatorial argument is known to us. Naïve
-   rotation-based bijections fail at block-boundary cases (an explicit S₉
-   counterexample is documented in AXIOMS_TODO.md). Formalizing 1.6.4
-   end-to-end is estimated at 3–5 weeks of MathComp development; see
-   AXIOMS_TODO.md for the preserved partial infrastructure (omega_set in
-   §H, Foata block endpoints in §I) and a roadmap for a future attempt.
+   We axiomatize ONLY the two sub-cases; the target lemmas are derived.
+   The "both ascents" case is DERIVED via the value-complement involution
+   (compl_perm, beta_compl, descent_set_compl). *)
 
-   We axiomatize only the "both descents" case (both i, j = i+1 ∈ D). The
-   "both ascents" case is DERIVED from this axiom via the value-complement
-   involution (compl_perm, beta_compl, descent_set_compl), reducing the
-   axiomatic content to one case. *)
+(* Sub-axiom, Case A: j at boundary or j+1 ∈ D.
+   Justification: toggle_at_j_omega_strict_superset (§H below) shows
+   ω(D) ⊊ ω(D \ {j}) under this hypothesis. Prop 1.6.4 (proved seq-level
+   in psi.v via omega_monotone_class_count + strict_witness_exists) then
+   gives β(D) < β(D \ {j}). The finset/seq type bridge is the remaining
+   gap; see psi.v §M6.6 comments. *)
+Axiom beta_swap_lt_caseA : forall n (D : {set 'I_n}) (i j : 'I_n),
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  (forall q : 'I_n, val q = (val j).+1 -> q \in D) ->
+  beta D < beta (toggle_at D j).
 
-(* "Both descents" monotonicity (atomic axiom). *)
-Axiom beta_swap_monotone_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
+(* Sub-axiom, Case B: j < n-1 and j+1 ∉ D — ω-sets differ by adjacent swap.
+   Justification: omega(D) and omega(toggle_at D j) differ by swapping bit j
+   for bit i (see M7_CLOSING_AXIOMS_INFORMAL.md §3.3 / §4.5). The inequality
+   follows from comparing cd-index marginal contributions of adjacent
+   ω-positions, which requires Theorem 1.6.3 (nonneg cd-index) plus a
+   monotonicity argument on the recursive structure of min-max trees. *)
+Axiom beta_swap_lt_caseB : forall n (D : {set 'I_n}) (i j : 'I_n),
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  (exists q : 'I_n, val q = (val j).+1 /\ q \notin D) ->
+  beta D < beta (toggle_at D j).
+
+(* "Both descents" strict version (PROVED from the two sub-axioms). *)
+Lemma beta_swap_lt_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
   val j = (val i).+1 ->
   i \in D -> j \in D ->
-  beta D <= beta (toggle_at D i).
+  beta D < beta (toggle_at D j).
+Proof.
+move=> n D i j Hj Hi Hj'.
+case: (boolP [exists q : 'I_n, (val q == (val j).+1) && (q \notin D)]).
+- move/existsP => [q /andP [/eqP Hq Hqnot]].
+  apply: (beta_swap_lt_caseB Hj Hi Hj'); by exists q.
+- move/existsPn => Hall.
+  apply: (beta_swap_lt_caseA Hj Hi Hj') => q Hq.
+  have := Hall q; rewrite Hq eqxx /=; by rewrite negbK.
+Qed.
 
-(* "Both descents" strict version (atomic axiom). *)
-Axiom beta_swap_lt_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
+(* "Both descents" monotonicity (PROVED from the strict version).
+   NOTE: toggles the UPPER index j = i+1, not i. Toggling the lower index
+   can decrease β — counterexample: n=4, D={2,3}, i=2, β(D)=6 > 4=β(D\{2}).
+   Toggling j removes the upper descent, which always increases β. *)
+Lemma beta_swap_monotone_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
   val j = (val i).+1 ->
   i \in D -> j \in D ->
-  beta D < beta (toggle_at D i).
+  beta D <= beta (toggle_at D j).
+Proof.
+move=> n D i j Hj Hi Hj'.
+exact: ltnW (beta_swap_lt_both_in Hj Hi Hj').
+Qed.
 
 (* Toggle commutes with complement on the set side.
    Used to reduce the "both ascents" case to the "both descents" case. *)
@@ -263,7 +296,7 @@ apply/imsetP/idP.
 Qed.
 
 (* β-swap monotonicity: if positions i and j = i+1 have the same
-   D-membership, then toggling i does not decrease β. Derived from the
+   D-membership, then toggling j does not decrease β. Derived from the
    "both descents" axiom `beta_swap_monotone_both_in` via the value-
    complement involution: when both i, j are ASCENTS in D, they are both
    DESCENTS in ~: D; applying the axiom to ~: D and translating back via
@@ -271,7 +304,7 @@ Qed.
 Lemma beta_swap_monotone n (D : {set 'I_n}) (i j : 'I_n) :
   val j = (val i).+1 ->
   (i \in D) = (j \in D) ->
-  beta D <= beta (toggle_at D i).
+  beta D <= beta (toggle_at D j).
 Proof.
 move=> Hj Hij.
 case Hi : (i \in D).
@@ -281,14 +314,14 @@ case Hi : (i \in D).
   have Hj' : j \in ~: D by rewrite !inE -Hij Hi.
   have H := beta_swap_monotone_both_in Hj Hi' Hj'.
   rewrite toggle_at_compl in H.
-  by rewrite (beta_compl D) (beta_compl (toggle_at D i)).
+  by rewrite (beta_compl D) (beta_compl (toggle_at D j)).
 Qed.
 
 (* Strict version, derived identically. *)
 Lemma beta_swap_lt n (D : {set 'I_n}) (i j : 'I_n) :
   val j = (val i).+1 ->
   (i \in D) = (j \in D) ->
-  beta D < beta (toggle_at D i).
+  beta D < beta (toggle_at D j).
 Proof.
 move=> Hj Hij.
 case Hi : (i \in D).
@@ -298,7 +331,7 @@ case Hi : (i \in D).
   have Hj' : j \in ~: D by rewrite !inE -Hij Hi.
   have H := beta_swap_lt_both_in Hj Hi' Hj'.
   rewrite toggle_at_compl in H.
-  by rewrite (beta_compl D) (beta_compl (toggle_at D i)).
+  by rewrite (beta_compl D) (beta_compl (toggle_at D j)).
 Qed.
 
 (* ========================================================================= *)
@@ -401,8 +434,8 @@ elim => [|k IH] D HM Hnalt.
   by move: HM; rewrite leqn0 subn_eq0 leqNgt Hlt.
 - (* Step: apply beta_swap_lt at any same-pair, then IH *)
   case: (set_not_altP Hnalt) => i [j [Hj Hij]].
-  have Hstrict : beta D < beta (toggle_at D i) := beta_swap_lt Hj Hij.
-  case H' : (set_is_alt (toggle_at D i)).
+  have Hstrict : beta D < beta (toggle_at D j) := beta_swap_lt Hj Hij.
+  case H' : (set_is_alt (toggle_at D j)).
   + (* toggled set is set-alt: β(toggled) = β(alt) by classification + beta_compl *)
     by rewrite (beta_set_is_alt_eq H') in Hstrict.
   + (* toggled set still not set-alt: apply IH *)
@@ -520,6 +553,76 @@ have Hpd : p \in D by apply: Hpred.
 rewrite mem_omega_set toggle_at_other; last by rewrite eq_sym.
 rewrite Elxi toggle_at_self Hi /=.
 by rewrite -/p Hpd.
+Qed.
+
+(* ----- j-toggle analogues ------------------------------------------------ *)
+(* When we toggle j = i+1 (the UPPER index, as in the corrected §C axioms),
+   the ω-bit at position i is always gained, and the bit at i-1 is NOT
+   affected (since neither i-1 nor i changes membership). This makes the
+   j-toggle strictly better-behaved than the i-toggle for the ω-bridge. *)
+
+(* The ω-bit at position i always enters ω after toggling j. *)
+Lemma toggle_at_j_omega_bit_i_new n (D : {set 'I_n.+1}) (i j : 'I_n.+1) :
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  exists k : 'I_n,
+    [/\ widen_ord (leqnSn n) k = i,
+        lift ord0 k = j,
+        k \notin omega_set D &
+        k \in omega_set (toggle_at D j)].
+Proof.
+move=> Hj Hi Hj'.
+have Hik : val i < n.
+  by have := ltn_ord j; rewrite Hj -ltnS.
+pose k := Ordinal Hik.
+have Ewid : widen_ord (leqnSn n) k = i by apply/val_inj.
+have Elif : lift ord0 k = j by apply/val_inj; rewrite /= /bump /= add1n -Hj.
+have Hij : i != j by rewrite -val_eqE Hj /=; elim: (val i).
+exists k; split => //.
+  by rewrite mem_omega_set Ewid Elif Hi Hj'.
+rewrite mem_omega_set Ewid Elif.
+have Hji : j != i by rewrite eq_sym.
+by rewrite (toggle_at_other _ Hji) Hi toggle_at_self Hj'.
+Qed.
+
+(* Strict ω-superset under j-toggle — with the extra hypothesis that
+   the successor position j+1 is also in D (or j is at the boundary,
+   in which case the hypothesis is vacuously true). This is Case A of
+   the j-toggle ω-analysis, corresponding to beta_swap_lt_caseA.  *)
+Lemma toggle_at_j_omega_strict_superset n
+  (D : {set 'I_n.+1}) (i j : 'I_n.+1) :
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  (forall q : 'I_n.+1, val q = (val j).+1 -> q \in D) ->
+  omega_set D \proper omega_set (toggle_at D j).
+Proof.
+move=> Hj Hi Hj' Hsucc.
+have [k [Ewid Elif Hknot Hkin]] := toggle_at_j_omega_bit_i_new Hj Hi Hj'.
+apply/properP; split; last by exists k.
+apply/subsetP => x Hx.
+have Hxk : x != k.
+  by apply/eqP => E; subst x; move: Hknot; rewrite Hx.
+have Hij : i != j by rewrite -val_eqE Hj /=; elim: (val i).
+rewrite mem_omega_set in Hx *.
+case Elxj : (lift ord0 x == j).
+- (* lift x = j implies x = k, contradiction *)
+  exfalso; move/eqP: Hxk; apply; apply/val_inj.
+  have Hxval : val x = val i.
+    have := congr1 val (eqP Elxj); rewrite /= /bump /= add1n Hj => [[]] //.
+  rewrite Hxval; have := congr1 val Ewid; rewrite /= => <- //.
+- case Ewxj : (widen_ord (leqnSn n) x == j).
+  + (* widen x = j: toggle flips widen x; lift x has val = (val j).+1 *)
+    rewrite mem_omega_set (eqP Ewxj) toggle_at_self Hj' /=.
+    have Hlxnj : j != lift ord0 x by rewrite eq_sym; exact: negbT Elxj.
+    rewrite toggle_at_other //.
+    have Hvlx : val (lift ord0 x) = (val j).+1.
+      have := congr1 val (eqP Ewxj); rewrite /= => Hvx.
+      by rewrite /= /bump /= add1n Hvx.
+    by rewrite (Hsucc _ Hvlx).
+  + (* widen x != j, lift x != j: both unchanged by toggle *)
+    rewrite mem_omega_set.
+    have Hwxnj : j != widen_ord (leqnSn n) x.
+      by rewrite eq_sym; exact: negbT Ewxj.
+    have Hlxnj : j != lift ord0 x by rewrite eq_sym; exact: negbT Elxj.
+    by rewrite !toggle_at_other.
 Qed.
 
 (* ========================================================================= *)
