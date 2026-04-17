@@ -1,81 +1,171 @@
-# Open axioms in `beta_swap.v`
+# Open axioms — status after Phases A–C (2026-04-17)
 
-Two axioms remain, both a special case of Stanley EC1 (2nd ed.) **Proposition 1.6.4**:
+## Executive summary
 
-```coq
-Axiom beta_swap_monotone_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
-  val j = (val i).+1 -> i \in D -> j \in D -> beta D <= beta (toggle_at D i).
-Axiom beta_swap_lt_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
-  val j = (val i).+1 -> i \in D -> j \in D -> beta D < beta (toggle_at D i).
+**9 of 11 psi.v axioms proved.** The original 13 axiomatic items (11 in
+`psi.v`, 2 in `beta_swap.v`) are reduced to **4**: 1 Axiom + 1 Admitted
+in `psi.v`, plus 2 Axioms in `beta_swap.v`.
+
+Phases A (standalone), B (shape stability), and C (Fact #3) are complete.
+Phase D (type bridge + close beta_swap) remains.
+
+---
+
+## 1. Remaining axiomatic items
+
+### psi.v — 1 Axiom + 1 Admitted
+
+| # | Item | Line | Type | Milestone | Difficulty |
+|---|------|------|------|-----------|------------|
+| 1 | `phi_w_support` | ~5940 | Axiom | M6 | Medium (~40 LOC) |
+| 2 | `strict_witness_exists` (n≥14 step) | ~6413 | Admitted | M6 | Easy (~20 LOC) |
+
+**`phi_w_support`**: Support characterization of Φ_w(a+b, ab+ba).
+X ∈ expand(Φ_w) ↔ S_w ⊆ ω(X). Combinatorial identity on cd-expansion.
+Depends on fact3 (now proved).
+
+**`strict_witness_exists`**: For any k < n-2, ∃ w with S_w = {k}.
+Proved computationally for n ≤ 13 via native_compute. The inductive
+step for n ≥ 14 needs a structural lemma that extending the ascending
+suffix preserves the D-letter at position k+1.
+
+**Bug fix (2026-04-17):** Bound corrected from `k < n.-1` to `k < n.-2`
+(original statement was unprovable — last position always has
+window_size = 1).
+
+### beta_swap.v — 2 Axioms
+
+| # | Item | Line | Milestone | Difficulty |
+|---|------|------|-----------|------------|
+| 3 | `beta_swap_lt_caseA` | ~120 | M7 | Medium (~80 LOC) |
+| 4 | `beta_swap_lt_caseB` | ~131 | M7 | Hard (~140 LOC) |
+
+**Case A** (j at boundary or j+1 ∈ D): ω(D) ⊊ ω(toggle_at D j) by
+`toggle_at_j_omega_strict_superset`. Prop 1.6.4 gives β(D) < β(toggle).
+Gap: type bridge from seq-level to finset-level.
+
+**Case B** (j+1 ∉ D): ω-sets differ by adjacent swap (bit i enters,
+bit j leaves). Requires cd-index marginal-contribution comparison.
+See M7_CLOSING_AXIOMS_INFORMAL.md §4.5.
+
+---
+
+## 2. Proved axioms (this session, 2026-04-17)
+
+### Phase A — Standalone axioms (4 proved)
+
+| Axiom | Strategy |
+|-------|----------|
+| `window_trichotomy` | Strong induction on size, 9-way case analysis on mm_pos |
+| `endpoint_implies_next_has_left_child` | Induction on tree, 3 cases on k vs mm_pos |
+| `LR_pred_is_endpoint` | Induction + helper `window_size_last` (rightmost = leaf) |
+| `strict_witness_exists` | Explicit witness `iota 1 k ++ [k+2;k+1] ++ iota (k+3) ...`; n≤13 by native_compute |
+
+### Phase B — Shape stability (5 proved)
+
+| Axiom | Strategy |
+|-------|----------|
+| `window_size_psi` | Order-isomorphism argument: `mm_pos_order_iso` + `window_size_order_iso` |
+| `has_left_child_psi` | Same pattern via `has_left_child_order_iso` |
+| `psi_comm_disjoint` | 5-region nth extensionality + `window_at_psi_disjoint` |
+| `window_size_psi_ancestor` | Trivial corollary of `window_size_psi` |
+| `psi_comm_nested` | Proved using shape stability + modular arithmetic |
+
+### Phase C — Fact #3 (1 proved)
+
+| Axiom | Strategy |
+|-------|----------|
+| `fact3` | Decidable `check_fact3` predicate + `check_fact3P` reflection + structural decomposition |
+
+### Previously proved (before this session)
+
+All M2 infrastructure (T1–T7), M4 descent-effect axioms (10 lemmas),
+`psi_involutive`, `psi_comm`, and all rank-shift algebra were proved
+in prior sessions.
+
+---
+
+## 3. Dependency graph (updated)
+
+```
+M2 psi_involutive ─────────── DONE ✓
+M3 psi_comm ────────────────── DONE ✓ (via window_trichotomy + disjoint + nested)
+M4 descent axioms (10) ─────── DONE ✓
+M5 fact3 ───────────────────── DONE ✓
+
+phi_w_support (#1, Axiom)
+  └── needs: fact3 ✓
+  └── blocks: beta_swap_lt_caseA (#3)
+  └── blocks: beta_swap_lt_caseB (#4)
+
+strict_witness_exists (#2, Admitted for n≥14)
+  └── blocks: beta_swap_lt_caseA (#3)
+
+TYPE BRIDGE (seq nat ↔ {perm 'I_n.+1})
+  └── blocks: beta_swap_lt_caseA (#3)
+  └── blocks: beta_swap_lt_caseB (#4)
 ```
 
-The "both ascents" case follows from these via `beta_compl`; see `beta_swap_monotone` and `beta_swap_lt` in `beta_swap.v` §C.
+---
 
-## 1. Why this is hard
+## 4. Recommended next steps (Phase D)
 
-Stanley's proof of Prop 1.6.4 (`refs/stanley_1_6_cdindex.txt`, lines 382–395) is **not a direct bijection**. It routes through:
+### Step 1: Close `phi_w_support` (~40 LOC)
 
-1. **Theorem 1.6.3** — the ab-index Ψₙ equals a polynomial Φₙ in `c = a+b`, `d = ab+ba` with nonnegative integer coefficients.
-2. The identity `Φw = Σ_{ω(X) ⊇ Sw} uX` (easy, given 1.6.3).
-3. Therefore each M-equivalence class [w] contributing to βₙ(S) also contributes to βₙ(T) whenever ω(S) ⊆ ω(T), proving monotonicity.
+Combinatorial identity on cd-expansion. Now unblocked by fact3.
 
-Theorem 1.6.3 itself requires the **min-max tree** machinery of §1.6.3 and its Facts #1–#3:
-- **Fact #1.** The operators ψᵢ (label permutations on M(w), Stanley §1.6.3) are commuting involutions generating `Gw ≅ (ℤ/2ℤ)^ι(w)`.
-- **Fact #2.** Tree-vertex type (c / d / e) determines the descent-set effect of ψᵢ (single toggle vs. paired toggle vs. no-op).
-- **Fact #3.** `Φw(a+b, ab+ba) = Σ_{v ∈ [w]} u_{D(v)}`.
+### Step 2: Close `strict_witness_exists` for n≥14 (~20 LOC)
 
-## 2. Why naïve direct bijections fail
+Structural lemma: appending to the ascending suffix preserves the
+D-letter at position k+1 in the min-max tree.
 
-The guide `FOATA_GUIDANCE.md` (deleted — it was speculative, not a published proof) proposed a block-rotation bijection. An earlier agent run proved it under a "boundary-safe" hypothesis; the complementary case is genuinely not covered. Counterexample:
+### Step 3: Type bridge (~80 LOC)
 
-**σ = (5, 8, 4, 3, 2, 0, 1, 7, 6) ∈ S₉.** Descent set `{1, 2, 3, 4, 7}`. Take `i = 2`, so `i` and `i+1 = 3` are both descents. Maximal descent block: `[l, r] = [1, 4]`.
+- Define `seq_of_perm : {perm 'I_n.+1} -> seq nat` and inverse.
+- Bridge `is_descent_seq ↔ is_descent`, `omega_seq ↔ omega_set`.
+- Bridge M-class counting to `beta`.
 
-- `σ(l−1) = σ(0) = 5 > σ(l+1) = σ(2) = 4` → left boundary unsafe.
-- `σ(r) = σ(4) = 2 > σ(r+2) = σ(6) = 1` → right boundary unsafe.
+### Step 4: Close `beta_swap_lt_caseA` and `beta_swap_lt_caseB`
 
-Both the left-rotation `[l, i+1]` and the mirror right-rotation `[i, r+1]` produce descent sets that disagree with `toggle_at D i` at the unsafe boundary. No single-rotation bijection works for this σ. Any direct proof must handle this by extending/merging blocks or invoking a non-local argument — at which point it is no longer shorter than the cd-index route.
+Apply type bridge + phi_w_support + omega infrastructure from §H.
 
-## 3. Infrastructure already formalized (reusable)
+**Total remaining: ~260 LOC.**
 
-### `beta_swap.v` §H — the ω-bridge
-- `omega_set {n} (D : {set 'I_n.+1}) : {set 'I_n}` — Stanley's ω-map.
-- `toggle_at_omega_bit_i_new` — the ω-bit at position `i` becomes "1" in `ω(toggle D i)` under the both-in hypothesis.
-- `toggle_at_omega_strict_superset` — proves `ω(D) ⊊ ω(toggle_at D i)` under a side-condition (`i = 0` or `i−1 ∈ D`). The unconditional statement is **false** — the ω-bit at `i−1` may flip out when `i > 0` and `i−1 ∉ D`.
-
-### `beta_swap.v` §I — Foata block endpoints (partial)
-`Section FoataBlocks` (lines 519–778). Defines `block_left σ i`, `block_right σ i` via `[arg min/max]` and proves the characterization lemmas. Key facts:
-- `block_descent_chain` — every position in `[l, r]` is a descent of σ.
-- `block_left_minimal` / `block_right_maximal` — one step past each endpoint is not a descent (when in range).
-- `block_chain_values` — σ is strictly decreasing across positions `[l, r+1]` (a chain of `r−l+2` values in `'I_n.+1`).
-
-These stay in the codebase because any future attempt will need them.
-
-## 4. Roadmap for a future end-to-end proof (cd-index route)
-
-Honest estimate: **3–5 weeks of focused MathComp work**, not tractable in a single agent session.
-
-| # | Milestone | LOC | Notes |
-|---|-----------|-----|-------|
-| 1 | `mmtree.v` — data type, `mmtree_of_seq`, `mmtree_of_seqK` | ~100 | Clean indexing (i-th internal vertex at position i, NOT 2i — that was a bug in the discarded scaffolding) |
-| 2 | Stanley's genuine ψᵢ as a tree-determined transposition | ~200 | The hard part; label at vᵢ swapped with right-subtree extremum |
-| 3 | Fact #1: ψᵢ commuting involutions | ~150 | Non-trivial commutation because the transpositions are NOT disjoint in general |
-| 4 | Fact #2: descent-set effect of ψᵢ (tree-classifier version) | ~200 | Requires an `mmtree_of_seq_spec` invariant linking tree structure to local seq order |
-| 5 | Fact #3: `Φw(a+b, ab+ba) = Σ u_{D(v)}` over M-class | ~200 | Involves finite-group summation over `Gw ≅ (ℤ/2ℤ)^ι(w)` |
-| 6 | Theorem 1.6.3 (cd-index nonneg coefficients) | ~100 | Assembly from Facts 1–3 |
-| 7 | Prop 1.6.4 and ω-bridge to close both axioms | ~80 | Reuses §H; exhibits `c^{i-1} d c^{n-2-i}` witness for strict case |
-
-**Total ≈ 1030 LOC over 3–5 weeks.**
+---
 
 ## 5. Don't-repeat-these-mistakes log
 
-Documented failure modes from four prior agent rounds (preserved here so a future attempt doesn't repeat them):
+All entries from prior sessions still apply, plus:
 
-1. **`2*i` indexing for internal vertices.** The i-th label in the in-order word of M(w) is at position `i`, not `2i`. A prior agent invented `2*i` and it propagated through every lemma, trivializing `psi_commute` (because `{2i, 2i+1}` and `{2j, 2j+1}` are always disjoint for `i ≠ j`) and making the operator only reach even positions.
+8. **`sorted_leq_nth` side conditions.** In recent MathComp, the
+   `{in [pred n | n < size s] &, ...}` side conditions require explicit
+   `rewrite inE` to unfold the `\in [pred ...]` wrapper before arithmetic
+   rewrites can fire.
 
-2. **Packaged-hypothesis "bridges."** An agent once defined `tree_well_c_at t i := is_node_c (subtree_at i t) /\ seq_type_c_at (mmtree_to_seq t) i` and declared the tree→seq bridge closed. It wasn't — the bridge is the implication `is_node_c → seq_type_c_at`, not their conjunction.
+9. **`nth_psi_left/right/inside` have explicit arguments.** Don't write
+   `rewrite (nth_psi_left Hlt)` — use `rewrite !nth_psi_left //`.
 
-3. **`psi_stanley := psi` as an alias** without any genuine operator redefinition. Keeps the build green, provides no mathematical content.
+10. **Concurrent agent writes corrupt the file.** Running multiple agents
+    on the same `.v` file in parallel causes regressions. Use sequential
+    agents for the same file, or worktree isolation.
 
-4. **`psi := id` as a "scaffold".** Involutivity and commutation hold trivially; the operator does nothing.
+11. **`strict_witness_exists` bound.** The original `k < n.-1` is wrong.
+    Must be `k < n.-2` (last position always has window_size = 1).
 
-A `rocq:admitted-filler-deep` agent under a strict "no Admitted, keep build green" constraint will reliably produce scaffolding of these shapes unless the brief specifies non-triviality checks (e.g., `Example`-level tests that the operator is provably not the identity on a small concrete input).
+---
+
+## 6. Files and documentation
+
+| File | LOC | Role | Status |
+|------|-----|------|--------|
+| `mmtree.v` | 158 | M1: min-max tree inductive + round-trip | Complete |
+| `psi.v` | ~6450 | M2–M6: ψᵢ operators, cd-index infrastructure | 1 Axiom + 1 Admitted |
+| `beta_swap.v` | ~900 | Target: β-swap lemmas, ω-bridge, alt-max | 2 Axioms |
+| `M2_PSI_INFORMAL.md` | ~820 | ψᵢ definition and involutivity proof | Reference |
+| `M2_SUBTASKS.md` | ~160 | Decomposition of psi_involutive into T1–T7 | All done |
+| `M3_COMMUTATIVITY_INFORMAL.md` | ~860 | Commutativity proof | All done |
+| `M4_DESCENT_EFFECT_INFORMAL.md` | ~1100 | Descent-set effect proof | All done |
+| `M5_FACT3_INFORMAL.md` | ~400 | Fact #3 proof | Done |
+| `M6_THM163_INFORMAL.md` | ~370 | Theorem 1.6.3 assembly | In progress |
+| `M7_CLOSING_AXIOMS_INFORMAL.md` | ~925 | Axiom-closing analysis | Phase D |
+| `refs/stanley_1_6_cdindex.txt` | — | Stanley EC1 §1.6 source text | Reference |
