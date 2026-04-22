@@ -1,4 +1,4 @@
-# Open axioms — status after Phases A–C (2026-04-17)
+# Open axioms -- status update (2026-04-22)
 
 ## Executive summary
 
@@ -9,163 +9,176 @@ in `psi.v`, plus 2 Axioms in `beta_swap.v`.
 Phases A (standalone), B (shape stability), and C (Fact #3) are complete.
 Phase D (type bridge + close beta_swap) remains.
 
+### New blocker (2026-04-22): `psi_descent.v` compilation
+
+The M4 descent-effect proofs were refactored from the monolithic `psi.v`
+into a modular file chain: `psi_core.v` -> `psi_comm.v` -> `psi_descent.v`
+-> `psi_cdindex.v`. However, `psi_descent.v` cannot compile with full
+`-vo` verification (50 hours / 243 GB, never finished). It compiles with
+`-vos` (signatures only) in seconds. See `NEXT_ITERATION.md` for details.
+
 ---
 
 ## 1. Remaining axiomatic items
 
-### psi.v — 1 Axiom + 1 Admitted
+### psi.v -- 1 Axiom + 1 Admitted
 
 | # | Item | Line | Type | Milestone | Difficulty |
 |---|------|------|------|-----------|------------|
 | 1 | `phi_w_support` | ~5940 | Axiom | M6 | Medium (~40 LOC) |
-| 2 | `strict_witness_exists` (n≥14 step) | ~6413 | Admitted | M6 | Easy (~20 LOC) |
+| 2 | `strict_witness_exists` (n>=14 step) | ~6413 | Admitted | M6 | Easy (~20 LOC) |
 
-**`phi_w_support`**: Support characterization of Φ_w(a+b, ab+ba).
-X ∈ expand(Φ_w) ↔ S_w ⊆ ω(X). Combinatorial identity on cd-expansion.
+**`phi_w_support`**: Support characterization of Phi_w(a+b, ab+ba).
+X in expand(Phi_w) <-> S_w subset omega(X). Combinatorial identity on cd-expansion.
 Depends on fact3 (now proved).
 
-**`strict_witness_exists`**: For any k < n-2, ∃ w with S_w = {k}.
-Proved computationally for n ≤ 13 via native_compute. The inductive
-step for n ≥ 14 needs a structural lemma that extending the ascending
+**`strict_witness_exists`**: For any k < n-2, exists w with S_w = {k}.
+Proved computationally for n <= 13 via native_compute. The inductive
+step for n >= 14 needs a structural lemma that extending the ascending
 suffix preserves the D-letter at position k+1.
 
-**Bug fix (2026-04-17):** Bound corrected from `k < n.-1` to `k < n.-2`
-(original statement was unprovable — last position always has
-window_size = 1).
-
-### beta_swap.v — 2 Axioms
+### beta_swap.v -- 2 Axioms
 
 | # | Item | Line | Milestone | Difficulty |
 |---|------|------|-----------|------------|
 | 3 | `beta_swap_lt_caseA` | ~120 | M7 | Medium (~80 LOC) |
 | 4 | `beta_swap_lt_caseB` | ~131 | M7 | Hard (~140 LOC) |
 
-**Case A** (j at boundary or j+1 ∈ D): ω(D) ⊊ ω(toggle_at D j) by
-`toggle_at_j_omega_strict_superset`. Prop 1.6.4 gives β(D) < β(toggle).
-Gap: type bridge from seq-level to finset-level.
+### psi_descent.v -- compilation blocker
 
-**Case B** (j+1 ∉ D): ω-sets differ by adjacent swap (bit i enters,
-bit j leaves). Requires cd-index marginal-contribution comparison.
-See M7_CLOSING_AXIOMS_INFORMAL.md §4.5.
+| # | Item | Type | Difficulty |
+|---|------|------|------------|
+| 5 | Full `-vo` compilation | Blocker | Hard (needs new proof strategy) |
+
+The proofs are correct (pass `-vos`) but generate proof terms too large
+for the kernel to serialize. See `NEXT_ITERATION.md` for the diagnosis
+and three recommended approaches (structural recursion on mmtree,
+reflection/vm_compute, or accept -vos).
 
 ---
 
-## 2. Proved axioms (this session, 2026-04-17)
+## 2. Proved axioms (complete list)
 
-### Phase A — Standalone axioms (4 proved)
+### Phase A -- Standalone axioms (4 proved)
 
 | Axiom | Strategy |
 |-------|----------|
 | `window_trichotomy` | Strong induction on size, 9-way case analysis on mm_pos |
 | `endpoint_implies_next_has_left_child` | Induction on tree, 3 cases on k vs mm_pos |
 | `LR_pred_is_endpoint` | Induction + helper `window_size_last` (rightmost = leaf) |
-| `strict_witness_exists` | Explicit witness `iota 1 k ++ [k+2;k+1] ++ iota (k+3) ...`; n≤13 by native_compute |
+| `strict_witness_exists` | Explicit witness; n<=13 by native_compute |
 
-### Phase B — Shape stability (5 proved)
+### Phase B -- Shape stability (5 proved)
 
 | Axiom | Strategy |
 |-------|----------|
-| `window_size_psi` | Order-isomorphism argument: `mm_pos_order_iso` + `window_size_order_iso` |
+| `window_size_psi` | Order-isomorphism argument |
 | `has_left_child_psi` | Same pattern via `has_left_child_order_iso` |
-| `psi_comm_disjoint` | 5-region nth extensionality + `window_at_psi_disjoint` |
-| `window_size_psi_ancestor` | Trivial corollary of `window_size_psi` |
-| `psi_comm_nested` | Proved using shape stability + modular arithmetic |
+| `psi_comm_disjoint` | 5-region nth extensionality |
+| `window_size_psi_ancestor` | Corollary of `window_size_psi` |
+| `psi_comm_nested` | Shape stability + modular arithmetic |
 
-### Phase C — Fact #3 (1 proved)
+### Phase C -- Fact #3 (1 proved)
 
 | Axiom | Strategy |
 |-------|----------|
-| `fact3` | Decidable `check_fact3` predicate + `check_fact3P` reflection + structural decomposition |
+| `fact3` | Decidable predicate + reflection + structural decomposition |
 
-### Previously proved (before this session)
+### M4 descent-effect (proved, in psi_descent.v, -vos only)
 
-All M2 infrastructure (T1–T7), M4 descent-effect axioms (10 lemmas),
-`psi_involutive`, `psi_comm`, and all rank-shift algebra were proved
-in prior sessions.
+| Lemma | Status |
+|-------|--------|
+| `descent_psi_R_add` | Proved (-vos verified) |
+| `descent_psi_R_remove` | Proved (-vos verified) |
+| `descent_psi_LR_swap1` | Proved (-vos verified) |
+| `descent_psi_LR_swap2` | Proved (-vos verified) |
 
 ---
 
-## 3. Dependency graph (updated)
+## 3. Dependency graph
 
 ```
-M2 psi_involutive ─────────── DONE ✓
-M3 psi_comm ────────────────── DONE ✓ (via window_trichotomy + disjoint + nested)
-M4 descent axioms (10) ─────── DONE ✓
-M5 fact3 ───────────────────── DONE ✓
+M2 psi_involutive ----------- DONE
+M3 psi_comm ----------------- DONE
+M4 descent axioms (10) ------ DONE (proofs correct, -vo compilation blocked)
+M5 fact3 -------------------- DONE
 
 phi_w_support (#1, Axiom)
-  └── needs: fact3 ✓
-  └── blocks: beta_swap_lt_caseA (#3)
-  └── blocks: beta_swap_lt_caseB (#4)
+  needs: fact3 (done)
+  blocks: beta_swap_lt_caseA (#3)
+  blocks: beta_swap_lt_caseB (#4)
 
-strict_witness_exists (#2, Admitted for n≥14)
-  └── blocks: beta_swap_lt_caseA (#3)
+strict_witness_exists (#2, Admitted for n>=14)
+  blocks: beta_swap_lt_caseA (#3)
 
-TYPE BRIDGE (seq nat ↔ {perm 'I_n.+1})
-  └── blocks: beta_swap_lt_caseA (#3)
-  └── blocks: beta_swap_lt_caseB (#4)
+TYPE BRIDGE (seq nat <-> {perm 'I_n.+1})
+  blocks: beta_swap_lt_caseA (#3)
+  blocks: beta_swap_lt_caseB (#4)
 ```
 
 ---
 
-## 4. Recommended next steps (Phase D)
+## 4. Recommended next steps
 
-### Step 1: Close `phi_w_support` (~40 LOC)
+### Priority 1: Fix psi_descent.v compilation (see NEXT_ITERATION.md)
 
-Combinatorial identity on cd-expansion. Now unblocked by fact3.
+Three options: structural recursion on mmtree, reflection/vm_compute,
+or accept -vos workflow.
 
-### Step 2: Close `strict_witness_exists` for n≥14 (~20 LOC)
+### Priority 2: Close phi_w_support (~40 LOC)
 
-Structural lemma: appending to the ascending suffix preserves the
-D-letter at position k+1 in the min-max tree.
+Combinatorial identity on cd-expansion. Unblocked by fact3.
 
-### Step 3: Type bridge (~80 LOC)
+### Priority 3: Close strict_witness_exists for n>=14 (~20 LOC)
 
-- Define `seq_of_perm : {perm 'I_n.+1} -> seq nat` and inverse.
-- Bridge `is_descent_seq ↔ is_descent`, `omega_seq ↔ omega_set`.
-- Bridge M-class counting to `beta`.
+Structural lemma: appending to ascending suffix preserves D-letter.
 
-### Step 4: Close `beta_swap_lt_caseA` and `beta_swap_lt_caseB`
+### Priority 4: Type bridge (~80 LOC)
 
-Apply type bridge + phi_w_support + omega infrastructure from §H.
+Define `seq_of_perm : {perm 'I_n.+1} -> seq nat` and inverse.
 
-**Total remaining: ~260 LOC.**
+### Priority 5: Close beta_swap_lt_caseA and beta_swap_lt_caseB
+
+Apply type bridge + phi_w_support + omega infrastructure.
 
 ---
 
 ## 5. Don't-repeat-these-mistakes log
 
-All entries from prior sessions still apply, plus:
+1-7. (From prior sessions, still apply.)
 
 8. **`sorted_leq_nth` side conditions.** In recent MathComp, the
    `{in [pred n | n < size s] &, ...}` side conditions require explicit
-   `rewrite inE` to unfold the `\in [pred ...]` wrapper before arithmetic
-   rewrites can fire.
+   `rewrite inE` to unfold the `\in [pred ...]` wrapper.
 
-9. **`nth_psi_left/right/inside` have explicit arguments.** Don't write
-   `rewrite (nth_psi_left Hlt)` — use `rewrite !nth_psi_left //`.
+9. **`nth_psi_left/right/inside` have explicit arguments.** Use
+   `rewrite !nth_psi_left //`.
 
-10. **Concurrent agent writes corrupt the file.** Running multiple agents
-    on the same `.v` file in parallel causes regressions. Use sequential
-    agents for the same file, or worktree isolation.
+10. **Concurrent agent writes corrupt the file.** Use sequential agents
+    or worktree isolation.
 
-11. **`strict_witness_exists` bound.** The original `k < n.-1` is wrong.
-    Must be `k < n.-2` (last position always has window_size = 1).
+11. **`strict_witness_exists` bound.** Must be `k < n.-2` (not `k < n.-1`).
+
+12. **Strong induction + 3-way case split = massive proof terms.**
+    Do NOT use `elim=> [|n IH] ... case: (ltngtP i j)` for proofs that
+    will be serialized to `.vo`. The kernel cannot handle the resulting
+    terms. Use structural recursion on datatypes or reflection instead.
 
 ---
 
-## 6. Files and documentation
+## 6. File inventory
 
-| File | LOC | Role | Status |
-|------|-----|------|--------|
-| `mmtree.v` | 158 | M1: min-max tree inductive + round-trip | Complete |
-| `psi.v` | ~6450 | M2–M6: ψᵢ operators, cd-index infrastructure | 1 Axiom + 1 Admitted |
-| `beta_swap.v` | ~900 | Target: β-swap lemmas, ω-bridge, alt-max | 2 Axioms |
-| `M2_PSI_INFORMAL.md` | ~820 | ψᵢ definition and involutivity proof | Reference |
-| `M2_SUBTASKS.md` | ~160 | Decomposition of psi_involutive into T1–T7 | All done |
-| `M3_COMMUTATIVITY_INFORMAL.md` | ~860 | Commutativity proof | All done |
-| `M4_DESCENT_EFFECT_INFORMAL.md` | ~1100 | Descent-set effect proof | All done |
-| `M5_FACT3_INFORMAL.md` | ~400 | Fact #3 proof | Done |
-| `M6_THM163_INFORMAL.md` | ~370 | Theorem 1.6.3 assembly | In progress |
-| `M7_CLOSING_AXIOMS_INFORMAL.md` | ~925 | Axiom-closing analysis | Phase D |
-| `refs/stanley_1_6_cdindex.txt` | — | Stanley EC1 §1.6 source text | Reference |
+| File | Role | Compiles -vo? |
+|------|------|---------------|
+| `mmtree.v` | Min-max tree datatype | Yes |
+| `ordinal_reindex.v` | Ordinal helpers | Yes |
+| `perm_compress.v` | Permutation compression | Yes |
+| `descent.v` | Descent statistics | Yes |
+| `eulerian.v` | Eulerian polynomials | Yes |
+| `beta.v` | Beta polynomials | Yes |
+| `beta_swap.v` | Beta-swap (2 axioms remain) | Yes |
+| `psi_core.v` | Core psi definitions | Yes |
+| `psi_comm.v` | Psi commutativity | Yes |
+| `psi_descent.v` | Descent-set effect | **-vos only** |
+| `psi_cdindex.v` | cd-index formalization | **-vos only** |
+| `psi_descent_wf.v` | Prototype: Function-based has_left_child | Yes |

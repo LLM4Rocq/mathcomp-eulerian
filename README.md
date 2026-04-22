@@ -1,29 +1,46 @@
 # mathcomp-eulerian
 
-A MathComp 2.5+ / Rocq 9.0 formalization of permutation **descent statistics**, **Eulerian numbers**, and the set-refined β-numbers used in Putnam 2025 problem A5. Six layers, each independently useful.
+A MathComp 2.5+ / Rocq 9.0 formalization of permutation **descent statistics**, **Eulerian numbers**, and the set-refined β-numbers used in Putnam 2025 problem A5. Includes a cd-index formalization via Stanley's psi operators.
 
 ## Build
 
-```
-make            # builds all .v files in _CoqProject
+```bash
+# Full build (all files except psi_descent/psi_cdindex):
+make
+
+# For psi_descent.v and psi_cdindex.v, use -vos (signatures only):
+rocq compile -vos -q -w -deprecated-library-file -w -notation-overridden \
+  -R . mathcomp_eulerian psi_descent.v psi_cdindex.v
 ```
 
-Dependencies: Rocq ≥ 9.0 and MathComp ≥ 2.5 (`all_ssreflect`, `fingroup`, `perm`, `binomial`, `ssrint`, `ssralg`).
+**Note:** `psi_descent.v` cannot compile with full `-vo` verification due to
+massive proof terms (see `NEXT_ITERATION.md`). Use `-vos` for development.
+
+Dependencies: Rocq >= 9.0 and MathComp >= 2.5 (`all_ssreflect`, `fingroup`, `perm`, `binomial`, `ssrint`, `ssralg`).
 
 ## File structure
 
+Two independent chains:
+
 ```
-ordinal_reindex.v → perm_compress.v → descent.v → eulerian.v → beta.v → beta_swap.v
+ordinal_reindex.v -> perm_compress.v -> descent.v -> eulerian.v -> beta.v -> beta_swap.v
+
+mmtree.v -> psi_core.v -> psi_comm.v -> psi_descent.v -> psi_cdindex.v
 ```
 
-| File | Lines | Contents |
-|------|-------|----------|
-| `ordinal_reindex.v` | 54 | Monotonicity of `lift`/`unlift` on `'I_n` |
-| `perm_compress.v` | 115 | `drop_perm` / `lift_perm` bijection on `{perm 'I_n}` |
-| `descent.v` | 122 | Descent set, descent/ascent counts, reversal symmetry |
-| `eulerian.v` | 746 | Eulerian numbers: base cases, recurrence, symmetry, Worpitzky, closed form |
-| `beta.v` | 173 | Set-refined descent counts `β(D)` (Layer 4) |
-| `beta_swap.v` | 244 | β-swap lemmas + alt-maximises-β corollary toward Putnam A5 (Layer 5) |
+| File | Lines | Contents | Compiles -vo? |
+|------|-------|----------|---------------|
+| `ordinal_reindex.v` | 54 | Monotonicity of `lift`/`unlift` on `'I_n` | Yes |
+| `perm_compress.v` | 115 | `drop_perm` / `lift_perm` bijection | Yes |
+| `descent.v` | 122 | Descent set, counts, reversal symmetry | Yes |
+| `eulerian.v` | 746 | Eulerian numbers: recurrence, symmetry, Worpitzky, closed form | Yes |
+| `beta.v` | 173 | Set-refined descent counts `beta(D)` | Yes |
+| `beta_swap.v` | 244 | beta-swap lemmas + alt-maximises-beta | Yes (2 axioms) |
+| `mmtree.v` | 158 | Min-max tree datatype and round-trip | Yes |
+| `psi_core.v` | 1952 | Core psi operator definitions and lemmas | Yes |
+| `psi_comm.v` | 1363 | Psi commutativity | Yes |
+| `psi_descent.v` | 1576 | Descent-set effect of psi (Fact #2) | **-vos only** |
+| `psi_cdindex.v` | 1950 | cd-index formalization | **-vos only** |
 
 ## Results
 
