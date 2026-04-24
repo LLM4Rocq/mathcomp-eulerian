@@ -4,7 +4,7 @@
 (* omega-monotonicity of β.                                                  *)
 
 From mathcomp Require Import all_ssreflect.
-Require Import mmtree psi_core psi_comm psi_descent.
+Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

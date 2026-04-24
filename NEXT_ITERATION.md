@@ -1,6 +1,17 @@
 # psi_descent.v: Status and Next Steps
 
-## Current State (2026-04-22)
+## RESOLVED (2026-04-24)
+
+Option A (structural recursion on mmtree) was implemented successfully.
+The original `psi_descent.v` is replaced by:
+- `psi_descent_v2.v` — core + tree_structure (8s, 151KB .vo)
+- `psi_descent_thms.v` — descent-effect theorems (7s, 82KB .vo)
+
+Total: 15 seconds, 233KB, 0 Admitted. See `OPTION_A_PROGRESS.md`.
+
+---
+
+## Original State (2026-04-22, now historical)
 
 ### What works
 - All files compile with `rocq compile -vos` (signature checking, no proof verification)

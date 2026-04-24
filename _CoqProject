@@ -6,7 +6,9 @@
 mmtree.v
 psi_core.v
 psi_comm.v
-psi_descent.v
+psi_descent_v2.v
+psi_descent_thms.v
+# psi_descent.v  # original (cannot compile -vo, replaced by v2 + thms)
 psi_cdindex.v
 # psi_base.v  # combined M2+M3+M4 (needs >16GB for full -vo)
 # psi.v       # monolithic original (never compiled)
@@ -15,4 +17,6 @@ perm_compress.v
 descent.v
 eulerian.v
 beta.v
+beta_omega.v
+beta_bridge.v
 beta_swap.v
