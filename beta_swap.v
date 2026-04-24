@@ -1,20 +1,24 @@
-(* Layer 5: β-swap lemma and alternating-maximum corollary.                  *)
+(* Layer 5: alternating-maximum corollary for β-numbers.                     *)
 (*                                                                           *)
 (* Proves that among descent sets D : {set 'I_n} which are not               *)
 (* set-alternating (i.e. contain a consecutive same-membership pair),        *)
 (* β(D) is strictly smaller than β(alt_desc_set n).                          *)
 (*                                                                           *)
-(* One LABELED AXIOM remains: `beta_swap_lt_caseB`.                          *)
-(* Case A (`beta_swap_lt_caseA`) is now a PROVED LEMMA via beta_bridge.v     *)
-(* using omega_proper_beta_lt (Stanley Prop 1.6.4) +                         *)
-(* toggle_at_j_omega_strict_superset.                                        *)
-(* Everything downstream — `beta_alt_max` — is `Qed`.                        *)
+(* NO AXIOMS.  beta_alt_max is proved directly via omega_proper_beta_lt      *)
+(* (Stanley Prop 1.6.4 in beta_bridge.v): we show ω(D) ⊊ ω(alt) = setT     *)
+(* whenever D is not set-alternating.                                        *)
+(*                                                                           *)
+(* Historical note: the original proof went through per-step strict          *)
+(* monotonicity (beta_swap_lt_caseB).  That axiom turned out to be FALSE —   *)
+(* counterexample: n=3, D={0,1}, toggle_at D 1 = {0} gives β=3=3, not <.    *)
+(* The direct ω-based proof bypasses the swap chain entirely.                *)
 (*                                                                            *)
 (* Build order: beta_omega.v → beta_bridge.v → beta_swap.v                   *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import
   ordinal_reindex perm_compress descent eulerian beta beta_omega beta_bridge.
+Require Import perm_seq_bridge.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -56,48 +60,8 @@ by exists i, j.
 Qed.
 
 (* ========================================================================= *)
-(* §C. β-swap lemmas (Foata — classical)                                      *)
+(* §C. Toggle and complement lemmas                                          *)
 (* ========================================================================= *)
-
-(* beta_swap_lt_caseA is now PROVED in beta_bridge.v via omega_proper_beta_lt
-   (Stanley Prop 1.6.4) + toggle_at_j_omega_strict_superset (beta_omega.v). *)
-
-(* Sub-axiom, Case B: j < n-1 and j+1 ∉ D — ω-sets differ by adjacent swap.
-   Justification: omega(D) and omega(toggle_at D j) differ by swapping bit j
-   for bit i (see toggle_at_j_omega_bit_i_new). The inequality follows from
-   comparing cd-index marginal contributions of adjacent ω-positions, which
-   requires Theorem 1.6.3 (nonneg cd-index) plus a monotonicity argument.
-   This case is NOT handled by omega_proper_beta_lt since the omega sets are
-   incomparable (not in a subset relation). *)
-Axiom beta_swap_lt_caseB : forall n (D : {set 'I_n}) (i j : 'I_n),
-  val j = (val i).+1 -> i \in D -> j \in D ->
-  (exists q : 'I_n, val q = (val j).+1 /\ q \notin D) ->
-  beta D < beta (toggle_at D j).
-
-(* "Both descents" strict version (PROVED from the two sub-cases). *)
-Lemma beta_swap_lt_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
-  val j = (val i).+1 ->
-  i \in D -> j \in D ->
-  beta D < beta (toggle_at D j).
-Proof.
-move=> n D i j Hj Hi Hj'.
-case: (boolP [exists q : 'I_n, (val q == (val j).+1) && (q \notin D)]).
-- move/existsP => [q /andP [/eqP Hq Hqnot]].
-  apply: (beta_swap_lt_caseB Hj Hi Hj'); by exists q.
-- move/existsPn => Hall.
-  apply: (beta_swap_lt_caseA Hj Hi Hj') => q Hq.
-  have := Hall q; rewrite Hq eqxx /=; by rewrite negbK.
-Qed.
-
-(* "Both descents" monotonicity (PROVED from the strict version). *)
-Lemma beta_swap_monotone_both_in : forall n (D : {set 'I_n}) (i j : 'I_n),
-  val j = (val i).+1 ->
-  i \in D -> j \in D ->
-  beta D <= beta (toggle_at D j).
-Proof.
-move=> n D i j Hj Hi Hj'.
-exact: ltnW (beta_swap_lt_both_in Hj Hi Hj').
-Qed.
 
 (* Toggle commutes with complement on the set side. *)
 Lemma toggle_at_compl n (D : {set 'I_n}) (i : 'I_n) :
@@ -113,7 +77,7 @@ by case: (i == j); case: (j \in D).
 Qed.
 
 (* ========================================================================= *)
-(* §D. Alt maximises β (deferred: depends on derived beta_swap_lt below)     *)
+(* §D. Alternating-set lemmas and Hamming distance                           *)
 (* ========================================================================= *)
 
 Lemma alt_pair_parity n (i j : 'I_n) :
@@ -211,39 +175,6 @@ apply/imsetP/idP.
   by rewrite inE descent_set_compl Hs setCK.
 Qed.
 
-Lemma beta_swap_monotone n (D : {set 'I_n}) (i j : 'I_n) :
-  val j = (val i).+1 ->
-  (i \in D) = (j \in D) ->
-  beta D <= beta (toggle_at D j).
-Proof.
-move=> Hj Hij.
-case Hi : (i \in D).
-- have Hj' : j \in D by rewrite -Hij.
-  exact: (beta_swap_monotone_both_in Hj Hi Hj').
-- have Hi' : i \in ~: D by rewrite !inE Hi.
-  have Hj' : j \in ~: D by rewrite !inE -Hij Hi.
-  have H := beta_swap_monotone_both_in Hj Hi' Hj'.
-  rewrite toggle_at_compl in H.
-  by rewrite (beta_compl D) (beta_compl (toggle_at D j)).
-Qed.
-
-(* Strict version, derived identically. *)
-Lemma beta_swap_lt n (D : {set 'I_n}) (i j : 'I_n) :
-  val j = (val i).+1 ->
-  (i \in D) = (j \in D) ->
-  beta D < beta (toggle_at D j).
-Proof.
-move=> Hj Hij.
-case Hi : (i \in D).
-- have Hj' : j \in D by rewrite -Hij.
-  exact: (beta_swap_lt_both_in Hj Hi Hj').
-- have Hi' : i \in ~: D by rewrite !inE Hi.
-  have Hj' : j \in ~: D by rewrite !inE -Hij Hi.
-  have H := beta_swap_lt_both_in Hj Hi' Hj'.
-  rewrite toggle_at_compl in H.
-  by rewrite (beta_compl D) (beta_compl (toggle_at D j)).
-Qed.
-
 (* ========================================================================= *)
 (* §F. Classification of set-alternating sets                                *)
 (* ========================================================================= *)
@@ -290,7 +221,7 @@ by rewrite beta_compl setCK.
 Qed.
 
 (* ========================================================================= *)
-(* §G. β-based induction driver                                              *)
+(* §G. Direct ω-based proof that alt maximises β                             *)
 (* ========================================================================= *)
 
 Lemma not_set_is_alt_n_ge2 n (D : {set 'I_n}) :
@@ -302,55 +233,69 @@ rewrite Hj in Hjn.
 by apply: leq_ltn_trans Hjn; apply: ltn0Sn.
 Qed.
 
-Lemma beta_lt_fact n (D : {set 'I_n}) :
-  ~~ set_is_alt D -> beta D < n.+1`!.
+(* ω(alt) is the full set: every consecutive pair in alt_desc_set
+   has differing membership, so every position is in the omega set. *)
+Lemma omega_set_alt_full m :
+  @omega_set m (alt_desc_set m.+1) = [set: 'I_m].
 Proof.
-move=> Hnalt.
-have Hn2 := not_set_is_alt_n_ge2 Hnalt.
-pose D' : {set 'I_n} := if D == set0 then [set: 'I_n] else set0.
-have HD'D : D' != D.
-  rewrite /D'; case Heq : (D == set0); last by rewrite eq_sym Heq.
-  by move/eqP: Heq => ->; apply/eqP/setP => /(_ (@Ordinal n 0 (ltnW Hn2)));
-     rewrite !inE.
-have HbD' : 1 <= beta D'.
-  by rewrite /D'; case: (D == set0); [rewrite beta_full | rewrite beta0].
-rewrite -addn1; apply: leq_trans (_ : beta D + beta D' <= n.+1`!).
-  by rewrite leq_add2l.
-by rewrite -sum_beta_eq_fact (bigD1 D) //= leq_add2l (bigD1 D' HD'D) //=
-   leq_addr.
+apply/setP => k.
+have Hk := @mem_omega_set m (alt_desc_set m.+1) k.
+rewrite Hk inE.
+(* LHS is (widen_ord _ k \in alt_desc_set m.+1) != (lift ord0 k \in ...) *)
+(* RHS is true *)
+rewrite !inE /=.
+(* Now should have ~~ odd (widen ...) != ~~ odd (lift ...) = true *)
+(* widen_ord k has val k, lift ord0 k has val k.+1 *)
+rewrite /bump /=.
+by case: (odd (val k)).
 Qed.
 
-Lemma beta_alt_max_bounded n :
-  forall k (D : {set 'I_n}),
-  (n.+1`! - beta D <= k)%N ->
-  ~~ set_is_alt D ->
-  beta D < beta (alt_desc_set n).
+(* If D is not set-alternating, then ω(D) is missing at least one element. *)
+Lemma not_set_is_alt_omega_not_full m (D : {set 'I_m.+1}) :
+  ~~ set_is_alt D -> omega_set D != [set: 'I_m].
 Proof.
-elim => [|k IH] D HM Hnalt.
-- (* Base m = 0: contradiction since β D < n.+1`! *)
-  exfalso.
-  have Hlt := beta_lt_fact Hnalt.
-  by move: HM; rewrite leqn0 subn_eq0 leqNgt Hlt.
-- (* Step: apply beta_swap_lt at any same-pair, then IH *)
-  case: (set_not_altP Hnalt) => i [j [Hj Hij]].
-  have Hstrict : beta D < beta (toggle_at D j) := beta_swap_lt Hj Hij.
-  case H' : (set_is_alt (toggle_at D j)).
-  + (* toggled set is set-alt: β(toggled) = β(alt) by classification + beta_compl *)
-    by rewrite (beta_set_is_alt_eq H') in Hstrict.
-  + (* toggled set still not set-alt: apply IH *)
-    apply: (ltn_trans Hstrict).
-    apply: IH; last by rewrite H'.
-    have HbDlt : beta D < (n.+1)`! := beta_lt_fact Hnalt.
-    apply: leq_trans (_ : (n.+1)`! - (beta D).+1 <= k).
-      by apply: leq_sub2l; exact: Hstrict.
-    by rewrite subnS -ltnS prednK ?subn_gt0.
+move/set_not_altP => [i [j [Hj Hij]]].
+(* We have i,j consecutive with same membership.
+   The omega bit at the position k with widen k = i, lift k = j
+   is NOT set (since D(i) = D(j) means same membership). *)
+have Hik : val i < m.
+  by have := ltn_ord j; rewrite Hj -ltnS.
+pose k := Ordinal Hik.
+apply/eqP => Hfull.
+have : k \in omega_set D by rewrite Hfull inE.
+rewrite mem_omega_set.
+have Ewid : widen_ord (leqnSn m) k = i by apply/val_inj.
+have Elif : lift ord0 k = j by apply/val_inj; rewrite /= /bump /= add1n -Hj.
+rewrite Ewid Elif Hij. by rewrite eqxx.
 Qed.
 
-(* Spec-facing lemma. *)
+(* Main theorem: the alternating descent set maximises β. *)
 Lemma beta_alt_max n (D : {set 'I_n}) :
   ~~ set_is_alt D -> beta D < beta (alt_desc_set n).
 Proof.
 move=> Hnalt.
-exact: (@beta_alt_max_bounded n (n.+1`! - beta D) D (leqnn _)).
+have Hn2 := not_set_is_alt_n_ge2 Hnalt.
+(* Need n >= 2 to apply omega_proper_beta_lt.
+   Write n = m.+2 so D : {set 'I_{m.+2}} = {set 'I_{(m.+1).+1}}. *)
+case: n D Hnalt Hn2 => [|[|m]] D Hnalt Hn2 //.
+(* Now n = m.+2, D : {set 'I_{m.+2}}. *)
+apply: (omega_proper_beta_lt (m := m.+1)).
+(* omega_set D \proper omega_set (alt_desc_set (m.+2)) *)
+rewrite omega_set_alt_full.
+(* omega_set D \proper [set: 'I_{m.+1}] *)
+apply/properP; split.
+- by apply/subsetP => x _; rewrite inE.
+- (* omega_set D != setT, so there exists k not in omega_set D *)
+  (* Directly from the set_not_altP witness *)
+  case: (set_not_altP Hnalt) => i0 [j0 [Hj0 Hij0]].
+  have Hik0 : val i0 < m.+1.
+    by have := ltn_ord j0; rewrite Hj0 -ltnS.
+  pose k0 := Ordinal Hik0.
+  have Hk0 : k0 \notin omega_set D.
+    rewrite (@mem_omega_set m.+1).
+    have Ew : widen_ord (leqnSn m.+1) k0 = i0 by apply/val_inj.
+    have El : lift ord0 k0 = j0 by apply/val_inj; rewrite /= /bump /= add1n -Hj0.
+    by rewrite Ew El Hij0 eqxx.
+  exists k0; first by rewrite inE.
+  exact: Hk0.
 Qed.
-

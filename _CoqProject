@@ -19,4 +19,5 @@ eulerian.v
 beta.v
 beta_omega.v
 beta_bridge.v
+perm_seq_bridge.v
 beta_swap.v

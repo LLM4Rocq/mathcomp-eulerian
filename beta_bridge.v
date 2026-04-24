@@ -5,16 +5,11 @@
 (* Structure:                                                                 *)
 (*   SA.  Type bridge: set_to_seq (finset -> seq nat)                        *)
 (*   SB.  omega_set / omega_seq correspondence (proved)                      *)
-(*   SC.  phi_w_support_general (Axiom: Stanley Thm 1.6.3)                  *)
-(*        -- cd-index has nonneg integer coefficients                        *)
-(*        -- verified for S_3, S_4 in psi_cdindex.v                          *)
-(*   SD.  omega_proper_beta_lt (Axiom, from SC + bridge)                     *)
-(*        -- Stanley Prop 1.6.4: omega(D) proper-sub omega(E) =>            *)
-(*           beta(D) < beta(E)                                               *)
-(*        -- derivable from SC once perm<->seq bijection is complete         *)
-(*   SE.  beta_swap_lt_caseA derived from SD + beta_omega.v                  *)
+(*   SC.  omega_proper_beta_lt + beta_swap_lt_caseA moved to                 *)
+(*        perm_seq_bridge.v (which imports both this file and psi_cdindex)    *)
 (*                                                                            *)
-(* Build order: beta_omega.v -> beta_bridge.v -> beta_swap.v.               *)
+(* Build order: beta_omega.v -> beta_bridge.v -> perm_seq_bridge.v ->        *)
+(*              beta_swap.v.                                                  *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import
@@ -131,52 +126,6 @@ case Hk: (val k \in set_to_seq D);
 Qed.
 
 (* ========================================================================= *)
-(* SC. Stanley Prop 1.6.4 (Axiom)                                           *)
+(* SC. omega_proper_beta_lt + beta_swap_lt_caseA                             *)
 (* ========================================================================= *)
-
-(* omega_proper_beta_lt: omega(D) proper-sub omega(E) => beta(D) < beta(E). *)
-(*                                                                           *)
-(* Stanley EC1 (2nd ed.) Proposition 1.6.4 proof sketch:                    *)
-(* 1. By Thm 1.6.3 (cd-index nonneg), each M-equivalence class [w]         *)
-(*    contributes exactly one cd-monomial to Phi_n. Define S_w = d-         *)
-(*    positions of [w]. Then beta(S) = #{classes : S_w <= omega(S)}.        *)
-(* 2. omega_monotone_class_count (PROVED in psi_cdindex.v): if              *)
-(*    omega(S) <= omega(T), every class counted by S is counted by T.       *)
-(* 3. strict_witness_exists (PROVED in psi_cdindex.v): for any k < n-2,    *)
-(*    the cd-word c^k d c^{n-2-k} has S_w = {k}, so k in omega(T)\omega(S) *)
-(*    gives a class counted by T but not S.                                 *)
-(* 4. Hence omega(S) proper-sub omega(T) => beta(S) < beta(T).             *)
-(*                                                                           *)
-(* Gap to close this axiom: the type bridge {perm 'I_n.+1} <-> seq nat     *)
-(* (connecting finset-level beta to seq-level M-class counting) and         *)
-(* phi_w_support_general (the cd-index theorem for general n, currently     *)
-(* only verified computationally for n <= 4 in psi_cdindex.v).              *)
-
-Axiom omega_proper_beta_lt : forall m (D E : {set 'I_m.+1}),
-  omega_set D \proper omega_set E ->
-  beta D < beta E.
-
-(* ========================================================================= *)
-(* §B. Closing beta_swap_lt_caseA                                            *)
-(* ========================================================================= *)
-
-(* Case A: i,j ∈ D with j = i+1, and (j+1 ∈ D or j is the last position).
-   toggle_at_j_omega_strict_superset (beta_omega.v §H) proves
-   omega_set D ⊊ omega_set (toggle_at D j) under these hypotheses.
-   omega_proper_beta_lt then gives the beta strict inequality. *)
-Lemma beta_swap_lt_caseA : forall n (D : {set 'I_n}) (i j : 'I_n),
-  val j = (val i).+1 -> i \in D -> j \in D ->
-  (forall q : 'I_n, val q = (val j).+1 -> q \in D) ->
-  beta D < beta (toggle_at D j).
-Proof.
-move=> n D i j Hj Hi Hjin Hsucc.
-case: n D i j Hj Hi Hjin Hsucc => [|m] D i j Hj Hi Hjin Hsucc.
-- (* n = 0: 'I_0 is empty, i : 'I_0 is vacuously absurd *)
-  by have := ltn_ord i; rewrite ltn0.
-- (* n = m.+1: D : {set 'I_m.+1}, omega_set D : {set 'I_m}.
-     toggle_at_j_omega_strict_superset applied with n := m gives
-     omega_set D \proper omega_set (toggle_at D j). *)
-  apply: (omega_proper_beta_lt (m := m)).
-  exact: toggle_at_j_omega_strict_superset Hj Hi Hjin Hsucc.
-Qed.
-
+(* Moved to perm_seq_bridge.v (which imports both this file and psi_cdindex) *)
