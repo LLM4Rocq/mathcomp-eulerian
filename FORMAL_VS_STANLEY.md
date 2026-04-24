@@ -120,8 +120,20 @@ position p.
 - `insert_max_perm_bij` (line 445): bijection proof
 - `des_insert_max_ord0/ord_max/interior` (lines 254-377): descent counting
 
-This matches Stanley's proof of (1.39) on p.75 exactly, but formalized
-via an explicit insert/extract bijection rather than a counting argument.
+**Why this path was chosen:** Stanley's proof on p.75 is a counting
+argument: "choose w in S_d with k-1 descents, insert d+1 after a
+descent position (k ways) or after an ascent position (d-k+2 ways)."
+This is clean but implicitly defines a bijection without constructing it.
+
+The formal proof makes the bijection explicit: `insert_max_perm t p`
+constructs sigma from (tau, p), and `extract_max_perm` constructs the
+inverse. The bijection proof (`insert_max_perm_bij`) then gives the
+partition of S_{n+2} into fibers. This is more work (~300 LOC vs. a
+paragraph) but is the natural approach in a proof assistant: rather
+than counting elements of a set by describing how to construct them
+(which requires showing no double-counting and no omissions), we
+exhibit the bijection and derive the counting identity from it. In
+MathComp, `reindex` and `partition_big` then handle the bookkeeping.
 
 ### 2.6 Worpitzky's Identity
 
@@ -147,9 +159,20 @@ Lemma eulerian_explicit n k :
   (eulerian n k)%:Z =
     \sum_(j < k.+1) (-1) ^ j *+ 'C(n.+2, j) *+ (k.+1 - j) ^ n.+1.
 ```
-Proved by Worpitzky inversion: substitute Worpitzky into the identity,
-exchange summation, and use `aux_id` (the alternating binomial convolution
-identity, proved on lines 592-611).
+Proved by Worpitzky inversion: substitute Worpitzky into the sum,
+exchange summation order, and use `aux_id` (the alternating binomial
+convolution identity sum_j (-1)^j C(n+2,j) C(t-j, n+1) = [t == n+1],
+proved on lines 592-611 by induction using Pascal's identity).
+
+**Why this path was chosen:** Stanley leaves the explicit formula as an
+exercise derivable from Worpitzky. The formal proof goes through integer
+arithmetic (`ssrint`, `ssralg`) because the alternating sum involves
+(-1)^j terms that require working over Z rather than N. The `aux_id`
+lemma is the key algebraic ingredient — it is a standalone identity
+about alternating binomial sums that could be reused in other contexts.
+The choice to work over Z and prove `aux_id` separately (rather than,
+say, using inclusion-exclusion as in Stanley Exercise 2.22) keeps the
+proof self-contained within Chapter 1 concepts.
 
 ---
 
@@ -204,10 +227,24 @@ Definition window_size (i : nat) (s : seq nat) : nat :=
   window_size_fuel (size s) i s.
 ```
 
-The formalization doesn't build an explicit tree data type. Instead, it
-works with `mm_pos` (the root position) and `window_size` (the size of
-the subtree at each position). The tree is implicit in the recursive
-structure of these functions.
+**Design choice:** The formalization doesn't build an explicit tree data
+type. Instead, it works with `mm_pos` (the root position) and
+`window_size` (the size of the subtree at each position). The tree is
+implicit in the recursive structure of these functions.
+
+**Why:** An explicit binary tree type (e.g., `Inductive mmtree := Leaf |
+Node of mmtree * nat * mmtree`) would require building and maintaining
+a bijection between sequences and trees throughout the development. Every
+lemma about `psi`, `phi_w`, `char_mono`, etc. would need to go through
+this bijection. The "implicit tree" approach avoids this: the sequence
+IS the representation, and tree properties (root position, subtree size,
+left/right child existence) are computed directly from the sequence via
+`mm_pos`, `window_size`, and `has_left_child`. This means psi operations
+act directly on sequences (no tree reconstruction), and the inductive
+structure is accessed via `take j w` / `drop (j+1) w` (left/right
+subtrees as subsequences). The cost is that structural lemmas require
+fuel-based recursion (`window_size_fuel`) with termination arguments,
+but this is a one-time cost paid in `psi_core.v`.
 
 ### 4.2 The psi Operators
 
@@ -286,7 +323,7 @@ of all M-class members; the RHS lists the expansion of the cd-word Phi_w.
 
 **Proof strategy (DIVERGES from Stanley):** Stanley states this as an
 easy consequence of Fact #2 (descent-set changes under psi). The formal
-proof uses:
+proof uses a different approach:
 1. A boolean checker `check_fact3` that verifies the sorted equality
 2. Psi-invariance of the checker (`check_fact3_psi_invariant`)
 3. Strong induction on size w with mm_pos decomposition
@@ -294,9 +331,26 @@ proof uses:
 5. Inductive step: decompose at mm_pos, apply IH to subtrees, close
    by simplification (`by rewrite /check_fact3 /apply_psis /=`)
 
-This "decidable predicate + reflection + structural induction" pattern
-avoids directly reasoning about the product structure of expand_cde and
-instead lets Rocq's reduction machinery verify each step.
+**Why this path was chosen:** Stanley's "easy consequence of Fact #2"
+would require formalizing the product structure of expand_cde across
+subtrees — showing that expand_cde(phi_w(w)) decomposes as a Cartesian
+product expand_cde(phi_w(L)) x expand_cde([root_letter]) x
+expand_cde(phi_w(R)). While expand_cde_cat (line 961) gives the
+concatenation factorization, connecting it to the char_mono factorization
+across subtrees requires reasoning about how descent bits in w decompose
+into independent bits in L and R. Each psi operator affects one bit
+independently (Fact #2), but formalizing this independence across all
+2^k combinations is verbose.
+
+The "decidable predicate + reflection" pattern sidesteps this entirely:
+instead of proving the algebraic product structure, we define a boolean
+checker and show it is psi-invariant (one psi at a time, matching
+Fact #2). The strong induction reduces to subtrees, and at each leaf
+Rocq's kernel evaluates the equality by computation. This is a standard
+technique in MathComp for converting combinatorial "obviously true"
+claims into formal proofs: verify the invariant, then let the machine
+check. The tradeoff is that the proof term is large (slow -vo
+compilation) but the proof script is short and robust.
 
 ### 5.2 Support Characterization (phi_w_support_general)
 
@@ -312,7 +366,9 @@ Lemma phi_w_support_general (w : seq nat) (X : seq bool) :
 ```
 
 **Proof strategy (DIVERGES from Stanley):** Stanley treats this as
-obvious from the definition. The formal proof requires substantial work:
+obvious ("it is easy to see"). The formal proof requires substantial
+work, decomposed into independent components:
+
 1. `expand_cde_mem_iff`: characterize expand_cde membership as
    "transitions at D-offsets" (induction on cd-word, ~130 LOC)
 2. `has_transition_omega_seq`: connect bit transitions to omega_seq
@@ -321,6 +377,27 @@ obvious from the definition. The formal proof requires substantial work:
    properties of the min-max tree linking cd-word offsets to S_w_seq
    (proved via boolean reflection, same pattern as fact3)
 4. Combine the above to get the biconditional
+
+**Why this path was chosen:** Stanley's "easy to see" hides two distinct
+claims: (a) expand_cde membership is equivalent to having transitions at
+D-positions, and (b) the D-positions in the cd-word Phi_w correspond to
+the S_w positions used in the omega condition. Claim (a) is indeed
+straightforward by induction on the cd-word — the C/D branching in
+expand_cde directly creates free/constrained bits. But claim (b) requires
+a non-trivial index-mapping argument: the cumulative bit-offset of the
+j-th D-letter in the cd-word must equal the S_w_seq value (which is the
+original tree position minus 1). This offset-position correspondence is
+a structural property of min-max trees that has no one-line proof.
+
+We decomposed the problem into (a) and (b) to isolate the cd-word part
+(purely syntactic, no tree structure needed) from the tree-structure part
+(relating offsets to positions). For (b), we reused the boolean
+reflection pattern from fact3: define `check_offsets w` = (D_offsets
+(phi_w w) == S_w_seq w), show it is psi-invariant (since both phi_w and
+S_w_seq are psi-invariant), and close by mmtree induction + computation.
+This avoids a direct inductive proof on the tree structure, which would
+require formalizing how endpoints pair with D-vertices — a counting
+argument that is clear on paper but tedious to formalize.
 
 ### 5.3 Proposition 1.6.4: omega-Monotonicity of beta
 
@@ -352,6 +429,39 @@ The formal proof requires ~580 LOC of bridge infrastructure:
 5. **Omega bridge**: `omega_set_seq_bridge_bounded` connecting the
    finset-level omega_set to the seq-level omega_seq.
 
+**Why this path was chosen:** Stanley's two-sentence proof is
+mathematically complete but operates in a single universe where
+permutations, sequences, descent sets, and cd-words coexist freely.
+The formalization lives in two separate type universes that cannot
+see each other:
+
+- **The perm/finset universe** (descent.v, beta.v, beta_omega.v):
+  permutations are `{perm 'I_{n+1}}`, descent sets are `{set 'I_n}`,
+  and beta counts permutations. This is where the theorem is *stated*.
+
+- **The seq/cd-index universe** (psi_core.v through psi_cdindex.v):
+  permutations are `seq nat`, descent patterns are `seq bool`, and the
+  M-class / cd-index machinery operates. This is where the proof
+  *content* lives (fact3, phi_w_support, strict_witness).
+
+Stanley moves between these freely because mathematics doesn't
+distinguish between a permutation-as-function and a permutation-as-
+word. In Rocq, `{perm 'I_5}` and `[:: 3; 1; 4; 0; 2]` are
+inhabitants of completely different types. The bridge file
+`perm_seq_bridge.v` exists solely to cross this gap: `perm_to_seq`
+and `seq_to_perm` translate between representations, and
+`is_descent_perm_seq` shows the descent predicate is preserved.
+
+The M-class injection argument is then the formal version of Stanley's
+"nonneg coefficients give <=": for each perm sigma with descent D, the
+cd-index of its M-class contains the E-pattern (by phi_w_support +
+omega monotonicity), so there exists a class member with descent E.
+This gives an injection {sigma : descent D} -> {tau : descent E}.
+The injectivity relies on `char_mono_class_inj` (descent patterns are
+distinct within a class, from fact3), and strictness uses
+`strict_witness_exists` (a class contributing to beta(E) but not
+beta(D)).
+
 ### 5.4 Corollary 1.6.5: Alternating Maximizes beta
 
 **Stanley (p.61):** "Let S subset [n-1]. Then beta_n(S) <= E_n, with
@@ -363,9 +473,9 @@ Lemma beta_alt_max n (D : {set 'I_n}) :
   ~~ set_is_alt D -> beta D < beta (alt_desc_set n).
 ```
 
-**Proof strategy (DIVERGES from Stanley):** Stanley derives this
-immediately from Prop 1.6.4 and equation (1.65). The formal proof also
-uses this approach but spells out the omega-set argument:
+**Proof strategy (follows Stanley):** Stanley derives this immediately
+from Prop 1.6.4 and equation (1.65). The formal proof follows the same
+route, spelling out the omega-set argument that Stanley leaves implicit:
 
 1. `omega_set_alt_full`: omega(alt_desc_set) = setT (the alternating
    set has the full omega set because every consecutive pair has different
