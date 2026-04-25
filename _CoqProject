@@ -9,7 +9,9 @@ psi_comm.v
 psi_descent_v2.v
 psi_descent_thms.v
 # psi_descent.v  # original (cannot compile -vo, replaced by v2 + thms)
-psi_cdindex.v
+psi_cdindex_core.v
+psi_cdindex_witness.v
+psi_cdindex_support.v
 # psi_base.v  # combined M2+M3+M4 (needs >16GB for full -vo)
 # psi.v       # monolithic original (never compiled)
 ordinal_reindex.v

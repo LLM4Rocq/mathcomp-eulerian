@@ -19,7 +19,8 @@
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import
   ordinal_reindex perm_compress descent eulerian beta beta_omega beta_bridge.
-Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms psi_cdindex.
+Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
+Require Import psi_cdindex_core psi_cdindex_witness psi_cdindex_support.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
