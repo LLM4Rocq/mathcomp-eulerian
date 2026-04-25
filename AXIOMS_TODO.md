@@ -137,7 +137,9 @@ beta_alt_max ------------------- DONE (direct omega proof, this session)
 | `psi_comm.v` | Psi commutativity | 0 | 0 |
 | `psi_descent_v2.v` | Core + tree_structure | 0 | 0 |
 | `psi_descent_thms.v` | Descent-effect theorems | 0 | 0 |
-| `psi_cdindex.v` | cd-index + phi_w_support | 0 | 0 |
+| `psi_cdindex_core.v` | cd-index definitions + helpers | 0 | 0 |
+| `psi_cdindex_witness.v` | S_w, omega, strict witness | 0 | 0 |
+| `psi_cdindex_support.v` | phi_w_support + structural fact3 | 0 | 0 |
 | `ordinal_reindex.v` | Ordinal helpers | 0 | 0 |
 | `perm_compress.v` | Permutation compression | 0 | 0 |
 | `descent.v` | Descent statistics | 0 | 0 |
@@ -145,9 +147,14 @@ beta_alt_max ------------------- DONE (direct omega proof, this session)
 | `beta.v` | Beta polynomials | 0 | 0 |
 | `beta_omega.v` | Omega-set infrastructure | 0 | 0 |
 | `beta_bridge.v` | Set/seq bridge | 0 | 0 |
-| `perm_seq_bridge.v` | Perm/seq bridge (NEW) | 0 | 0 |
+| `perm_seq_bridge.v` | Perm/seq bridge | 0 | 0 |
 | `beta_swap.v` | beta_alt_max | 0 | 0 |
-| **TOTAL** | | **0** | **0** |
+| **TOTAL** | **17 files** | **0** | **0** |
+
+Note: `psi_cdindex.v` was split into 3 files (core/witness/support)
+to reduce -vo compilation memory from >100GB to ~15GB per file.
+The structural proof of fact3 (check_fact3_true) avoids vm_compute
+entirely, using phi_w_support_general + perm_eq reasoning instead.
 
 ---
 
@@ -166,3 +173,14 @@ beta_alt_max ------------------- DONE (direct omega proof, this session)
 16. **Direct proofs beat swap chains.** The original beta_alt_max proof went
     through 6 intermediate swap lemmas (one false). The direct omega-set proof
     is 30 lines: ω(alt) = setT, non-alt has ω ⊊ setT, apply Prop 1.6.4.
+
+17. **`by rewrite ... /=` can OOM.** The `simpl` tactic on large terms produces
+    enormous proof terms that crash -vo compilation. The check_fact3_true closing
+    `by rewrite /check_fact3 /apply_psis /=` used >100GB. Fix: structural proof
+    via perm_eq_from_subset (membership + injectivity + size equality). Also:
+    split large files to serialize proof terms independently.
+
+18. **Circular dependency from structural proofs.** The structural fact3 proof
+    uses phi_w_support_general (downstream of fact3 in the original monolith).
+    Fix: split into core (definitions) / witness / support (phi_w_support +
+    fact3). fact3 lives in support, after phi_w_support_general.

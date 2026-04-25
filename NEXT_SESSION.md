@@ -12,12 +12,18 @@ Lemma beta_alt_max n (D : {set 'I_n}) :
 
 ## Build verification
 
-All files compile with `-vos` (type-level verification).
-Full `-vo` compilation requires patience for `psi_cdindex.v` (heavy vm_compute).
+All 17 files compile with `-vos` (type-level verification).
+Full `-vo` build expected to stay under ~15GB per file (structural proofs
+throughout, no heavy vm_compute in proof closings).
 
 ```bash
 opam exec -- make -j4    # full build
 ```
+
+Note: `psi_cdindex.v` was split into `psi_cdindex_core.v`,
+`psi_cdindex_witness.v`, `psi_cdindex_support.v` to keep -vo
+memory manageable. The vm_compute `Example` lemmas in core/support
+are on small concrete inputs (size ≤ 8) and compile quickly.
 
 ## What was done this session
 
@@ -61,7 +67,11 @@ Six intermediate lemmas removed (all were downstream of the false axiom).
 ```
 mmtree → psi_core → psi_comm → psi_descent_v2 → psi_descent_thms
                                                         ↓
-                                                  psi_cdindex
+                                                  psi_cdindex_core
+                                                        ↓
+                                                  psi_cdindex_witness
+                                                        ↓
+                                                  psi_cdindex_support
                                                         ↓
 ordinal_reindex → perm_compress → descent → eulerian → beta
                                                         ↓

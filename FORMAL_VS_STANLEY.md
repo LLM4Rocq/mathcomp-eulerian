@@ -307,7 +307,7 @@ boolean sequence (true = descent = b, false = ascent = a).
 Phi_n in the variables c = a+b and d = ab+ba. This polynomial is a sum
 of E_n monomials."
 
-**Formal: Fact #3 (`psi_cdindex.v:1157-1167`):**
+**Formal: Fact #3 (`psi_cdindex_support.v`):**
 ```coq
 Lemma fact3 : forall (w : seq nat),
   uniq w ->
@@ -342,22 +342,29 @@ into independent bits in L and R. Each psi operator affects one bit
 independently (Fact #2), but formalizing this independence across all
 2^k combinations is verbose.
 
-The "decidable predicate + reflection" pattern sidesteps this entirely:
-instead of proving the algebraic product structure, we define a boolean
-checker and show it is psi-invariant (one psi at a time, matching
-Fact #2). The strong induction reduces to subtrees, and at each leaf
-Rocq's kernel evaluates the equality by computation. This is a standard
-technique in MathComp for converting combinatorial "obviously true"
-claims into formal proofs: verify the invariant, then let the machine
-check. The tradeoff is that the proof term is large (slow -vo
-compilation) but the proof script is short and robust.
+The final proof uses a "membership + injectivity → perm_eq" argument:
+1. `char_mono_self_mem`: every sequence's char_mono is in its own
+   expand_cde (via phi_w_support_general + D_vertex_descent_transition)
+2. `char_mono_apply_psis_mem`: extends to all M-class elements
+3. `uniq_map_char_mono_powerset`: char_monos are pairwise distinct
+   (pigeonhole: injective map into uniq target of same size)
+4. `perm_eq_from_subset`: uniq + same size + subset → perm_eq
+
+This produces small proof terms (~15GB -vo). An earlier version used
+boolean reflection (check_fact3 + psi-invariance + `by ... /=` closing)
+which was elegant but produced proof terms exceeding 100GB.
+
+The structural proof creates a dependency inversion: fact3 uses
+phi_w_support_general (originally downstream). This is resolved by
+a file split: psi_cdindex_core.v (definitions), psi_cdindex_witness.v
+(S_w, omega, witnesses), psi_cdindex_support.v (phi_w_support + fact3).
 
 ### 5.2 Support Characterization (phi_w_support_general)
 
 **Stanley (p.61, in the proof of Prop 1.6.4):** "It is easy to see that
 Phi_w = sum_{omega(X) supseteq S_w} u_X" where S_w = {i-1 : f_i = d}.
 
-**Formal (`psi_cdindex.v:2282-2302`):**
+**Formal (`psi_cdindex_support.v`):**
 ```coq
 Lemma phi_w_support_general (w : seq nat) (X : seq bool) :
   uniq w -> 2 <= size w -> size X = (size w).-1 ->
@@ -572,12 +579,15 @@ its complement. This is equation (1.65) restated as a classification.
 Stanley §1.4 (descents):     descent.v, eulerian.v, beta.v
 Stanley §1.6.2 (flip equiv):  (not formalized)
 Stanley §1.6.3 (cd-index):   psi_core.v, psi_comm.v, psi_descent_v2.v,
-                               psi_descent_thms.v, psi_cdindex.v
+                               psi_descent_thms.v,
+                               psi_cdindex_core.v (definitions + helpers)
+                               psi_cdindex_witness.v (S_w, omega, witness)
+                               psi_cdindex_support.v (phi_w_support + fact3)
 Stanley §1.6.4 (omega mono):  beta_omega.v, beta_bridge.v, perm_seq_bridge.v
 Stanley Cor 1.6.5 (alt max):  beta_swap.v
 ```
 
-The formal proof requires ~5000 LOC across 15 files, primarily because:
+The formal proof requires ~5500 LOC across 17 files, primarily because:
 1. The perm-to-seq type bridge (absent in informal math)
 2. The min-max tree structure lemmas (stated without proof by Stanley)
 3. The psi commutativity proofs (stated as "Fact #1" by Stanley)
