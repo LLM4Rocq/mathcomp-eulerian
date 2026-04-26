@@ -8,3 +8,9 @@
 Makefile.coq
 Makefile.coq.conf
 rocq_mcp_cache_*.v
+
+# Local toolchain caches (mamba, poppler, micromamba) — never track.
+.local/
+
+# Per-session Claude Code state.
+.claude/

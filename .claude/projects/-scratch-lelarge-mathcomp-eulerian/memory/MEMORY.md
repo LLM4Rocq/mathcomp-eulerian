@@ -1,5 +1,0 @@
-- [Apptainer environment](env_apptainer.md) — $HOME is read-only; redirect caches under the project dir
-- [Stanley EC1 PDF location](ref_stanley_pdf.md) — refs/enu_comb_stanley.pdf + §1.4/§1.6 text extracts; Prop 1.6.4 is the β(S)-monotonicity source
-- [cd-index formalization status](project_cdindex_status.md) — COMPLETE: 0 axioms, 0 Admitted; beta_alt_max fully proved
-- [False axioms discovered](feedback_false_axioms.md) — beta_swap_lt_caseB and char_mono_phi_w_injective were false; always test computationally
-- [Slurm memory](feedback_slurm_mem.md) — psi_descent compilation resolved; no special allocation needed

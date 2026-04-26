@@ -1,7 +1,0 @@
-(* Layer 3: Eulerian numbers and their properties. *)
-From mathcomp Require Import all_ssreflect fingroup perm binomial.
-From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent.
-
-Set Implicit Arguments.
-Unset Strict Implicit.
-Unset Printing Implicit Defensive.

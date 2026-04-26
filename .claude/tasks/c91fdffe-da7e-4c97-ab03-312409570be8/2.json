@@ -1,9 +1,0 @@
-{
-  "id": "2",
-  "subject": "Refactor 4 main descent lemmas to use helpers",
-  "description": "Rewrite descent_psi_R_add, descent_psi_R_remove, descent_psi_LR_swap1, descent_psi_LR_swap2 using the new helpers",
-  "activeForm": "Refactoring descent lemmas",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

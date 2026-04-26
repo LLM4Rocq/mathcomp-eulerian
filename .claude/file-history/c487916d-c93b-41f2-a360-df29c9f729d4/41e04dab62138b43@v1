@@ -1,3 +1,0 @@
-- [Apptainer environment](env_apptainer.md) — $HOME is read-only; redirect caches under the project dir
-- [Stanley EC1 PDF location](ref_stanley_pdf.md) — refs/enu_comb_stanley.pdf + §1.4/§1.6 text extracts; Prop 1.6.4 is the β(S)-monotonicity source
-- [cd-index formalization status](project_cdindex_status.md) — M1-M7 done structurally; 24 axioms remain; shape-stability (T4) is the bottleneck

@@ -1,9 +1,0 @@
-{
-  "id": "1",
-  "subject": "Extract interior/boundary helper lemmas for descent proofs",
-  "description": "Extract descent_psi_interior and descent_psi_rboundary helpers from the 4 repeated proof blocks",
-  "activeForm": "Extracting helper lemmas",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}
