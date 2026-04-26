@@ -1,0 +1,249 @@
+(* Layer 3: Eulerian numbers and their properties. *)
+From mathcomp Require Import all_ssreflect fingroup perm binomial.
+From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+(* ========================================================================= *)
+(* Eulerian numbers                                                          *)
+(* ========================================================================= *)
+
+(* eulerian n k = number of permutations of 'I_n.+1 with exactly k descents. *)
+Definition eulerian (n k : nat) : nat :=
+  #|[set s : {perm 'I_n.+1} | des s == k]|.
+
+(* ========================================================================= *)
+(* Base cases and bounds                                                     *)
+(* ========================================================================= *)
+
+Section EulerianBasic.
+
+Lemma eulerian_row_sum n : \sum_(k < n.+1) eulerian n k = #|{perm 'I_n.+1}|.
+Proof.
+rewrite /eulerian -sum1_card.
+rewrite (partition_big (fun s : {perm 'I_n.+1} => inord (des s) : 'I_n.+1) xpredT) //=.
+apply: eq_bigr => k _; rewrite -sum1_card; apply: eq_bigl => s; rewrite inE.
+by rewrite -val_eqE /= inordK // ltnS des_le.
+Qed.
+
+Lemma eulerian_row_sum_fact n : \sum_(k < n.+1) eulerian n k = n.+1`!.
+Proof. by rewrite eulerian_row_sum card_Sn. Qed.
+
+Lemma eulerian_out_of_range n k : n < k -> eulerian n k = 0.
+Proof.
+move=> nk; apply/eqP; rewrite cards_eq0; apply/eqP/setP => s.
+rewrite !inE; apply/negbTE; rewrite neq_ltn.
+by rewrite (leq_ltn_trans (des_le s) nk).
+Qed.
+
+Lemma des0_id n (s : {perm 'I_n.+1}) : des s = 0 -> s = 1%g.
+Proof.
+move=> Hds.
+have Hds0 : descent_set s = set0.
+  by apply/eqP; rewrite -cards_eq0; apply/eqP.
+have Hmono : forall i : 'I_n,
+    (val (s (widen_ord (leqnSn n) i)) < val (s (lift ord0 i)))%N.
+  move=> i.
+  have Hneq : widen_ord (leqnSn n) i != lift ord0 i.
+    by apply/eqP => /(congr1 val) /=; rewrite /bump /= add1n => /n_Sn.
+  have : i \notin descent_set s by rewrite Hds0 inE.
+  rewrite mem_descent_set /is_descent -leqNgt ltn_neqAle => -> /=.
+  by rewrite andbT; apply/eqP => /val_inj/perm_inj/eqP; apply/negP.
+have Hle : forall i : 'I_n.+1, (val i <= val (s i))%N.
+  case=> m; elim: m => [|m IHm] Hm; first exact: leq0n.
+  have Hm1 : m < n.+1 by apply: ltnW.
+  have Hmn : m < n by [].
+  have := Hmono (Ordinal Hmn).
+  have -> : widen_ord (leqnSn n) (Ordinal Hmn) = Ordinal Hm1.
+    exact: val_inj.
+  have -> : lift ord0 (Ordinal Hmn) = Ordinal Hm.
+    by apply: val_inj; rewrite /= /bump /= add1n.
+  by move/(leq_ltn_trans (IHm Hm1)).
+have Hsum : \sum_(i : 'I_n.+1) (val (s i) - val i)%N = 0.
+  rewrite sumnB //.
+  have -> : \sum_(i : 'I_n.+1) val (s i)
+          = \sum_(i : 'I_n.+1) val i.
+    by rewrite [RHS](reindex_inj (@perm_inj _ s)).
+  by rewrite subnn.
+apply/permP => i; rewrite perm1; apply/val_inj.
+move/eqP: Hsum; rewrite (bigD1 i) //= addn_eq0 subn_eq0 => /andP[/eqP Hi _].
+by apply/eqP; rewrite eqn_leq Hle /= -subn_eq0 Hi.
+Qed.
+
+Lemma eulerian_n_0 n : eulerian n 0 = 1.
+Proof.
+rewrite /eulerian -(cards1 (1%g : {perm 'I_n.+1})); apply: eq_card => s.
+rewrite !inE; apply/eqP/eqP => [/des0_id //|->]; exact: des_id.
+Qed.
+
+End EulerianBasic.
+
+(* ========================================================================= *)
+(* Symmetry: eulerian n k = eulerian n (n - k)                               *)
+(* ========================================================================= *)
+
+Lemma rev_perm_inj n : injective (@rev_perm n).
+Proof. by move=> s1 s2; rewrite /rev_perm; exact: mulgI. Qed.
+
+Lemma rev_perm_involutive n : involutive (@rev_perm n).
+Proof.
+move=> s; apply/permP => j.
+by rewrite !rev_permE rev_ordK.
+Qed.
+
+Lemma eulerian_symm n k : k <= n -> eulerian n k = eulerian n (n - k).
+Proof.
+move=> kn; rewrite /eulerian.
+rewrite -(card_imset _ (@rev_perm_inj n)).
+congr #|pred_of_set _|; apply/setP => s; rewrite !inE.
+apply/imsetP/idP.
++ by case=> t; rewrite inE => /eqP <- ->; rewrite des_rev_perm.
++ move=> /eqP Hs; exists (rev_perm s); last by rewrite rev_perm_involutive.
+  by rewrite inE des_rev_perm Hs subKn.
+Qed.
+
+Lemma eulerian_n_n n : eulerian n n = 1.
+Proof. by rewrite (eulerian_symm (leqnn n)) subnn eulerian_n_0. Qed.
+
+(* ========================================================================= *)
+(* Recurrence:                                                               *)
+(*   eulerian n.+1 k.+1 = k.+2 * eulerian n k.+1 + (n.+1 - k) * eulerian n k *)
+(* (The k = 0 case is eulerian_n_0: eulerian n.+1 0 = 1.)                    *)
+(*                                                                           *)
+(* We prove this via the "insert-max-value" bijection                        *)
+(*   {perm 'I_n.+2} ≅ {perm 'I_n.+1} × 'I_n.+2                               *)
+(*   σ ↦ (τ, p)                                                              *)
+(* where p = σ^{-1}(ord_max) is the position of the max value and τ is       *)
+(* obtained by deleting that max from σ's one-line notation.                 *)
+(* ========================================================================= *)
+
+(* ------------------------------------------------------------------------- *)
+(* Helpers on widen_ord (leqnSn n.+1) : 'I_n.+1 -> 'I_n.+2                   *)
+(* ------------------------------------------------------------------------- *)
+
+Lemma widenSn_inj n : injective (widen_ord (leqnSn n.+1)).
+Proof. by move=> i1 i2 H; apply/val_inj; exact: (congr1 val H). Qed.
+
+Lemma widenSn_neq_ord_max n (j : 'I_n.+1) :
+  widen_ord (leqnSn n.+1) j != (ord_max : 'I_n.+2).
+Proof.
+by apply/eqP => H; move: (congr1 val H) (ltn_ord j) => /= ->; rewrite ltnn.
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* insert_max_perm: inserting max value at a given position                  *)
+(* ------------------------------------------------------------------------- *)
+
+Section InsertMax.
+Variables (n : nat) (t : {perm 'I_n.+1}) (p : 'I_n.+2).
+
+Definition insert_max_fun (i : 'I_n.+2) : 'I_n.+2 :=
+  match unlift p i with
+  | Some j => widen_ord (leqnSn _) (t j)
+  | None => ord_max
+  end.
+
+Lemma insert_max_fun_p : insert_max_fun p = ord_max.
+Proof. by rewrite /insert_max_fun unlift_none. Qed.
+
+Lemma insert_max_fun_lift (j : 'I_n.+1) :
+  insert_max_fun (lift p j) = widen_ord (leqnSn _) (t j).
+Proof. by rewrite /insert_max_fun liftK. Qed.
+
+Lemma insert_max_fun_inj : injective insert_max_fun.
+Proof.
+move=> i1 i2; rewrite /insert_max_fun.
+case: (unliftP p i1) => [j1 ->|->]; case: (unliftP p i2) => [j2 ->|->].
+- by move/widenSn_inj/perm_inj ->.
+- by move/eqP; rewrite (negbTE (widenSn_neq_ord_max _)).
+- by move/eqP; rewrite eq_sym (negbTE (widenSn_neq_ord_max _)).
+- by [].
+Qed.
+
+Definition insert_max_perm : {perm 'I_n.+2} := perm insert_max_fun_inj.
+
+Lemma insert_max_permE i : insert_max_perm i = insert_max_fun i.
+Proof. by rewrite permE. Qed.
+
+Lemma insert_max_perm_at_p : insert_max_perm p = ord_max.
+Proof. by rewrite insert_max_permE insert_max_fun_p. Qed.
+
+Lemma insert_max_perm_lift (j : 'I_n.+1) :
+  insert_max_perm (lift p j) = widen_ord (leqnSn _) (t j).
+Proof. by rewrite insert_max_permE insert_max_fun_lift. Qed.
+
+End InsertMax.
+
+(* ------------------------------------------------------------------------- *)
+(* Inverse: extract_max_perm                                                *)
+(* ------------------------------------------------------------------------- *)
+
+Section ExtractMax.
+Variables (n : nat) (s : {perm 'I_n.+2}) (p : 'I_n.+2).
+Hypothesis (sp : s p = ord_max).
+
+Fact extract_max_ne (j : 'I_n.+1) : s (lift p j) != (ord_max : 'I_n.+2).
+Proof.
+rewrite -sp; apply/eqP => /perm_inj /eqP.
+by rewrite eq_sym (negbTE (neq_lift _ _)).
+Qed.
+
+Definition extract_max_fun (j : 'I_n.+1) : 'I_n.+1 :=
+  odflt j (unlift ord_max (s (lift p j))).
+
+Lemma extract_max_funE (j : 'I_n.+1) :
+  widen_ord (leqnSn n.+1) (extract_max_fun j) = s (lift p j).
+Proof.
+rewrite /extract_max_fun.
+case: (unliftP ord_max (s (lift p j))) => [k ->|H] /=.
+- by apply: val_inj; rewrite /= /bump /= leqNgt ltn_ord.
+- by move: (extract_max_ne j); rewrite H eqxx.
+Qed.
+
+Lemma extract_max_fun_inj : injective extract_max_fun.
+Proof.
+move=> j1 j2 /(congr1 (widen_ord (leqnSn n.+1))).
+rewrite !extract_max_funE => /perm_inj /lift_inj //.
+Qed.
+
+Definition extract_max_perm : {perm 'I_n.+1} := perm extract_max_fun_inj.
+
+Lemma extract_max_permE j : extract_max_perm j = extract_max_fun j.
+Proof. by rewrite permE. Qed.
+
+Lemma extract_max_widen (j : 'I_n.+1) :
+  widen_ord (leqnSn n.+1) (extract_max_perm j) = s (lift p j).
+Proof. by rewrite extract_max_permE extract_max_funE. Qed.
+
+End ExtractMax.
+
+(* ------------------------------------------------------------------------- *)
+(* Bijection: insert_max_perm and extract_max_perm are inverses             *)
+(* ------------------------------------------------------------------------- *)
+
+Section InsertExtractBij.
+Variable n : nat.
+
+Lemma extract_insert_max (t : {perm 'I_n.+1}) (p : 'I_n.+2) :
+  extract_max_perm (insert_max_perm_at_p t p) = t.
+Proof.
+apply/permP => j; apply: (@widenSn_inj n).
+by rewrite (extract_max_widen (insert_max_perm_at_p _ _)) insert_max_perm_lift.
+Qed.
+
+Lemma insert_extract_max (s : {perm 'I_n.+2}) (p : 'I_n.+2)
+    (sp : s p = ord_max) :
+  insert_max_perm (extract_max_perm sp) p = s.
+Proof.
+apply/permP => i; rewrite insert_max_permE /insert_max_fun.
+case: (unliftP p i) => [j ->|->]; last exact/esym.
+by rewrite -extract_max_widen.
+Qed.
+
+End InsertExtractBij.
+
+Lemma eulerian_rec n k :
+  eulerian n.+1 k.+1 = k.+2 * eulerian n k.+1 + (n.+1 - k) * eulerian n k.
+Admitted.

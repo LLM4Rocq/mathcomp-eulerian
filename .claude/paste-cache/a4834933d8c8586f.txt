@@ -1,0 +1,12 @@
+beta_swap.v (244 lines) — §3 + §4 with 4 labeled admits:                                          
+  - beta_swap_monotone (§C.1) — Foata's swap injection (~150 lines to fill)                                               
+  - beta_swap_lt (§C.2) — strict witness construction                                                                     
+  - find_reducing_toggle (§D.1) — combinatorial boundary-pair argument                                                  
+  - beta_alt_max_bounded — one branch admit (second-alt case)                                                             
+                                                                                                                          
+  Important correction from the agent: The spec's D != alt_desc_set n → β D < β alt_desc_set is actually false — there are
+   two alternating sets (odd and even positions) with equal β by reversal symmetry. The delivered beta_alt_max correctly  
+  uses the weaker hypothesis ~~ set_is_alt D (no consecutive same-type pair), which aligns with A5's ~~ is_alt s. Update  
+  the md spec accordingly.                                                                                                
+                                                                                                                        
+  Skeleton is in place. Next step would be filling the 4 admits (the §C.1 Foata injection is the biggest piece) 

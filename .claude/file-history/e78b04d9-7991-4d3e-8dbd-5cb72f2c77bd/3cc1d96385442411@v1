@@ -1,0 +1,27 @@
+---
+name: Slurm memory allocation
+description: psi_descent.v cannot compile -vo in reasonable time (243 GB / 50h, still growing); use -vos workflow
+type: feedback
+originSessionId: 53a5ea2f-3c43-4f62-9f7c-1af6fe3aed00
+---
+psi_descent.v compilation profile (2026-04-20 to 2026-04-22, multiple attempts):
+
+**Full compilation (`-vo`) is NOT feasible:**
+- Original file: killed at 156 GB / 16 hours (never completed)
+- With `abstract` on has_left_child_cons: same trajectory
+- With `Opaque` on all major lemmas: no effect
+- With proof decomposition (13 Local Lemmas): ~15% memory reduction, still not finishing
+- With unified tree_structure lemma: 243 GB / 50 hours, still growing when killed
+- Root cause: strong induction on `size w` + 3-way case split generates massive proof terms that the kernel can't serialize in bounded memory
+
+**Use `-vos` workflow instead:**
+- `rocq compile -vos psi_descent.v` → 33 KB in seconds
+- `rocq compile -vos psi_cdindex.v` → 54 KB in seconds
+- Downstream development works fine against `.vos` files
+- Proofs are NOT verified but type signatures are checked
+
+**For future work:** The proof needs a fundamentally different approach — e.g., structural recursion on the `mmtree` datatype instead of strong induction on `size w`, or reflection-based proofs using `vm_compute`.
+
+**Why:** The cgroup at `/sys/fs/cgroup/.../job_NNNN/memory.max` caps RSS regardless of node capacity.
+
+**How to apply:** Use `rocq compile -vos` for all files in the dependency chain. For full verification, a new proof strategy is needed.

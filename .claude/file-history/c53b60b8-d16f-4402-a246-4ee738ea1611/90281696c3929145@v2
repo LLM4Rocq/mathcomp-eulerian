@@ -1,0 +1,13 @@
+{
+  "rocq-mcp": {
+    "type": "stdio",
+    "command": "uv",
+    "args": ["run", "rocq-mcp"],
+    "env": {
+      "ROCQ_COQC_TIMEOUT": "120",
+      "ROCQ_VERIFY_TIMEOUT": "240",
+      "UV_CACHE_DIR": "/scratch/lelarge/mathcomp-eulerian/.cache/uv",
+      "XDG_CACHE_HOME": "/scratch/lelarge/mathcomp-eulerian/.cache"
+    }
+  }
+}

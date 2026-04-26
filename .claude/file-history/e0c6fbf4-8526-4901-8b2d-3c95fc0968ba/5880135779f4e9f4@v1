@@ -1,0 +1,1527 @@
+(* psi_comm.v — Milestone 3: Commutativity of psi                            *)
+(*                                                                           *)
+(* Proves that the operators ψᵢ commute (Stanley EC1 §1.6.3, Fact #1).      *)
+
+From mathcomp Require Import all_ssreflect.
+Require Import mmtree psi_core.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+
+(* ===== Milestone 3: Commutativity of psi ================================= *)
+(* Reference: M3_COMMUTATIVITY_INFORMAL.md (informal proof note).             *)
+(* Stanley EC1 (2nd ed.) section 1.6.3, Fact #1: the psi_i are commuting     *)
+(* involutions.                                                               *)
+
+(* ----- M3.1 Window geometry trichotomy ------------------------------------ *)
+(* Two windows in a min-max tree are either disjoint or nested.               *)
+(* Justification: M3_COMMUTATIVITY_INFORMAL.md section 1.2.                   *)
+(* The recursive structure of window_size mirrors the tree construction.       *)
+(* At each level, mm_pos separates left from right subtree. Positions in      *)
+(* different branches have disjoint windows; positions in the same branch     *)
+(* have nested windows. This is a structural property of binary trees.        *)
+
+Lemma window_trichotomy : forall i j (w : seq nat),
+  i < size w -> j < size w -> i <> j ->
+  [\/ i + window_size i w <= j,
+      j + window_size j w <= i |
+      (i < j /\ j + window_size j w <= i + window_size i w) \/
+      (j < i /\ i + window_size i w <= j + window_size j w)].
+Proof.
+suff H : forall n i j (w : seq nat),
+  size w <= n -> i < size w -> j < size w -> i <> j ->
+  [\/ i + window_size i w <= j,
+      j + window_size j w <= i |
+      (i < j /\ j + window_size j w <= i + window_size i w) \/
+      (j < i /\ i + window_size i w <= j + window_size j w)].
+  by move=> i j w Hi Hj Hne; apply: (H (size w)).
+elim=> [| n IH] i j w Hsz Hi Hj Hne.
+  by move: Hi; rewrite leqn0 in Hsz; move/eqP: Hsz => ->.
+case: w Hsz Hi Hj Hne => [|a s0] //= Hsz Hi Hj Hne.
+set w := a :: s0.
+set j0 := mm_pos w.
+have Hw_ne : w <> [::] by [].
+have Hj0 : j0 < size w := mm_pos_lt Hw_ne.
+have Hj0_s0 : j0 <= size s0 by rewrite -ltnS.
+have Hsz' : size s0 <= n by rewrite -ltnS.
+have Htake_sz : size (take j0 w) <= n.
+  by rewrite size_take Hj0; exact: leq_trans Hj0_s0 Hsz'.
+have Hdrop_sz : size (drop j0.+1 w) <= n.
+  by rewrite size_drop /=;
+     exact: leq_trans (leq_subr _ _) Hsz'.
+have Htake_j0 : size (take j0 w) = j0
+  by rewrite size_take Hj0.
+have Hdrop_j0 : size (drop j0.+1 w) = size s0 - j0
+  by rewrite size_drop /=.
+have Hwsi := window_size_cons i a s0.
+have Hwsj := window_size_cons j a s0.
+rewrite -/w -/j0 in Hwsi Hwsj.
+(* Helper: left subtree window stays within j0 *)
+have Hleft_bound : forall k, k < j0 ->
+  k + window_size k w <= j0.
+  move=> k Hk.
+  have Hwsk : window_size k w = window_size k (take j0 w).
+    have := window_size_cons k a s0.
+    rewrite /= -/j0 Hk => //.
+  rewrite Hwsk.
+  have Hbd := window_size_bound k (take j0 w).
+  rewrite Htake_j0 in Hbd.
+  have Hk' : k <= j0 := ltnW Hk.
+  apply: leq_trans (_ : k + (j0 - k) <= _).
+    by rewrite leq_add2l.
+  by rewrite subnKC.
+(* Helper for right-subtree index shifting *)
+have Hshift : forall k, j0 < k ->
+  k - j0 - 1 + j0.+1 = k.
+  move=> k0 Hk0.
+  have Hle := ltnW Hk0.
+  suff H: k0 - j0 - 1 = k0 - j0.+1.
+    by rewrite H subnK.
+  by rewrite subn1 subnS.
+(* Helper: right-subtree index bound *)
+have Hright_idx : forall k, j0 < k -> k < size w ->
+  k - j0 - 1 < size (drop j0.+1 w).
+  move=> k Hk Hksz.
+  rewrite Hdrop_j0.
+  case E: (k - j0) (subn_gt0 j0 k) => [|m];
+    first by rewrite Hk.
+  move=> _; rewrite subSS subn0.
+  by rewrite -E leq_sub2r // -ltnS.
+(* Helper: window_size for right subtree *)
+have Hws_right : forall k, j0 < k ->
+  window_size k w =
+  window_size (k - j0 - 1) (drop j0.+1 w).
+  move=> k Hk.
+  have Hwsk := window_size_cons k a s0.
+  rewrite /= -/j0 in Hwsk.
+  rewrite Hwsk ifF; last first.
+    by apply/negbTE; rewrite -ltnNge; exact: ltnW.
+  by rewrite ifF //; exact: gtn_eqF.
+(* Helper: window_size at the root *)
+have Hws_root : window_size j0 w = size w - j0.
+  have := window_size_cons j0 a s0.
+  by rewrite /= -/j0 ltnn eq_refl.
+(* Main 9-way case analysis: i vs j0, j vs j0 *)
+case: (ltngtP i j0) => [Hi_lt | Hi_r | Hi_eq];
+  case: (ltngtP j j0) => [Hj_lt | Hj_r | Hj_eq].
+- (* i left, j left: recurse on take j0 w *)
+  have Hi' : i < size (take j0 w) by rewrite Htake_j0.
+  have Hj' : j < size (take j0 w) by rewrite Htake_j0.
+  have := IH i j (take j0 w) Htake_sz Hi' Hj' Hne.
+  rewrite Hwsi Hi_lt Hwsj Hj_lt.
+  by case=> [?|?|?];
+     [constructor 1|constructor 2|constructor 3].
+- (* i left, j right: disjoint, i+ws_i <= j0 <= j *)
+  constructor 1.
+  exact: leq_trans (Hleft_bound i Hi_lt) (ltnW Hj_r).
+- (* i left, j = root: disjoint, i+ws_i <= j0 = j *)
+  constructor 1.
+  by rewrite Hj_eq; exact: Hleft_bound i Hi_lt.
+- (* i right, j left: disjoint, j+ws_j <= j0 <= i *)
+  constructor 2.
+  exact: leq_trans (Hleft_bound j Hj_lt) (ltnW Hi_r).
+- (* i right, j right: recurse on drop j0.+1 w *)
+  set i' := i - j0 - 1. set j' := j - j0 - 1.
+  set w' := drop j0.+1 w.
+  have Hi' : i' < size w' :=
+    Hright_idx i Hi_r Hi.
+  have Hj' : j' < size w' :=
+    Hright_idx j Hj_r Hj.
+  have Hne' : i' <> j'.
+    move=> H; apply: Hne.
+    have := congr1 (addn^~ j0.+1) H.
+    by rewrite /i' /j' !(Hshift) //.
+  have Hwsi_r := Hws_right i Hi_r.
+  have Hwsj_r := Hws_right j Hj_r.
+  have := IH i' j' w' Hdrop_sz Hi' Hj' Hne'.
+  rewrite Hwsi_r Hwsj_r.
+  (* Goal now has ws_i' and ws_j' in place of ws_i and ws_j *)
+  (* IH transfer: convert primed back to unprimed *)
+  (* Rewrite goal's window_size first, then index shifts *)
+  (* After Hwsi_r/Hwsj_r rewrite, goal uses i'/j'/w' for
+     window sizes but still uses i/j for positions *)
+  case=> [H1 | H1 | [[H1a H1b] | [H1a H1b]]].
+  + constructor 1.
+    (* goal: i + ws_i' <= j *)
+    (* Goal has unfolded i'/j'/w' from Hwsi_r/Hwsj_r
+       rewrite. Refold before shifting position indices. *)
+    rewrite -/i' -/w'.
+    have -> : i = i' + j0.+1 by rewrite Hshift.
+    have -> : j = j' + j0.+1 by rewrite Hshift.
+    rewrite -addnA [j0.+1 + _]addnC addnA leq_add2r.
+    exact: H1.
+  + constructor 2.
+    rewrite -/j' -/w'.
+    have -> : j = j' + j0.+1 by rewrite Hshift.
+    have -> : i = i' + j0.+1 by rewrite Hshift.
+    rewrite -addnA [j0.+1 + _]addnC addnA leq_add2r.
+    exact: H1.
+  + constructor 3; left; split.
+    * have -> : i = i' + j0.+1 by rewrite Hshift.
+      have -> : j = j' + j0.+1 by rewrite Hshift.
+      by rewrite ltn_add2r.
+    * rewrite -/i' -/j' -/w'.
+      have -> : j = j' + j0.+1 by rewrite Hshift.
+      have -> : i = i' + j0.+1 by rewrite Hshift.
+      rewrite -!addnA ![j0.+1 + _]addnC !addnA
+              leq_add2r.
+      exact: H1b.
+  + constructor 3; right; split.
+    * have -> : j = j' + j0.+1 by rewrite Hshift.
+      have -> : i = i' + j0.+1 by rewrite Hshift.
+      by rewrite ltn_add2r.
+    * rewrite -/i' -/j' -/w'.
+      have -> : i = i' + j0.+1 by rewrite Hshift.
+      have -> : j = j' + j0.+1 by rewrite Hshift.
+      rewrite -!addnA ![j0.+1 + _]addnC !addnA
+              leq_add2r.
+      exact: H1b.
+- (* i right, j = root: nested, j < i *)
+  constructor 3; right; split.
+  + by rewrite Hj_eq.
+  + rewrite Hj_eq Hws_root subnKC; last exact: ltnW.
+    (* goal: i + window_size i w <= size w *)
+    have := window_size_bound i w.
+    move=> Hbd.
+    apply: leq_trans (_ : i + (size w - i) <= _).
+      by rewrite leq_add2l.
+    by rewrite subnKC // ltnW.
+- (* i = root, j left: disjoint, j+ws_j <= j0 = i *)
+  constructor 2.
+  by rewrite Hi_eq; exact: Hleft_bound j Hj_lt.
+- (* i = root, j right: nested, i < j *)
+  constructor 3; left; split.
+  + by rewrite Hi_eq.
+  + rewrite Hi_eq Hws_root subnKC; last exact: ltnW.
+    have Hbd := window_size_bound j w.
+    apply: leq_trans (_ : j + (size w - j) <= _).
+      by rewrite leq_add2l.
+    by rewrite subnKC // ltnW.
+- (* i = root, j = root: impossible *)
+  by exfalso; apply: Hne; rewrite Hi_eq Hj_eq.
+Qed.
+
+(* Non-triviality: the nested case does occur (positions 1 and 5). *)
+Example window_trichotomy_ex :
+  let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
+  (1 < 5) && (5 + window_size 5 w <= 1 + window_size 1 w).
+Proof. by []. Qed.
+
+(* ----- M3.2 Disjoint commutativity --------------------------------------- *)
+(* When W_i and W_j are disjoint intervals, psi_i and psi_j modify non-      *)
+(* overlapping slices of w, so the operations commute. The proof is purely    *)
+(* mechanical take/drop/cat manipulation; the mathematical content is nil.    *)
+(* Justification: M3_COMMUTATIVITY_INFORMAL.md section 2.                     *)
+(* The word decomposes into 5 slices: [0,i), W_i, (W_i,j), W_j, (W_j,n),    *)
+(* with psi_i acting on slice 2 and psi_j on slice 4 independently.          *)
+(* Window stability: psi_j does not change positions in W_i (disjoint),       *)
+(* so window_size/window_at at i are unchanged by psi_j (and vice versa).     *)
+(* This is the disjoint-window specialization of M2_SUBTASKS.md T4-T5.        *)
+
+(* Window-size invariance under psi (forward declaration from M5).           *)
+
+(* ----- Order-isomorphism infrastructure ---------------------------------- *)
+(* mm_pos and window_size depend only on comparison structure.               *)
+
+Lemma foldr_minn_le_nth s a i :
+  i < (size s).+1 ->
+  foldr minn a s <= nth 0 (a :: s) i.
+Proof. move=> Hi; apply: foldr_minn_le; exact: mem_nth. Qed.
+
+Lemma foldr_maxn_ge_nth s a i :
+  i < (size s).+1 ->
+  nth 0 (a :: s) i <= foldr maxn a s.
+Proof. move=> Hi; apply: foldr_maxn_ge; exact: mem_nth. Qed.
+
+Lemma mm_pos_order_iso (s1 s2 : seq nat) :
+  size s1 = size s2 -> uniq s1 -> uniq s2 ->
+  s1 <> [::] ->
+  (forall p q, p < size s1 -> q < size s1 ->
+    (nth 0 s1 p < nth 0 s1 q) =
+    (nth 0 s2 p < nth 0 s2 q)) ->
+  mm_pos s1 = mm_pos s2.
+Proof.
+move=> Hsz Hu1 Hu2 Hne Hord.
+case: s1 Hsz Hu1 Hne Hord => [//|a1 t1] Hsz Hu1 _ Hord.
+case: s2 Hsz Hu2 Hord => [|a2 t2] Hsz Hu2 Hord.
+  by move: Hsz; rewrite /=.
+set s1 := a1 :: t1; set s2 := a2 :: t2.
+have Hszeq : size s1 = size s2 := Hsz.
+have Hp1 : min_pos s1 < size s1 by apply: min_pos_lt.
+have Hq1 : max_pos s1 < size s1 by apply: max_pos_lt.
+have Hp2 : min_pos s2 < size s2 by apply: min_pos_lt.
+have Hq2 : max_pos s2 < size s2 by apply: max_pos_lt.
+(* unique argmin/argmax characterizations *)
+have argmin1 : forall r, r < size s1 -> r <> min_pos s1 ->
+  nth 0 s1 (min_pos s1) < nth 0 s1 r.
+  move=> r Hr Hrp.
+  rewrite (nth_index 0 (min_in t1 a1)) ltn_neqAle.
+  apply/andP; split; last by apply: foldr_minn_le_nth.
+  apply/negP => /eqP Heq; apply: Hrp; symmetry.
+  apply/eqP; rewrite -(nth_uniq 0 Hp1 Hr Hu1).
+  by apply/eqP; rewrite (nth_index 0 (min_in t1 a1)).
+have argmax1 : forall r, r < size s1 ->
+  r <> max_pos s1 ->
+  nth 0 s1 r < nth 0 s1 (max_pos s1).
+  move=> r Hr Hrq.
+  rewrite (nth_index 0 (max_in t1 a1)) ltn_neqAle.
+  apply/andP; split; last by apply: foldr_maxn_ge_nth.
+  apply/negP => /eqP Heq; apply: Hrq.
+  apply/eqP; rewrite -(nth_uniq 0 Hr Hq1 Hu1).
+  by apply/eqP; rewrite (nth_index 0 (max_in t1 a1)).
+have argmin2 : forall r, r < size s2 ->
+  r <> min_pos s2 ->
+  nth 0 s2 (min_pos s2) < nth 0 s2 r.
+  move=> r Hr Hrp.
+  rewrite (nth_index 0 (min_in t2 a2)) ltn_neqAle.
+  apply/andP; split; last by apply: foldr_minn_le_nth.
+  apply/negP => /eqP Heq; apply: Hrp; symmetry.
+  apply/eqP; rewrite -(nth_uniq 0 Hp2 Hr Hu2).
+  by apply/eqP; rewrite (nth_index 0 (min_in t2 a2)).
+have argmax2 : forall r, r < size s2 ->
+  r <> max_pos s2 ->
+  nth 0 s2 r < nth 0 s2 (max_pos s2).
+  move=> r Hr Hrq.
+  rewrite (nth_index 0 (max_in t2 a2)) ltn_neqAle.
+  apply/andP; split; last by apply: foldr_maxn_ge_nth.
+  apply/negP => /eqP Heq; apply: Hrq.
+  apply/eqP; rewrite -(nth_uniq 0 Hr Hq2 Hu2).
+  by apply/eqP; rewrite (nth_index 0 (max_in t2 a2)).
+(* transfer *)
+have argmin1_s2 : forall r, r < size s2 ->
+  r <> min_pos s1 ->
+  nth 0 s2 (min_pos s1) < nth 0 s2 r.
+  move=> r Hr Hrp.
+  have Hr' : r < size s1 by rewrite Hszeq.
+  rewrite -(Hord (min_pos s1) r Hp1 Hr').
+  exact: argmin1.
+have argmax1_s2 : forall r, r < size s2 ->
+  r <> max_pos s1 ->
+  nth 0 s2 r < nth 0 s2 (max_pos s1).
+  move=> r Hr Hrq.
+  have Hr' : r < size s1 by rewrite Hszeq.
+  rewrite -(Hord r (max_pos s1) Hr' Hq1).
+  exact: argmax1.
+(* min_pos equal *)
+have ltn_neq_ : forall a b : nat, a < b -> a <> b
+  by move=> ?? /ltn_eqF /eqP.
+have Hmin_eq : min_pos s1 = min_pos s2.
+  apply/eqP; rewrite eqn_leq; apply/andP; split;
+    rewrite leqNgt; apply/negP => Hlt.
+  - have H1 := argmin1_s2 (min_pos s2) Hp2
+      (ltn_neq_ _ _ Hlt).
+    have H2 := argmin2 (min_pos s1)
+      ltac:(rewrite -Hszeq; done)
+      (not_eq_sym (ltn_neq_ _ _ Hlt)).
+    by rewrite ltnNge (ltnW H1) in H2.
+  - have H1 := argmin2 (min_pos s1)
+      ltac:(rewrite -Hszeq; done) (ltn_neq_ _ _ Hlt).
+    have H2 := argmin1_s2 (min_pos s2) Hp2
+      (not_eq_sym (ltn_neq_ _ _ Hlt)).
+    by rewrite ltnNge (ltnW H2) in H1.
+(* max_pos equal *)
+have Hmax_eq : max_pos s1 = max_pos s2.
+  apply/eqP; rewrite eqn_leq; apply/andP; split;
+    rewrite leqNgt; apply/negP => Hlt.
+  - have H1 := argmax1_s2 (max_pos s2) Hq2
+      (ltn_neq_ _ _ Hlt).
+    have H2 := argmax2 (max_pos s1)
+      ltac:(rewrite -Hszeq; done)
+      (not_eq_sym (ltn_neq_ _ _ Hlt)).
+    by rewrite ltnNge (ltnW H1) in H2.
+  - have H1 := argmax2 (max_pos s1)
+      ltac:(rewrite -Hszeq; done) (ltn_neq_ _ _ Hlt).
+    have H2 := argmax1_s2 (max_pos s2) Hq2
+      (not_eq_sym (ltn_neq_ _ _ Hlt)).
+    by rewrite ltnNge (ltnW H2) in H1.
+by rewrite /mm_pos Hmin_eq Hmax_eq.
+Qed.
+
+Lemma window_size_order_iso (s1 s2 : seq nat) i :
+  size s1 = size s2 -> uniq s1 -> uniq s2 ->
+  (forall p q, p < size s1 -> q < size s1 ->
+    (nth 0 s1 p < nth 0 s1 q) =
+    (nth 0 s2 p < nth 0 s2 q)) ->
+  window_size i s1 = window_size i s2.
+Proof.
+(* Follows from mm_pos_order_iso by structural induction on the     *)
+(* Cartesian tree. At each level, mm_pos is the same (by order      *)
+(* iso), so the recursion goes to the same subtree with the same    *)
+(* comparison structure. *)
+move: s1 s2 i.
+suff Hgen : forall n s1 s2 i, size s1 <= n ->
+  size s1 = size s2 -> uniq s1 -> uniq s2 ->
+  (forall p q, p < size s1 -> q < size s1 ->
+    (nth 0 s1 p < nth 0 s1 q) =
+    (nth 0 s2 p < nth 0 s2 q)) ->
+  window_size i s1 = window_size i s2.
+  by move=> s1 s2 i; apply: (Hgen (size s1));
+     rewrite ?leqnn.
+elim=> [|n IH] s1 s2 i Hsz1 Hszeq Hu1 Hu2 Hord.
+  have Hsz0 : size s1 = 0.
+    by apply/eqP; rewrite -leqn0.
+  by rewrite (size0nil Hsz0); rewrite Hsz0 in Hszeq;
+     rewrite (size0nil (esym Hszeq)).
+case Hs1 : s1 => [|a1 t1]; first
+  by move: Hszeq; rewrite Hs1 /= => Hsz2;
+     have -> : s2 = [::] by apply/eqP;
+     rewrite -size_eq0 -Hsz2.
+case Hs2 : s2 => [|a2 t2]; first
+  by move: Hszeq; rewrite Hs1 Hs2 /=.
+have Hne1 : a1 :: t1 <> [::] by [].
+have Hne2 : a2 :: t2 <> [::] by [].
+have Hszeq' : size (a1 :: t1) = size (a2 :: t2)
+  by rewrite -Hs1 -Hs2.
+subst s1 s2.
+have Hmm := mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord.
+set m := mm_pos (a1 :: t1).
+rewrite (window_size_cons i a1 t1) -/m.
+rewrite (window_size_cons i a2 t2) -Hmm -/m.
+have Hm1 : m < size (a1 :: t1) by apply: mm_pos_lt.
+case: (ltngtP i m) => [Him | Hmi | _].
+- apply: IH.
+  + rewrite size_takel ?ltnW //.
+    exact: leq_trans (ltnW Hm1) Hsz1.
+  + by rewrite !size_takel // ?ltnW //
+       -(mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord).
+  + by move: Hu1; rewrite -{1}(cat_take_drop m (a1 :: t1))
+       cat_uniq => /andP [].
+  + by move: Hu2; rewrite -{1}(cat_take_drop m (a2 :: t2))
+       cat_uniq => /andP [].
+  + move=> p q Hp Hq.
+    rewrite !nth_take //.
+    apply: Hord;
+      apply: ltn_trans _ Hm1; rewrite size_takel ?ltnW //
+      in Hp Hq; done.
+- apply: IH.
+  + rewrite size_drop.
+    by apply: leq_trans (leq_subr _ _);
+       rewrite /= ltnS in Hsz1; exact: (leq_trans (leqnSn _) Hsz1).
+  + by rewrite !size_drop Hszeq'.
+  + by move: Hu1;
+       rewrite -{1}(cat_take_drop m.+1 (a1 :: t1))
+       cat_uniq => /andP [_ /andP [_ ?]].
+  + by move: Hu2;
+       rewrite -{1}(cat_take_drop m.+1 (a2 :: t2))
+       cat_uniq => /andP [_ /andP [_ ?]].
+  + move=> p q Hp Hq.
+    rewrite !nth_drop; apply: Hord;
+      rewrite /= ltnS size_drop /= in Hp Hq;
+      rewrite /= ltnS;
+      by apply: leq_trans _ (leq_subr _ _) => //;
+         exact: leq_add.
+- by rewrite Hszeq'.
+Qed.
+
+(* ----- window_size_psi helpers -------------------------------------------- *)
+
+(* mm_pos of drop (mm_pos w) w is 0.                                *)
+Lemma mm_pos_drop_mm w :
+  w <> [::] ->
+  mm_pos (drop (mm_pos w) w) = 0.
+Proof.
+move=> Hw_ne.
+set m := mm_pos w.
+have Hm : m < size w by apply: mm_pos_lt.
+have Hdm_ne : drop m w <> [::].
+  move=> E; have : size (drop m w) = 0 by rewrite E.
+  by rewrite size_drop => /eqP; rewrite subn_eq0 leqNgt Hm.
+have Hnth_m := nth_w_mm_pos Hw_ne.
+have [Hno_min Hno_max] := notin_take_mm Hw_ne.
+have Hmin_dm := min_val_drop Hw_ne Hno_min Hm.
+have Hmax_dm := max_val_drop Hw_ne Hno_max Hm.
+have Hhead_dm : head 0 (drop m w) = nth 0 w m
+  by rewrite -nth0 nth_drop addn0.
+apply: mm_pos_char => //.
+  by case: (drop m w) Hdm_ne.
+- (* min \notin take 0 (drop m w) = [::] *)
+  by rewrite take0.
+- (* max \notin take 0 (drop m w) = [::] *)
+  by rewrite take0.
+- rewrite -/m in Hmin_dm Hmax_dm.
+  have Hh : nth 0 (drop m w) 0 = nth 0 w m.
+    by rewrite nth_drop addn0.
+  case: Hnth_m => Hval; [left | right]; rewrite Hh Hval.
+  + by symmetry.
+  + by symmetry.
+Qed.
+
+(* Helper: psi 0 s = rank_shift_seq s when mm_pos s = 0 and 1 < size s. *)
+Lemma psi_0_eq s :
+  mm_pos s = 0 -> 1 < size s ->
+  psi 0 s = rank_shift_seq s.
+Proof.
+move=> Hm0 Hsz.
+have Hs_ne : s <> [::] by case: (s) Hsz.
+have Hws : window_size 0 s = size s.
+  have [a [s0 Hs_eq]] : exists a s0, s = a :: s0.
+    by case: (s) Hs_ne => [//|a s0] _; exists a, s0.
+  rewrite Hs_eq (window_size_cons 0 a s0).
+  by rewrite -Hs_eq Hm0 ltnn eqxx subn0.
+rewrite /psi take0 cat0s Hws /window_at Hws drop0 add0n.
+rewrite take_oversize //.
+by rewrite drop_size cats0.
+Qed.
+
+(* ----- Order-isomorphism lemmas for mm_pos and window_size --------------- *)
+(* Two sequences with the same comparison structure have the same mm_pos     *)
+(* and window_size at every position. Used for the j = mm_pos case of       *)
+(* window_size_psi, where rank_shift_seq preserves interior comparisons.     *)
+
+
+
+(* Helper: drop_suffix under psi when psi window is below cutoff.           *)
+Lemma drop_psi_above j k w :
+  j + window_size j w <= k ->
+  drop k (psi j w) = drop k w.
+Proof.
+move=> Hle.
+have [Hksz | Hksz] := leqP (size w) k.
+  by rewrite !drop_oversize ?size_psi.
+apply: (@eq_from_nth _ 0).
+  by rewrite !size_drop size_psi.
+move=> p Hp.
+rewrite !nth_drop.
+apply: nth_psi_right.
+by apply: leq_trans Hle (leq_addr _ _).
+Qed.
+
+Lemma window_size_psi : forall (j i : nat) (w : seq nat),
+  uniq w -> window_size i (psi j w) = window_size i w.
+Proof.
+suff Hgen : forall n j i w, size w <= n ->
+  uniq w -> window_size i (psi j w) = window_size i w.
+  by move=> j i w Hu; apply: (Hgen (size w));
+     rewrite ?leqnn.
+elim=> [|n IH] j i w Hsz Huniq.
+  by move: Hsz; rewrite leqn0 => /eqP/size0nil ->.
+have [Htriv | Hws_gt1] := leqP (window_size j w) 1.
+  by rewrite (psi_id_trivial Htriv).
+have Hjw := ws_lt_size Hws_gt1.
+have Hw_ne : w <> [::] by case: (w) Hjw.
+case: (w) Hw_ne Huniq Hws_gt1 Hjw Hsz =>
+  [//|a s0] _ Huniq Hws_gt1 Hjw Hsz.
+set s := a :: s0.
+set m := mm_pos s.
+have Hm : m < size s by apply: mm_pos_lt.
+have Hs_ne : s <> [::] by discriminate.
+have Hm' : mm_pos (psi j s) = m by apply: mm_pos_psi_eq.
+have Hpsi_ne : psi j s <> [::].
+  by move=> E; move: Hjw; rewrite -(size_psi j) E.
+have [a' [s0' Hpsi_eq]] : exists a' s0', psi j s =
+  a' :: s0'.
+  by case: (psi j s) Hpsi_ne => [//|x y] _; exists x, y.
+have Hm'c : mm_pos (a' :: s0') = m
+  by rewrite -Hpsi_eq.
+rewrite Hpsi_eq (window_size_cons i a' s0') Hm'c.
+rewrite (window_size_cons i a s0) -/m.
+case: (ltngtP i m) => [Him | Hmi | Hieqm].
+- (* i < m *)
+  case: (ltngtP j m) => [Hjm | Hmj | Hjeqm].
+  + (* j < m *)
+    rewrite -Hpsi_eq (take_mm_psi Hs_ne Huniq Hws_gt1 Hjm).
+    apply: IH.
+    * rewrite size_take Hm.
+      exact: leq_trans (ltnW Hm) Hsz.
+    * have : uniq (take m s ++ drop m s)
+        by rewrite cat_take_drop.
+      by rewrite cat_uniq => /andP [? /andP [? ?]].
+  + by rewrite -Hpsi_eq (@take_psi m j s (ltnW Hmj)).
+  + by rewrite -Hpsi_eq Hjeqm
+       (@take_psi m m s (leqnn m)).
+- (* i > m *)
+  case: (ltngtP j m) => [Hjm | Hmj | Hjeqm].
+  + (* j < m *)
+    suff -> : drop m.+1 (a' :: s0') =
+      drop m.+1 (a :: s0) by [].
+    rewrite -Hpsi_eq.
+    apply: drop_psi_above.
+    apply: leq_trans (window_fits_left Hs_ne Hjm) _.
+    exact: leqnSn.
+  + (* j > m *)
+    suff -> : drop m.+1 (a' :: s0') =
+      psi (j - m - 1) (drop m.+1 (a :: s0)).
+      apply: IH.
+      * rewrite /s /= size_drop.
+        exact: leq_trans (leq_subr _ _) (ltnW Hsz).
+      * have : uniq (take m.+1 s ++ drop m.+1 s)
+          by rewrite cat_take_drop.
+        by rewrite cat_uniq => /andP [_ /andP [_ ?]].
+    by rewrite -Hpsi_eq
+       (drop_mm_psi Hs_ne Huniq Hws_gt1 Hmj).
+  + (* j = m: use window_size_order_iso *)
+    subst j.
+    have Hws_m : window_size m s = size s - m.
+      by rewrite (window_size_cons m a s0) -/m ltnn eqxx.
+    have Hws_drop : 1 < size (drop m s).
+      by rewrite size_drop -Hws_m.
+    have Hdm_ne : drop m s <> [::].
+      by case: (drop m s) Hws_drop.
+    have Huniq_dm : uniq (drop m s).
+      have : uniq (take m s ++ drop m s)
+        by rewrite cat_take_drop.
+      by rewrite cat_uniq => /andP [_ /andP [_ ?]].
+    have Hmm_drop : mm_pos (drop m s) = 0
+      by exact: mm_pos_drop_mm.
+    (* psi m s = take m s ++ rank_shift_seq (drop m s) *)
+    have Hpsi_m_eq : psi m s =
+      take m s ++ rank_shift_seq (drop m s).
+      rewrite /psi.
+      have Hwa_m : window_at m s = drop m s.
+        rewrite (window_at_cons m a s0) -/m ltnn eqxx //.
+      rewrite Hwa_m Hws_m.
+      by rewrite subnKC ?drop_size ?cats0 // ltnW.
+    (* Use window_size_order_iso *)
+    have Him' : 0 < i - m by rewrite subn_gt0.
+    (* drop m.+1 (psi m s) = behead (rank_shift_seq (drop m s)) *)
+    have Hdrop_psi : drop m.+1 (a' :: s0') =
+      behead (rank_shift_seq (drop m s)).
+      rewrite -Hpsi_eq Hpsi_m_eq.
+      rewrite drop_cat size_take Hm.
+      have -> : m.+1 < m = false by rewrite ltnNge leqnSn.
+      by rewrite /= subSn // subnn drop0.
+    have Hdrop_orig : drop m.+1 (a :: s0) =
+      behead (drop m s).
+      by rewrite /s /= drop0.
+    rewrite Hdrop_psi Hdrop_orig.
+    apply: window_size_order_iso.
+    * by rewrite !size_behead size_rank_shift_seq2.
+    * apply: (subseq_uniq (suffix_subseq 1 _)).
+      by rewrite (perm_uniq (rank_shift_perm_eq _)).
+    * exact: (subseq_uniq (suffix_subseq 1 _)).
+    * move=> p q Hp Hq.
+      have Hsz_bh : size (behead (drop m s)) =
+        (size (drop m s)).-1
+        by rewrite size_behead.
+      have Hp1 : p.+1 < size (drop m s).
+        by rewrite -ltnS prednK //;
+           rewrite Hsz_bh in Hp; apply: ltnW.
+      have Hq1 : q.+1 < size (drop m s).
+        by rewrite -ltnS prednK //;
+           rewrite Hsz_bh in Hq; apply: ltnW.
+      rewrite -[behead (rank_shift_seq _)]
+        (drop1 (rank_shift_seq (drop m s))).
+      rewrite -[behead (drop m s)](drop1 (drop m s)).
+      rewrite !nth_drop.
+      rewrite [1 + p]addnC [1 + q]addnC.
+      have Hrsz : size (rank_shift_seq (drop m s)) =
+        size (drop m s)
+        by rewrite size_rank_shift_seq2.
+      have Hp1' : p.+1 < size s.
+        rewrite /s /= ltnS.
+        by rewrite size_drop /= in Hp1;
+           apply: leq_trans (leq_subr _ _) (ltnW Hsz).
+      have Hq1' : q.+1 < size s.
+        rewrite /s /= ltnS.
+        by rewrite size_drop /= in Hq1;
+           apply: leq_trans (leq_subr _ _) (ltnW Hsz).
+      (* Use rank_shift_preserves_interior_order *)
+      have Hhead_ext : (head 0 (drop m s) ==
+        nth 0 (sort leq (drop m s)) 0) ||
+        (head 0 (drop m s) == nth 0 (sort leq (drop m s))
+        (size (drop m s)).-1).
+        apply: window_head_extremum => //.
+        rewrite (window_size_cons m a s0) -/m ltnn eqxx //.
+      symmetry.
+      exact: rank_shift_preserves_interior_order
+        Huniq_dm Hws_drop Hhead_ext
+        (ltnW (ltn0Sn _)) (ltnW (ltn0Sn _)) Hp1 Hq1.
+- (* i = m *)
+  by rewrite -Hpsi_eq size_psi.
+Qed.
+
+(* Window-at stability: psi_j preserves window_at at position i              *)
+(* when the windows at i and j are disjoint (i + ws_i <= j).                 *)
+Lemma window_at_psi_disjoint i j w :
+  uniq w ->
+  i + window_size i w <= j ->
+  window_at i (psi j w) = window_at i w.
+Proof.
+move=> Hu Hdisj.
+have [Hi | Hi] := leqP (size w) i.
+  by rewrite /window_at !drop_oversize ?size_psi.
+rewrite /window_at (window_size_psi j i Hu).
+set ws := window_size i w.
+apply: (@eq_from_nth _ 0).
+  by rewrite !size_take !size_drop size_psi.
+move=> k Hk.
+have Hws_le : ws <= size w - i
+  by apply: window_size_bound.
+have Hksz : k < ws.
+  apply: leq_trans Hk _.
+  rewrite size_take size_drop size_psi.
+  exact: geq_minl.
+have Hk_wi : k < size w - i
+  by apply: leq_trans Hksz Hws_le.
+rewrite !nth_take ?nth_drop //.
+  apply: nth_psi_left.
+  apply: leq_trans _ Hdisj.
+  by rewrite ltn_add2l.
+Qed.
+
+(* Disjoint commutativity (WLOG i + ws_i <= j).                              *)
+Lemma psi_comm_disjoint_lr i j (w : seq nat) :
+  uniq w ->
+  i + window_size i w <= j ->
+  psi i (psi j w) = psi j (psi i w).
+Proof.
+move=> Hu Hdisj.
+apply: (@eq_from_nth _ 0).
+  by rewrite !size_psi.
+move=> k Hk; rewrite !size_psi in Hk.
+set wsi := window_size i w.
+set wsj := window_size j w.
+have [Hi | Hi] := leqP (size w) i.
+  have Hi' : size (psi j w) <= i by rewrite size_psi.
+  by rewrite (psi_id_oor Hi') (psi_id_oor Hi).
+have Hwsi_le : i + wsi <= size w.
+  have Hbd := window_size_bound i w.
+  rewrite -(subnKC (ltnW Hi)).
+  by rewrite leq_add2l.
+have [Hj | Hj] := leqP (size w) j.
+  have Hj' : size (psi i w) <= j by rewrite size_psi.
+  by rewrite (psi_id_oor Hj) (psi_id_oor Hj').
+have Hwsj_le : j + wsj <= size w.
+  have Hbd := window_size_bound j w.
+  rewrite -(subnKC (ltnW Hj)).
+  by rewrite leq_add2l.
+have Hws_ji : window_size j (psi i w) = wsj
+  by apply: window_size_psi.
+have Hws_ij : window_size i (psi j w) = wsi
+  by apply: window_size_psi.
+(* 5-region case split *)
+have [Hki | Hik] := ltnP k i.
+  (* k < i: both sides = nth 0 w k *)
+  have Hkj : k < j.
+    exact: leq_trans Hki
+      (leq_trans (leq_addr wsi i) Hdisj).
+  by rewrite !nth_psi_left.
+have [Hk_iws | Hk_iws] := ltnP k (i + wsi).
+  (* i <= k < i + wsi: inside W_i *)
+  have Hkj : k < j by apply: leq_trans Hk_iws Hdisj.
+  have Hi' : i < size (psi j w) by rewrite size_psi.
+  have Hk2' : k < i + window_size i (psi j w)
+    by rewrite Hws_ij.
+  rewrite (nth_psi_inside Hi' Hik Hk2').
+  rewrite (window_at_psi_disjoint Hu Hdisj).
+  rewrite nth_psi_left //.
+  by rewrite (nth_psi_inside Hi Hik Hk_iws).
+have [Hk3 | Hk3] := ltnP k j.
+  (* i + wsi <= k < j: both sides = nth 0 w k *)
+  have Hk_iws' : i + window_size i (psi j w) <= k
+    by rewrite Hws_ij.
+  rewrite (nth_psi_right Hk_iws') nth_psi_left //.
+  by rewrite nth_psi_left // nth_psi_right.
+have [Hk4 | Hk4] := ltnP k (j + wsj).
+  (* j <= k < j + wsj: inside W_j *)
+  have Hki : i + wsi <= k
+    by apply: leq_trans Hdisj Hk3.
+  rewrite nth_psi_right ?Hws_ij //.
+  rewrite (@nth_psi_inside j w k) //.
+  rewrite (@nth_psi_inside j (psi i w) k)
+    ?size_psi ?Hws_ji //.
+  congr (nth 0 (rank_shift_seq _) _).
+  rewrite /window_at Hws_ji.
+  apply: (@eq_from_nth _ 0).
+    by rewrite !size_take !size_drop size_psi.
+  move=> m' Hm'.
+  have Hwsj_le' : wsj <= size w - j
+    by apply: window_size_bound.
+  have Hm'sz : m' < wsj.
+    apply: leq_trans Hm' _.
+    rewrite size_take size_drop.
+    exact: geq_minl.
+  have Hm'wd : m' < size w - j
+    by apply: leq_trans Hm'sz Hwsj_le'.
+  rewrite !nth_take ?nth_drop //.
+  rewrite nth_psi_right //.
+  by apply: (leq_trans Hdisj); apply: leq_addr.
+(* j + wsj <= k: both sides = nth 0 w k *)
+have Hki' : i + wsi <= k.
+  have Hjk : j <= k := leq_trans (leq_addr wsj j) Hk4.
+  exact: leq_trans Hdisj Hjk.
+have Hk_ij : i + window_size i (psi j w) <= k
+  by rewrite Hws_ij.
+have Hk_ji : j + window_size j (psi i w) <= k
+  by rewrite Hws_ji.
+by rewrite (nth_psi_right Hk_ij) (nth_psi_right Hk4)
+           (nth_psi_right Hk_ji) (nth_psi_right Hki').
+Qed.
+
+Lemma psi_comm_disjoint : forall i j (w : seq nat),
+  uniq w ->
+  (i + window_size i w <= j \/ j + window_size j w <= i) ->
+  psi i (psi j w) = psi j (psi i w).
+Proof.
+move=> i j w Hu [Hdisj | Hdisj].
+  by apply: psi_comm_disjoint_lr.
+by symmetry; apply: psi_comm_disjoint_lr.
+Qed.
+
+(* Non-triviality: positions 2 and 6 have disjoint windows [2,5) and [6,8). *)
+Example psi_comm_disjoint_ex :
+  psi 2 (psi 6 [:: 3; 1; 4; 7; 5; 9; 2; 6]) =
+  psi 6 (psi 2 [:: 3; 1; 4; 7; 5; 9; 2; 6]).
+Proof. by []. Qed.
+
+(* ----- M3.3 Nested case: window stability under ancestor psi ------------- *)
+(* When W_j is properly contained in W_i (i.e., vertex j is in the right     *)
+(* subtree of vertex i), applying psi_i preserves the window geometry at j:  *)
+(* same size, and the window labels are the pointwise rank-shift of the       *)
+(* original. This is because psi_i's rank-shift, restricted to W_j's         *)
+(* positions, is a monotone map (no rank wrap-around occurs within W_j since  *)
+(* the wrap-around element is at position i, outside W_j). Therefore mm_pos  *)
+(* is preserved at every recursive level within W_j.                          *)
+(*                                                                            *)
+(* Justification: M3_COMMUTATIVITY_INFORMAL.md section 3.2 (Claim 3.2).      *)
+(* Also depends on M2_SUBTASKS.md T4-T5 (mm_pos stability / window           *)
+(* stability), which are the mathematical crux of both M2 and M3.            *)
+
+Lemma window_size_psi_ancestor : forall i j (w : seq nat),
+  uniq w ->
+  i < j -> j + window_size j w <= i + window_size i w ->
+  window_size j (psi i w) = window_size j w.
+Proof. move=> i j w Hu _ _; exact: window_size_psi. Qed.
+
+Example window_size_psi_ancestor_ex :
+  let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
+  window_size 5 (psi 1 w) = window_size 5 w.
+Proof. by []. Qed.
+
+(* ----- M3.4 Nested commutativity ----------------------------------------- *)
+(* When W_j is properly contained in W_i, the commutativity                   *)
+(* psi_i(psi_j(w)) = psi_j(psi_i(w)) reduces to the algebraic identity      *)
+(* RS_i(RS_j(x)) = RS_j(RS_i(x)) for labels x in W_j. This holds because:   *)
+(* 1) psi_j only modifies W_j, which is inside W_i, so psi_j preserves the  *)
+(*    multiset of W_i (hence sort and shift direction are the same);          *)
+(* 2) psi_i's rank-shift is monotone on W_j (no wrap-around), so RS_i        *)
+(*    acts as a fixed shift on r_j-ranks within W_j;                          *)
+(* 3) RS_i(RS_j(x)) = S_j[(r_j(x) + delta_j + c) mod ws_j]                  *)
+(*    RS_j(RS_i(x)) = S_j[(r_j(x) + c + delta_j) mod ws_j]                  *)
+(*    which are equal by commutativity of addition mod ws_j.                  *)
+(*                                                                            *)
+(* Justification: M3_COMMUTATIVITY_INFORMAL.md sections 3.3-3.6.             *)
+(* The proof combines window_size_psi_ancestor, the perm_eq preservation     *)
+(* of sort order, and modular arithmetic. The assembly is ~25 LOC but needs  *)
+(* all the window-stability sub-lemmas.                                       *)
+
+(* Helper: sort commutes with an order-preserving injection.             *)
+Lemma sort_map_mono (f : nat -> nat) (L : seq nat) :
+  uniq L ->
+  (forall x y, x \in L -> y \in L ->
+    (x < y) = (f x < f y)) ->
+  sort leq (map f L) = map f (sort leq L).
+Proof.
+move=> Hu Hmon.
+apply/perm_sortP => //.
+- by move=> ?; exact: leq_total.
+- exact: leq_trans.
+- exact: anti_leq.
+- rewrite perm_sym; apply: perm_map; exact: perm_sort.
+- rewrite sorted_map.
+  apply: sub_sorted; last exact: sort_sorted.
+  move=> x y /=; rewrite /relpre => Hxy.
+  have Hx_in : x \in L
+    by rewrite -(perm_mem (perm_sort leq L));
+       apply: mem_sort.
+  have Hy_in : y \in L
+    by rewrite -(perm_mem (perm_sort leq L));
+       apply: mem_sort.
+  rewrite leq_eqVlt in Hxy *.
+  case/orP: Hxy => [/eqP -> | Hlt].
+    by rewrite eqxx.
+  by rewrite -Hmon // orbT.
+Qed.
+
+(* Helper: index commutes with locally injective maps.                    *)
+Lemma index_map_inj_in (f : nat -> nat) (s : seq nat)
+    (x : nat) :
+  uniq s -> {in s &, injective f} -> x \in s ->
+  index (f x) (map f s) = index x s.
+Proof.
+elim: s => [//|a s IH].
+rewrite cons_uniq => /andP [Ha_notin Hu] Hinj.
+rewrite in_cons => /orP [/eqP -> | Hx].
+  by rewrite /= eqxx.
+have Hax : a != x.
+  by apply/eqP => Hax; rewrite Hax Hx in Ha_notin.
+have Hfax : f a != f x.
+  apply/eqP => Hfax.
+  by move: Hax; rewrite (Hinj a x (mem_head _ _)
+    (mem_cons _ Hx) Hfax) eqxx.
+rewrite /= (negbTE Hfax); congr _.+1.
+apply: IH => //.
+move=> u v Hu_in Hv_in; apply: Hinj;
+  exact: mem_cons.
+Qed.
+
+(* Helper: monotonicity implies local injectivity.                       *)
+Lemma mono_inj_in (f : nat -> nat) (L : seq nat) :
+  uniq L ->
+  (forall x y, x \in L -> y \in L ->
+    (x < y) = (f x < f y)) ->
+  {in L &, injective f}.
+Proof.
+move=> Hu Hmon x y Hx Hy Hfxy.
+case: (ltngtP x y) => // Hlt.
+- have : f x < f y by rewrite -Hmon.
+  by rewrite Hfxy ltnn.
+- have : f y < f x by rewrite -Hmon.
+  by rewrite Hfxy ltnn.
+Qed.
+
+(* Helper: rank_shift_seq commutes with a monotone injection.             *)
+Lemma rank_shift_map_comm (f : nat -> nat) (L : seq nat) :
+  uniq L -> 1 < size L ->
+  (forall x y, x \in L -> y \in L ->
+    (x < y) = (f x < f y)) ->
+  rank_shift_seq (map f L) = map f (rank_shift_seq L).
+Proof.
+move=> Hu Hsz Hmon.
+have Hinj_in := mono_inj_in Hu Hmon.
+have Hu_fL : uniq (map f L)
+  by rewrite map_inj_in_uniq.
+have Hsz_fL : 1 < size (map f L) by rewrite size_map.
+have Hsort := sort_map_mono Hu Hmon.
+have Hhead : head 0 (map f L) = f (head 0 L)
+  by case: (L) Hsz => [//|a s] _.
+have Hdelta : (head 0 (map f L) ==
+  nth 0 (sort leq (map f L)) 0) =
+  (head 0 L == nth 0 (sort leq L) 0).
+  rewrite Hsort Hhead (nth_map 0);
+    last by rewrite size_sort; apply: ltnW.
+  apply/eqP/eqP.
+  - move/(Hinj_in _ _ _ _) => -> //.
+    + case: (L) Hsz => [//|x s0] _; exact: mem_head.
+    + rewrite -(perm_mem (perm_sort _ _)).
+      exact: mem_nth (n:=0) (ltnW Hsz).
+  - by move=> ->.
+rewrite (rank_shift_seqE Hu Hsz).
+rewrite (rank_shift_seqE Hu_fL Hsz_fL).
+(* LHS: map over (map f L), RHS: map f over (map over L) *)
+(* Rewrite LHS: [seq ... | y <- map f L] to map over L *)
+rewrite map_map -map_comp.
+apply: eq_in_map => x Hx /=.
+rewrite Hsort Hhead size_map Hdelta.
+have Hx_srt : x \in sort leq L
+  by rewrite -(perm_mem (perm_sort leq L)).
+have Hidx_srt : index x (sort leq L) < size L
+  by rewrite -(size_sort leq) index_mem.
+have Hmod : (index x (sort leq L) +
+  (if head 0 L == nth 0 (sort leq L) 0
+   then (size L).-1 else 1)) %% size L < size L.
+  by rewrite ltn_mod; apply: ltnW.
+have Hu_srt : uniq (sort leq L) by rewrite sort_uniq.
+have Hinj_srt : {in sort leq L &, injective f}.
+  move=> u v Hu_in Hv_in.
+  apply: Hinj_in;
+    by rewrite (perm_mem (perm_sort leq L)).
+rewrite (index_map_inj_in Hu_srt Hinj_srt Hx_srt).
+rewrite (set_nth_default _ 0 (f 0)) ?size_map //.
+by rewrite (nth_map 0).
+Qed.
+
+(* Helper: psi commutes with any comparison-preserving map.               *)
+Lemma psi_map_comm (f : nat -> nat) (s : seq nat) k :
+  uniq s ->
+  (forall x y, x \in s -> y \in s ->
+    (x < y) = (f x < f y)) ->
+  map f (psi k s) = psi k (map f s).
+Proof.
+move=> Hu Hmon.
+have Hinj_in := mono_inj_in Hu Hmon.
+rewrite /psi.
+set ws := window_size k s.
+set wa := window_at k s.
+have Hu_fs : uniq (map f s)
+  by rewrite map_inj_in_uniq.
+have Hsz_eq : size (map f s) = size s by rewrite size_map.
+have Hord : forall p q, p < size s -> q < size s ->
+  (nth 0 s p < nth 0 s q) =
+  (nth 0 (map f s) p < nth 0 (map f s) q).
+  move=> p q Hp Hq.
+  rewrite (nth_map 0) // (nth_map 0) //.
+  apply: Hmon; exact: mem_nth.
+have Hws' : window_size k (map f s) = ws
+  by apply: window_size_order_iso.
+have Hwa' : window_at k (map f s) = map f wa.
+  by rewrite /window_at /wa Hws' map_drop map_take.
+have Hrs : rank_shift_seq (map f wa) =
+  map f (rank_shift_seq wa).
+  have [Htriv | Hnt] := leqP ws 1.
+    have Hsz_wa : size wa <= 1.
+      rewrite /wa /window_at size_take size_drop.
+      by case: ltnP => // _; apply: ltnW.
+    case Hwa0 : wa => [|a [|b t]].
+    - by rewrite /rank_shift_seq /=.
+    - by rewrite /rank_shift_seq /=.
+    - exfalso; move: Hsz_wa; rewrite Hwa0 /=.
+      by rewrite ltnS ltnS.
+  have Hu_wa : uniq wa.
+    rewrite /wa /window_at.
+    move: Hu; rewrite -{1}(cat_take_drop k s) cat_uniq.
+    move=> /andP [_ /andP [_ Hud]].
+    exact: (subseq_uniq (take_subseq _ _)).
+  have Hsz_wa : 1 < size wa.
+    rewrite /wa /window_at size_take size_drop.
+    case: ltnP => // Hle.
+    by rewrite ltnNge Hle in Hnt.
+  apply: rank_shift_map_comm => //.
+  move=> x y Hx Hy; apply: Hmon;
+    exact: mem_drop (mem_take _).
+rewrite Hws' Hwa' Hrs.
+by rewrite !map_cat map_take map_drop.
+Qed.
+
+(* Key commutativity lemma: rank_shift_seq commutes with psi at           *)
+(* interior positions. When mm_pos d = 0 and k > 0:                       *)
+(*   rank_shift_seq (psi k d) = psi k (rank_shift_seq d).                *)
+Lemma rank_shift_psi_comm d k :
+  uniq d -> 1 < size d -> mm_pos d = 0 -> 0 < k ->
+  rank_shift_seq (psi k d) = psi k (rank_shift_seq d).
+Proof.
+move=> Hu Hsz Hmm Hk0.
+have Hd_ne : d <> [::] by case: (d) Hsz.
+have Hperm := psi_perm_eq k d.
+have Hsort_psi : sort leq (psi k d) = sort leq d.
+  by apply/perm_sortP => //;
+     [move=> ?; exact: leq_total | exact: leq_trans
+      | exact: anti_leq].
+have Hhead_psi : head 0 (psi k d) = head 0 d.
+  by rewrite -(@nth0 _ 0) -(@nth0 _ 0 d); apply: nth_psi_left.
+(* decompose d = head :: behead *)
+case Hd : d => [|a t]; first by exfalso.
+have Ha : a = head 0 d by rewrite Hd.
+have Ht : t = behead d by rewrite Hd.
+(* mm_pos d = 0 means head is min or max *)
+(* psi k d = a :: psi (k-1) t for k > 0 *)
+(* psi k (rank_shift_seq d) =
+   head(rss d) :: psi (k-1) (behead(rss d)) *)
+(* rank_shift_seq d = map rs d for appropriate rs *)
+set rs := fun x => nth 0 (sort leq d)
+  ((index x (sort leq d) +
+    (if head 0 d == nth 0 (sort leq d) 0
+     then (size d).-1 else 1)) %% size d).
+have Hrs_d : rank_shift_seq d = map rs d
+  by rewrite (rank_shift_seqE Hu Hsz).
+have Hrs_psi : rank_shift_seq (psi k d) = map rs (psi k d).
+  rewrite (rank_shift_seqE (perm_uniq Hperm Hu)
+    (eq_leq (esym (perm_size Hperm)) Hsz)).
+  by rewrite Hsort_psi Hhead_psi (perm_size Hperm).
+(* rs is monotone on elements of t = behead d *)
+have Hhead_ext : (head 0 d ==
+  nth 0 (sort leq d) 0) ||
+  (head 0 d == nth 0 (sort leq d) (size d).-1).
+  apply: window_head_extremum => //.
+  by rewrite (window_size_cons 0 a t) -/d Hmm ltnn eqxx.
+have Hrs_mono : forall x y,
+  x \in t -> y \in t ->
+  (x < y) = (rs x < rs y).
+  move=> x y Hx Hy.
+  have Hx_d : x \in d by rewrite Hd in_cons Hx orbT.
+  have Hy_d : y \in d by rewrite Hd in_cons Hy orbT.
+  have Hpx : 0 < index x d.
+    rewrite Hd /=; case: eqP => [Hax|_] //.
+    subst x; move: Hu; rewrite Hd /= => /andP [Hna _].
+    by rewrite Hx in Hna.
+  have Hpy : 0 < index y d.
+    rewrite Hd /=; case: eqP => [Hay|_] //.
+    subst y; move: Hu; rewrite Hd /= => /andP [Hna _].
+    by rewrite Hy in Hna.
+  have Hidx : index x d < size d by rewrite index_mem.
+  have Hidy : index y d < size d by rewrite index_mem.
+  have Hnthx : nth 0 d (index x d) = x
+    by apply: nth_index.
+  have Hnthy : nth 0 d (index y d) = y
+    by apply: nth_index.
+  (* Use rank_shift_preserves_interior_order with swapped args *)
+  have Hrio := rank_shift_preserves_interior_order
+    Hu Hsz Hhead_ext Hpy Hpx Hidy Hidx.
+  rewrite Hnthx Hnthy in Hrio.
+  (* Convert nth 0 (rss d) to rs via nth_rank_shift_seq *)
+  have Hnthrsx : nth 0 (rank_shift_seq d) (index x d) =
+    rs x.
+    by rewrite (nth_rank_shift_seq Hu Hsz Hidx) nth_index.
+  have Hnthrsy : nth 0 (rank_shift_seq d) (index y d) =
+    rs y.
+    by rewrite (nth_rank_shift_seq Hu Hsz Hidy) nth_index.
+  by rewrite Hnthrsx Hnthrsy in Hrio.
+(* Now use psi_map_comm *)
+rewrite Hrs_psi -psi_map_comm //.
+  by rewrite -Hrs_d.
+- move: Hu; rewrite Hd /= => /andP [_ ?]; exact.
+- move=> x y Hx Hy; exact: Hrs_mono.
+Qed.
+
+Lemma psi_comm_nested : forall i j (w : seq nat),
+  uniq w ->
+  i < j -> j + window_size j w <= i + window_size i w ->
+  psi i (psi j w) = psi j (psi i w).
+Proof.
+suff Hgen : forall n i j w, size w <= n ->
+  uniq w ->
+  i < j -> j + window_size j w <= i + window_size i w ->
+  psi i (psi j w) = psi j (psi i w).
+  by move=> i j w; apply: (Hgen (size w)); rewrite ?leqnn.
+elim=> [|n IH] i j w Hsz Huniq Hij Hnest.
+  by move: Hsz; rewrite leqn0 => /eqP/size0nil ->.
+have [Htriv_i | Hws_i_gt1] := leqP (window_size i w) 1.
+  by rewrite (psi_id_trivial Htriv_i).
+have [Htriv_j | Hws_j_gt1] := leqP (window_size j w) 1.
+  by rewrite (psi_id_trivial Htriv_j).
+have Hiw := ws_lt_size Hws_i_gt1.
+have Hjw := ws_lt_size Hws_j_gt1.
+have Hw_ne : w <> [::] by case: (w) Hiw.
+case: (w) Hw_ne Huniq Hws_i_gt1 Hws_j_gt1 Hiw Hjw Hsz
+  Hij Hnest =>
+  [//|a s0] _ Huniq Hws_i Hws_j Hiw Hjw Hsz Hij Hnest.
+set s := a :: s0.
+set m := mm_pos s.
+have Hm : m < size s by apply: mm_pos_lt.
+have Hs_ne : s <> [::] by discriminate.
+have Hm_pi : mm_pos (psi i s) = m
+  by apply: mm_pos_psi_eq.
+have Hm_pj : mm_pos (psi j s) = m
+  by apply: mm_pos_psi_eq.
+have Huniq_pi : uniq (psi i s)
+  by rewrite (perm_uniq (psi_perm_eq i s)).
+have Huniq_pj : uniq (psi j s)
+  by rewrite (perm_uniq (psi_perm_eq j s)).
+(* Both i and j are in the same subtree relative to m *)
+case: (ltngtP i m) => [Him | Hmi | Hieqm].
+- (* i < m: j < m too since W_i fits in left subtree *)
+  have Hjm : j < m.
+    have Hfit := window_fits_left Hs_ne Him.
+    exact: leq_ltn_trans (leq_trans Hnest Hfit) Hm.
+  (* Wait, Hnest says j + ws_j <= i + ws_i.
+     And Hfit says i + ws_i <= m.
+     So j + ws_j <= m, hence j < m. *)
+  (* Both psi_i and psi_j act only on take m s *)
+  (* LHS = psi_i(psi_j(s)) *)
+  (* take m (psi_j s) = psi_j (take m s) *)
+  (* drop m.+1 (psi_j s) = drop m.+1 s *)
+  (* take m (psi_i(psi_j s)) =
+       psi_i(take m (psi_j s)) = psi_i(psi_j(take m s)) *)
+  (* drop m.+1 (psi_i(psi_j s)) = drop m.+1 (psi_j s)
+       = drop m.+1 s *)
+  (* Similarly for RHS *)
+  have Htmj : take m (psi j s) = psi j (take m s)
+    by exact: take_mm_psi.
+  have Htmi : take m (psi i s) = psi i (take m s)
+    by exact: take_mm_psi.
+  have Hdj : drop m.+1 (psi j s) = drop m.+1 s.
+    apply: drop_psi_above.
+    exact: leq_trans (window_fits_left Hs_ne Hjm) (leqnSn _).
+  have Hdi : drop m.+1 (psi i s) = drop m.+1 s.
+    apply: drop_psi_above.
+    exact: leq_trans (window_fits_left Hs_ne Him) (leqnSn _).
+  (* Both sides agree element by element *)
+  apply: (@eq_from_nth _ 0); first by rewrite !size_psi.
+  move=> k Hk; rewrite !size_psi in Hk.
+  (* position k *)
+  have [Hkm | Hkm] := ltnP k m.
+    (* k < m: in the left subtree *)
+    (* LHS at k *)
+    have Hm_pj' := Hm_pj.
+    have Hpj_ne : psi j s <> [::] by case: (psi j s) Hk.
+    have [a' [s0' Hpj_eq]] : exists a' s0',
+      psi j s = a' :: s0'.
+      by case: (psi j s) Hpj_ne => [//|x y] _;
+         exists x, y.
+    have Hm_pj'' : mm_pos (a' :: s0') = m
+      by rewrite -Hpj_eq.
+    have Hws_i_pj : 1 < window_size i (psi j s)
+      by rewrite window_size_psi.
+    have Him' : i < mm_pos (psi j s) by rewrite Hm_pj.
+    rewrite -(take_mm_psi Hpj_ne Huniq_pj Hws_i_pj Him').
+    rewrite Hm_pj Htmj nth_take //.
+    (* RHS at k *)
+    have Hpi_ne : psi i s <> [::] by case: (psi i s) Hk.
+    have Hws_j_pi : 1 < window_size j (psi i s)
+      by rewrite window_size_psi.
+    have Hjm' : j < mm_pos (psi i s) by rewrite Hm_pi.
+    rewrite -(take_mm_psi Hpi_ne Huniq_pi Hws_j_pi Hjm').
+    rewrite Hm_pi Htmi nth_take //.
+    (* Now need:
+       nth 0 (psi_i(psi_j(take m s))) k =
+       nth 0 (psi_j(psi_i(take m s))) k *)
+    have Huniq_tm : uniq (take m s).
+      have : uniq (take m s ++ drop m s)
+        by rewrite cat_take_drop.
+      by rewrite cat_uniq => /andP [].
+    have Hsz_tm : size (take m s) <= n.
+      rewrite size_take Hm.
+      exact: leq_trans (ltnW Hm) Hsz.
+    have Hws_i_tm : window_size i (take m s) =
+      window_size i s.
+      by rewrite (window_size_cons i a s0) -/m Him.
+    have Hws_j_tm : window_size j (take m s) =
+      window_size j s.
+      by rewrite (window_size_cons j a s0) -/m Hjm.
+    have Hnest_tm : j + window_size j (take m s) <=
+      i + window_size i (take m s)
+      by rewrite Hws_i_tm Hws_j_tm.
+    have := IH i j (take m s) Hsz_tm Huniq_tm Hij Hnest_tm.
+    by move=> ->.
+  (* k >= m *)
+  have [Hkm' | Hkm'] := eqVneq k m.
+    (* k = m: root position *)
+    subst k.
+    rewrite nth_psi_left // nth_psi_left //.
+    rewrite nth_psi_left; last by rewrite Hm_pj.
+    rewrite nth_psi_left; last by rewrite Hm_pi.
+    done.
+  (* k > m *)
+  have Hkm'' : m < k by rewrite ltn_neqAle eq_sym Hkm' Hkm.
+  (* Both psi_i and psi_j don't touch positions > m *)
+  have Hk_oor_i : i + window_size i s <= k.
+    exact: leq_trans (window_fits_left Hs_ne Him) Hkm.
+  have Hk_oor_j : j + window_size j s <= k.
+    exact: leq_trans (leq_trans Hnest Hk_oor_i).
+  rewrite (nth_psi_right (k:=k)).
+    rewrite (nth_psi_right (k:=k));
+      last by rewrite window_size_psi.
+    rewrite (nth_psi_right (k:=k));
+      last by rewrite window_size_psi.
+    by rewrite (nth_psi_right (k:=k)).
+  by [].
+- (* m < i (and hence m < j): both in right subtree *)
+  have Hmj : m < j by exact: ltn_trans Hmi Hij.
+  (* psi_i acts on drop m.+1 s *)
+  (* psi_j acts on drop m.+1 s *)
+  apply: (@eq_from_nth _ 0); first by rewrite !size_psi.
+  move=> k Hk; rewrite !size_psi in Hk.
+  have [Hkm | Hkm] := ltnP k m.+1.
+    (* k <= m: before both windows *)
+    rewrite !nth_psi_left //.
+    by rewrite !nth_psi_left // ltnW.
+  (* k > m *)
+  have [Hk_oor | Hk_inr] := leqP (size s) k.
+    by rewrite !nth_default ?size_psi.
+  (* k >= m.+1 and k < size s *)
+  (* Use drop_mm_psi to relate to psi on right subtree *)
+  have Hpj_ne : psi j s <> [::].
+    by move=> E; move: Hjw; rewrite -(size_psi j) E.
+  have Hws_i_pj : 1 < window_size i (psi j s)
+    by rewrite window_size_psi.
+  have Hmi' : mm_pos (psi j s) < i by rewrite Hm_pj.
+  have Hdpj : drop m.+1 (psi i (psi j s)) =
+    psi (i - m - 1) (drop m.+1 (psi j s)).
+    exact: drop_mm_psi Hpj_ne Huniq_pj Hws_i_pj Hmi'.
+  have Hdi_pj : drop m.+1 (psi j s) =
+    psi (j - m - 1) (drop m.+1 s).
+    exact: drop_mm_psi Hs_ne Huniq Hws_j Hmj.
+  have Hpi_ne : psi i s <> [::].
+    by move=> E; move: Hiw; rewrite -(size_psi i) E.
+  have Hws_j_pi : 1 < window_size j (psi i s)
+    by rewrite window_size_psi.
+  have Hmj' : mm_pos (psi i s) < j by rewrite Hm_pi.
+  have Hdpi : drop m.+1 (psi j (psi i s)) =
+    psi (j - m - 1) (drop m.+1 (psi i s)).
+    exact: drop_mm_psi Hpi_ne Huniq_pi Hws_j_pi Hmj'.
+  have Hdi_pi : drop m.+1 (psi i s) =
+    psi (i - m - 1) (drop m.+1 s).
+    exact: drop_mm_psi Hs_ne Huniq Hws_i Hmi.
+  (* nth k in LHS *)
+  have Hlhs : nth 0 (psi i (psi j s)) k =
+    nth 0 (drop m.+1 (psi i (psi j s))) (k - m.+1).
+    by rewrite nth_drop subnK.
+  have Hrhs : nth 0 (psi j (psi i s)) k =
+    nth 0 (drop m.+1 (psi j (psi i s))) (k - m.+1).
+    by rewrite nth_drop subnK.
+  rewrite Hlhs Hdpj Hdi_pj Hrhs Hdpi Hdi_pi.
+  have Huniq_dm : uniq (drop m.+1 s).
+    have : uniq (take m.+1 s ++ drop m.+1 s)
+      by rewrite cat_take_drop.
+    by rewrite cat_uniq => /andP [_ /andP [_ ?]].
+  have Hsz_dm : size (drop m.+1 s) <= n.
+    rewrite size_drop.
+    exact: leq_trans (leq_subr _ _) (ltnW Hsz).
+  set i' := i - m - 1. set j' := j - m - 1.
+  have Hi'j' : i' < j'.
+    rewrite /i' /j'.
+    by rewrite !subnS ltn_sub2r // subn_gt0.
+  have Hws_i' : window_size i' (drop m.+1 s) =
+    window_size i s.
+    rewrite (window_size_cons i a s0) -/m.
+    by rewrite ltnNge (ltnW Hmi) /= eq_sym (ltn_eqF Hmi).
+  have Hws_j' : window_size j' (drop m.+1 s) =
+    window_size j s.
+    rewrite (window_size_cons j a s0) -/m.
+    by rewrite ltnNge (ltnW Hmj) /= eq_sym (ltn_eqF Hmj).
+  have Hnest' : j' + window_size j' (drop m.+1 s) <=
+    i' + window_size i' (drop m.+1 s).
+    rewrite Hws_i' Hws_j' /i' /j'.
+    rewrite !subnS.
+    have Hm_le_i : m <= i by exact: ltnW.
+    have Hm_le_j : m <= j by exact: ltnW.
+    rewrite -!subn1 !subnBA //.
+    by rewrite !addnBA // [j + _ - _]addnBAC //
+       [i + _ - _]addnBAC //
+       leq_sub2r.
+  have := IH i' j' (drop m.+1 s) Hsz_dm Huniq_dm
+    Hi'j' Hnest'.
+  move=> ->.
+  (* Also need element at m to agree *)
+  congr (nth 0 _ _).
+- (* i = m *)
+  subst i.
+  (* ws_m = size s - m *)
+  have Hws_m : window_size m s = size s - m
+    by rewrite (window_size_cons m a s0) -/m ltnn eqxx.
+  have Hws_drop : 1 < size (drop m s)
+    by rewrite size_drop -Hws_m.
+  have Hdm_ne : drop m s <> [::]
+    by case: (drop m s) Hws_drop.
+  have Huniq_dm : uniq (drop m s).
+    have : uniq (take m s ++ drop m s)
+      by rewrite cat_take_drop.
+    by rewrite cat_uniq => /andP [_ /andP [_ ?]].
+  have Hmm_drop : mm_pos (drop m s) = 0
+    by exact: mm_pos_drop_mm.
+  (* psi m s = take m s ++ rank_shift_seq (drop m s) *)
+  have Hpsi_m_eq : psi m s =
+    take m s ++ rank_shift_seq (drop m s).
+    rewrite /psi.
+    have Hwa_m : window_at m s = drop m s.
+      rewrite (window_at_cons m a s0) -/m ltnn eqxx //.
+    rewrite Hwa_m Hws_m.
+    by rewrite subnKC ?drop_size ?cats0 // ltnW.
+  (* LHS = psi m (psi j s) *)
+  (* take m (psi_j s) = take m s (since m < j) *)
+  have Htm_pj : take m (psi j s) = take m s
+    by apply: take_psi; exact: ltnW.
+  (* drop m (psi_j s) *)
+  (* nth at m: nth 0 (psi_j s) m = nth 0 s m (since m < j) *)
+  have Hnth_m_pj : nth 0 (psi j s) m = nth 0 s m
+    by apply: nth_psi_left.
+  (* drop m.+1 (psi_j s) = psi (j-m-1) (drop m.+1 s) *)
+  have Hdm_pj : drop m.+1 (psi j s) =
+    psi (j - m - 1) (drop m.+1 s)
+    by exact: drop_mm_psi.
+  (* So drop m (psi_j s) = head d :: psi_{j'} (behead d)
+     where d = drop m s, j' = j - m - 1 *)
+  set d := drop m s.
+  set j' := j - m - 1.
+  have Hdm_pj_full : drop m (psi j s) =
+    nth 0 s m :: psi j' (behead d).
+    have Hm_pj_sz : m < size (psi j s) by rewrite size_psi.
+    rewrite (drop_nth 0 Hm_pj_sz) Hnth_m_pj Hdm_pj.
+    congr (_ :: _).
+    rewrite /behead /d.
+    by rewrite /s /= drop0.
+  (* sort and head of drop m (psi_j s) = those of d *)
+  have Hperm_dm : perm_eq (drop m (psi j s)) d.
+    suff : perm_eq (take m s ++ drop m (psi j s))
+      (take m s ++ d) by rewrite perm_cat2l.
+    have -> : take m s ++ drop m (psi j s) = psi j s
+      by rewrite -Htm_pj cat_take_drop.
+    have -> : take m s ++ d = s
+      by rewrite cat_take_drop.
+    exact: psi_perm_eq.
+  have Hsort_dm_pj : sort leq (drop m (psi j s)) =
+    sort leq d.
+    apply/perm_sortP => //.
+    - by move=> ?; exact: leq_total.
+    - exact: leq_trans.
+    - exact: anti_leq.
+  have Hhead_dm_pj : head 0 (drop m (psi j s)) = head 0 d.
+    rewrite Hdm_pj_full /d.
+    by case: (drop m s) Hdm_ne.
+  (* psi m (psi j s) = take m s ++ rss(drop m (psi_j s)) *)
+  have Hws_m_pj : window_size m (psi j s) = size s - m
+    by rewrite window_size_psi Hws_m.
+  have Hlhs : psi m (psi j s) =
+    take m s ++ rank_shift_seq (drop m (psi j s)).
+    rewrite /psi.
+    have Hwa : window_at m (psi j s) = drop m (psi j s).
+      rewrite /window_at Hws_m_pj.
+      rewrite take_oversize // size_drop size_psi.
+      by apply: leq_subr.
+    rewrite Hwa Htm_pj Hws_m_pj.
+    by rewrite subnKC ?drop_size ?cats0 ?size_psi // ltnW.
+  (* RHS = psi j (psi m s) *)
+  (* psi m s = take m s ++ rss d *)
+  (* take m (psi j (psi m s)) = take m (psi m s) = take m s *)
+  have Htm_pm : take m (psi m s) = take m s
+    by rewrite Hpsi_m_eq take_cat size_take Hm
+       ltnn subnn take0 cats0.
+  have Htm_pj_pm : take m (psi j (psi m s)) = take m s.
+    by rewrite (@take_psi m j (psi m s) (ltnW Hij)) Htm_pm.
+  (* drop m (psi j (psi m s)) *)
+  have Hpm_ne : psi m s <> [::].
+    by move=> E; move: Hiw; rewrite -(size_psi m) E.
+  have Hmm_pm : mm_pos (psi m s) = m by apply: mm_pos_psi_eq.
+  have Hws_j_pm : 1 < window_size j (psi m s)
+    by rewrite window_size_psi.
+  have Hmj_pm : mm_pos (psi m s) < j by rewrite Hmm_pm.
+  have Hdm_pm : drop m.+1 (psi j (psi m s)) =
+    psi j' (drop m.+1 (psi m s)).
+    exact: drop_mm_psi Hpm_ne Huniq_pi Hws_j_pm Hmj_pm.
+  have Hdm1_pm : drop m.+1 (psi m s) = behead (rank_shift_seq d).
+    rewrite Hpsi_m_eq drop_cat size_take Hm.
+    have -> : m.+1 < m = false by rewrite ltnNge leqnSn.
+    by rewrite /= subSn // subnn drop0.
+  have Hnth_m_pm : nth 0 (psi m s) m =
+    head 0 (rank_shift_seq d).
+    rewrite Hpsi_m_eq nth_cat size_take Hm ltnn.
+    by rewrite subnn -nth0.
+  have Hnth_m_pj_pm : nth 0 (psi j (psi m s)) m =
+    nth 0 (psi m s) m.
+    by apply: nth_psi_left.
+  have Hrhs : psi j (psi m s) =
+    take m s ++ (head 0 (rank_shift_seq d) ::
+      psi j' (behead (rank_shift_seq d))).
+    apply: (@eq_from_nth _ 0).
+      rewrite !size_psi size_cat /= size_psi size_behead
+        size_rank_shift_seq2 size_drop.
+      rewrite size_take Hm.
+      have := ltnW Hm.
+      by rewrite -subn_gt0 => /prednK <-; rewrite addnS.
+    move=> k Hk.
+    rewrite !size_psi in Hk.
+    have [Hkm | Hkm] := ltnP k m.
+      by rewrite nth_cat size_take Hm Hkm Htm_pj_pm
+         nth_take.
+    have [Hkeqm | Hkgtm] := eqVneq k m.
+      subst k; rewrite nth_cat size_take Hm ltnn subnn /=.
+      by rewrite Hnth_m_pj_pm Hnth_m_pm.
+    have Hkm' : m < k by rewrite ltn_neqAle eq_sym Hkeqm Hkm.
+    rewrite nth_cat size_take Hm.
+    have -> : k < m = false by rewrite ltnNge Hkm.
+    rewrite /= nth_drop subnK //.
+    have Hkm1 : m.+1 <= k by exact: Hkm'.
+    rewrite -(subnK Hkm1) addnC -nth_drop.
+    rewrite -Hdm_pm -Hdm1_pm.
+    rewrite nth_drop addnC subnK //.
+    done.
+  (* Now compare LHS and RHS *)
+  rewrite Hlhs Hrhs.
+  congr (_ ++ _).
+  (* LHS drop part: rss(drop m (psi_j s)) *)
+  (* RHS drop part: head(rss d) :: psi_j'(behead(rss d)) *)
+  (* Need: rss(head d :: psi_j'(behead d)) =
+           head(rss d) :: psi_j'(behead(rss d)) *)
+  rewrite Hdm_pj_full.
+  have Hd_head : nth 0 s m = head 0 d.
+    by rewrite /d -nth0 nth_drop addn0.
+  rewrite Hd_head.
+  (* rank_shift_seq(head d :: psi_j' (behead d))
+     = head(rss d) :: psi_j'(behead(rss d)) *)
+  (* This is rank_shift_psi_comm applied to d with k = j' *)
+  have Hj'0 : 0 < j'.
+    rewrite /j' subnS.
+    have Hjm : m < j by exact: Hij.
+    by rewrite -subn_gt0 prednK // subn_gt0.
+  (* head d :: psi_j'(behead d) = psi (j'+1) d ... no,
+     it equals psi j' d when mm_pos d = 0 if we account
+     for the Cartesian tree decomposition *)
+  (* Actually: we need the identity
+     rss(psi (j'+1) d) = psi (j'+1) (rss d) *)
+  (* But psi (j'+1) d when mm_pos d = 0:
+     psi (j'+1) d = head d :: psi j' (behead d) ... hmm
+     this requires j'+1 > 0 which is true *)
+  (* Wait, we computed earlier that for mm_pos d = 0 and k > 0:
+     psi k d = head d :: psi (k-1) (behead d).
+     But this requires window_size and window_at to decompose
+     correctly. Let me verify this is a provable identity. *)
+  (* Alternative: directly use rank_shift_psi_comm *)
+  have Hj1 : j' + 1 = j - m by rewrite /j' subnS prednK //
+    subn_gt0.
+  (* Use rank_shift_psi_comm with k = j - m *)
+  (* We need: rank_shift_seq (psi (j - m) d) =
+              psi (j - m) (rank_shift_seq d) *)
+  (* But psi (j-m) d when mm_pos d = 0: this is NOT the same as
+     head :: psi_j'(behead d) in general because of the
+     Cartesian tree structure of d *)
+  (* Let me think again...
+     psi (j-m) d: d has mm_pos 0. The window at (j-m) in d
+     uses the Cartesian tree of d.
+     j-m > 0, so the recursion goes to the right subtree
+     (behead d) with index j-m-1 = j'.
+     So window_size (j-m) d = window_size j' (behead d)
+       = window_size j s  (from window_size_cons)
+     And window_at (j-m) d = window_at j' (behead d)
+       = window_at j s
+     And psi (j-m) d:
+       take (j-m) d ++ rank_shift_seq(window_at (j-m) d)
+         ++ drop (j-m + ws) d
+     But take (j-m) d = head d :: take j' (behead d)
+     So psi (j-m) d = [head d] ++ take j' (behead d) ++
+       rank_shift_seq(window_at j' (behead d)) ++
+       drop (j' + ws) (behead d)
+     = head d :: psi j' (behead d) *)
+  have Hpsi_jm_d : psi (j - m) d = head 0 d :: psi j' (behead d).
+    rewrite /psi.
+    set ws_jm := window_size (j - m) d.
+    set wa_jm := window_at (j - m) d.
+    have Hjm_gt0 : 0 < j - m by rewrite subn_gt0.
+    have Hjm_ne0 : (j - m == 0) = false.
+      by apply/negbTE; rewrite -lt0n.
+    have Hws_jm : ws_jm = window_size j' (behead d).
+      rewrite /ws_jm /j'.
+      case Hd' : d => [|a' t'] //.
+      rewrite (window_size_cons (j - m) a' t') -Hd'
+        Hmm_drop ltn0 /= Hjm_ne0 subn0.
+      by rewrite /behead Hd'.
+    have Hwa_jm : wa_jm = window_at j' (behead d).
+      rewrite /wa_jm /j'.
+      case Hd' : d => [|a' t'] //.
+      rewrite (window_at_cons (j - m) a' t') -Hd'
+        Hmm_drop ltn0 /= Hjm_ne0 subn0.
+      by rewrite /behead Hd'.
+    have Htake_jm : take (j - m) d = head 0 d :: take j' (behead d).
+      case Hd' : d => [|a' t'] //.
+      rewrite /= /j' subnS.
+      by congr (_ :: take _ _).
+    rewrite Htake_jm Hws_jm Hwa_jm.
+    rewrite /psi.
+    congr (_ :: _ ++ _ ++ _).
+    rewrite /j' !subnS /behead.
+    case Hd' : d => [//|a' t'] /=.
+    congr (drop _ _).
+    by rewrite -subnDA addn1.
+  rewrite -Hpsi_jm_d.
+  have Hjm_pos : 0 < j - m by rewrite subn_gt0.
+  exact: rank_shift_psi_comm Huniq_dm Hws_drop Hmm_drop Hjm_pos.
+Qed.
+
+(* Non-triviality: positions 1 and 5 are nested (W_5 inside W_1). *)
+Example psi_comm_nested_ex :
+  psi 1 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) =
+  psi 5 (psi 1 [:: 3; 1; 4; 7; 5; 9; 2; 6]).
+Proof. by []. Qed.
+
+(* ----- M3.5 Main theorem: commutativity of psi --------------------------- *)
+
+Theorem psi_comm : forall i j (w : seq nat),
+  uniq w -> psi i (psi j w) = psi j (psi i w).
+Proof.
+move=> i j w Hu.
+have [Hij | Hij] := eqVneq i j; first by rewrite Hij.
+have [Hi | Hi] := leqP (size w) i.
+  rewrite psi_id_oor ?size_psi //.
+  by rewrite (psi_id_oor Hi).
+have [Hj | Hj] := leqP (size w) j.
+  have Hj2 : size (psi i w) <= j by rewrite size_psi.
+  by rewrite (psi_id_oor Hj) (psi_id_oor Hj2).
+move/eqP in Hij; have Hij' : i <> j by [].
+case: (window_trichotomy Hi Hj Hij') => [Hdisj | Hdisj | [[Hn1 Hn2] | [Hn1 Hn2]]].
+- by apply: psi_comm_disjoint => //; left.
+- by apply: psi_comm_disjoint => //; right.
+- by apply: psi_comm_nested.
+- by symmetry; apply: psi_comm_nested.
+Qed.
+
+(* Non-triviality: nested windows with genuinely different results than id. *)
+Example psi_comm_ex :
+  psi 1 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) =
+  psi 5 (psi 1 [:: 3; 1; 4; 7; 5; 9; 2; 6]).
+Proof. native_compute. reflexivity. Qed.
+
+(* The composed result is not the original (psi genuinely acts). *)
+Example psi_comm_nontrivial :
+  psi 1 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) = [:: 3; 9; 2; 6; 4; 1; 5; 7].
+Proof. native_compute. reflexivity. Qed.
+

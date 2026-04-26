@@ -1,0 +1,17 @@
+---
+name: Slurm memory allocation
+description: psi_descent.v needs >64GB to compile (including .vo serialization); psi_cdindex.v likely similar; request --mem=128G
+type: feedback
+originSessionId: c91fdffe-da7e-4c97-ab03-312409570be8
+---
+psi_descent.v compilation profile (after 2026-04-20 optimization):
+- **Proof checking phase**: peaks at ~30 GB RSS (~50 min) — down from 59 GB before optimization
+- **Serialization (.vo write) phase**: peaks at ~72 GB RSS (~2h30 total)
+- The serialization overhead is inherent to Rocq's .vo format and roughly doubles the checking-phase memory
+- Optimization extracted `descent_psi_interior`, `descent_psi_rboundary`, `descent_psi_lboundary_R` as helpers
+
+psi_cdindex.v (1950 LOC, depends on psi_descent.v) likely has similar requirements — not yet tested.
+
+**Why:** The cgroup at `/sys/fs/cgroup/.../job_NNNN/memory.max` caps RSS regardless of node capacity. The node (mem001, partition=mem) has 3TB but only gives what's requested.
+
+**How to apply:** If coqc/rocqworker gets SIGKILL (exit 137), check `dmesg | tail` for `oom-kill` and the cgroup limit before debugging the proof. Use `salloc --partition=mem --mem=128G --time=48:00:00 --job-name=coq`.

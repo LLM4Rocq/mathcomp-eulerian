@@ -1,0 +1,21 @@
+---
+name: Slurm memory allocation
+description: psi_descent.v needs 150+ GB per worker and 16+ hours (never completed); well-founded rewrite planned to fix this
+type: feedback
+originSessionId: 53a5ea2f-3c43-4f62-9f7c-1af6fe3aed00
+---
+psi_descent.v compilation profile (2026-04-20/21 measurement, killed after 16 hours):
+- **Per-worker peak**: 156 GB RSS (still growing when killed at 16 hours)
+- **Two workers with `-j4`**: 312 GB total
+- **Never completed** — `.vo` file was never produced
+- Growth pattern: climb -> plateau (Qed kernel check) -> climb, with each cycle larger
+- The fuel-based `has_left_child_fuel` pattern causes exponential proof term bloat
+- A well-founded rewrite using `Function` from `Recdef` is planned (see `PLAN_WF_REWRITE.md`)
+
+Previous estimates of "64-128 GB" were too low. Do NOT attempt `make -j4` with psi_descent.v on nodes with <256 GB. Even `-j1` would need 150+ GB.
+
+psi_cdindex.v (1950 LOC, depends on psi_descent.v) likely has similar requirements — not yet tested.
+
+**Why:** The cgroup at `/sys/fs/cgroup/.../job_NNNN/memory.max` caps RSS regardless of node capacity. The node (mem001, partition=mem) has 3TB but only gives what's requested.
+
+**How to apply:** If coqc/rocqworker gets SIGKILL (exit 137), check `dmesg | tail` for `oom-kill` and the cgroup limit before debugging the proof. Use `salloc --partition=mem --mem=256G --time=48:00:00 --job-name=coq`. After the well-founded rewrite, memory should drop to <5 GB.

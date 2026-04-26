@@ -1,0 +1,770 @@
+1.4       Descents
+In addition to cycle type and inversion table, there is one other fundamental statistic associ-
+ated with a permutation w ∈ Sn . If w = w1 w2 · · · wn and 1 ≤ i ≤ n − 1, then i is a descent
+of w if wi > wi+1 , while i is an ascent if wi < wi+1 . (Sometimes it is desirable to also define
+n to be a descent, but we will adhere to the above definition.) Define the descent set D(w)
+of w by
+                               D(w) = {i : wi > wi+1 } ⊆ [n − 1].
+If S ⊆ [n − 1], then denote by α(S) (or αn (S) if necessary) the number of permutations
+w ∈ Sn whose descent set is contained in S, and by β(S) (or βn (S)) the number whose
+descent set is equal to S. In symbols,
+
+                               α(S) = #{w ∈ Sn : D(w) ⊆ S}                                (1.31)
+                               β(S) = #{w ∈ Sn : D(w) = S}.                               (1.32)
+
+Clearly                                             X
+                                          α(S) =           β(T ).                         (1.33)
+                                                    T ⊆S
+
+As explained in Example 2.2.4, we can invert this relationship to obtain
+                                      X
+                               β(S) =     (−1)#(S−T ) α(T ).                              (1.34)
+                                             T ⊆S
+
+
+1.4.1 Proposition. Let S = {s1 , . . . , sk }< ⊆ [n − 1]. Then
+                                                                         
+                                                    n
+                       α(S) =                                              .              (1.35)
+                                  s1 , s2 − s1 , s3 − s2 , . . . , n − sk
+
+Proof. To obtain a permutation
+                                w = w1 w2 · · · wn ∈ Sn satisfying D(w) ⊆ S, first choose
+w1 < w2 < · · · < ws1 in s1 ways. Then choose ws1 +1 < ws1 +2 < · · · < ws2 in sn−s
+                         n                                                           1
+                                                                                 2 −s1
+                                                                                       ways,
+and so on. We therefore obtain
+                                                                        
+                                 n      n − s1      n − s2              n − sk
+                     α(S) =                                        ···
+                                s1      s2 − s1     s3 − s2             n − sk
+                                                                       
+                                                  n
+                            =                                            ,
+                                s1 , s2 − s1 , s3 − s2 , . . . , n − sk
+
+as desired.
+
+1.4.2 Example. Let n ≥ 9. Then
+
+                         βn (3, 8) = αn (3, 8) − αn (3) − αn (8) + αn (∅)
+                                                     
+                                            n            n       n
+                                   =                 −      −       + 1.
+                                      3, 5, n − 8        3       8
+
+                                                    38
+Two closely related descent sets are of special combinatorial interest. We say that a per-
+mutation w = w1 w2 · · · wn ∈ Sn (or more generally any sequence of distinct numbers) is
+alternating (or zigzag or down-up) if w1 > w2 < w3 > w4 < · · · . Equivalently, D(w) =
+{1, 3, 5, . . . } ∩ [n − 1]. The alternating permutations in S4 are 2143, 3142, 3241, 4132, 4231.
+Similarly, w is reverse alternating (or up-down) if w1 < w2 > w3 < w4 > · · · . Equivalently,
+D(w) = {2, 4, 6, . . . } ∩ [n − 1]. The reverse alternating permutations in S4 are 1324, 1423,
+2314, 2413, 3412. The number of alternating permutations w ∈ Sn is denoted En (with
+E0 = 1) and is called an Euler number. (Originally (−1)n E2n was called an Euler number.)
+Since w is alternating if and only if n + 1 − w1 , n + 1 − w2 , . . . , n + 1 − wn is reverse al-
+ternating, it follows that En is also the number of reverse alternating permutations in Sn .
+We will develop some properties of alternating permutations and Euler numbers in various
+subsequent sections, especially Section 1.6.
+Note. Some mathematicians define alternating permutations to be our reverse alternating
+permutations, while others define them to be permutations which are either alternating or
+reverse alternating according to our definition.
+For the remainder of this section we discuss some additional permutation statistics based
+on the descent set. The first of these is the number of descents of w, denoted des(w). Thus
+des(w) = #D(w). Let
+                                               X
+                                  Ad (x) =        x1+des(w)                           (1.36)
+                                                              w∈Sd
+                                                              d
+                                                              X
+                                                        =           A(d, k)xk .
+                                                              k=1
+
+Hence A(d, k) is the number of permutations w ∈ Sd with exactly k − 1 descents. The
+polynomial Ad (x) is called an Eulerian polynomial, while A(d, k) is an Eulerian number. We
+set A(0, k) = δ0k . The first few Eulerian polynomials are
+
+               A0 (x)      =    1
+               A1 (x)      =    x
+               A2 (x)      =    x + x2
+               A3 (x)      =    x + 4x2 + x3
+               A4 (x)      =    x + 11x2 + 11x3 + x4
+               A5 (x)      =    x + 26x2 + 66x3 + 26x4 + x5
+               A6 (x)      =    x + 57x2 + 302x3 + 302x4 + 57x5 + x6
+               A7 (x)      =    x + 120x2 + 1191x3 + 2416x4 + 1191x5 + 120x6 + x7
+               A8 (x)      =    x + 247x2 + 4293x3 + 15619x4 + 15619x5 + 4293x6
+                                 +247x7 + x8 .
+
+The bijection w 7→ w
+                   b of Proposition 1.3.1 yields an interesting alternative description of the
+Eulerian numbers. Suppose that
+
+             w = (a1 , a2 , . . . , ai1 )(ai1 +1 , ai1 +2 , . . . , ai2 ) · · · (aik−1 +1 , aik−1 +2 , . . . , ad )
+
+                                                              39
+is a permutation in Sd written in standard form. Thus a1 , ai1 +1 , . . . , aik−1 +1 are the largest
+elements of their cycles, and a1 < ai1 +1 < · · · < aik−1 +1 . It follows that if w(ai) 6= ai+1 , then
+ai < ai+1 . Hence ai < ai+1 or i = d if and only if w(ai) ≥ ai , so that
+
+                               d − des( b
+                                       w) = #{i ∈ [d] : w(i) ≥ i}.
+
+A number i for which w(i) ≥ i is called a weak excedance of w, while a number i for which
+w(i) > i is called an excedance of w. One easily sees that a permutation w = w1 w2 · · · wd has
+k weak excedances if and only if the permutation u1 u2 · · · ud defined by ui = d + 1 − wd−i+1
+has d − k excedances. Moreover, w has d − 1 − j descents if and only if wd wd−1 · · · w1 has j
+descents. We therefore obtain the following result.
+1.4.3 Proposition. The number of permutations w ∈ Sd with k excedances, as well as the
+number with k + 1 weak excedances, is equal to the Eulerian number A(d, k + 1).
+
+The next result gives a fundamental property of Eulerian polynomials related to generating
+functions.
+1.4.4 Proposition. For every d ≥ 0 we have
+                                     X                 Ad (x)
+                                           md xm =              .                              (1.37)
+                                     m≥0
+                                                     (1 − x)d+1
+
+                                            P
+Proof. The proof is by induction on d. Since m≥0 xm = 1/(1 − x), the assertion is true for
+d = 0. Now assume that equation (1.37) holds for some d ≥ 0. Differentiate with respect to
+x and multiply by x to obtain
+                        X                  x(1 − x)A′d (x) + (d + 1)xAd (x)
+                              md+1 xm =                                     .                  (1.38)
+                        m≥0
+                                                     (1 − x)d+2
+
+Hence it suffices to show that
+
+                           Ad+1 (x) = x(1 − x)A′d (x) + (d + 1)xAd (x).
+
+Taking coefficients of xk on both sides and simplifying yields
+
+                        A(d + 1, k) = kA(d, k) + (d − k + 2)A(d, k − 1).                       (1.39)
+
+The left-hand side of equation (1.39) counts permutations in Sd+1 with k − 1 descents. We
+can obtain such a permutation uniquely in one of two ways. For the first way, choose a
+permutation w = w1 · · · wd ∈ Sd with k − 1 descents, and insert d + 1 after wi if i ∈ D(w), or
+insert d+1 at the end. There are k ways to insert d+1, so we obtain by this method kA(d, k)
+permutations in Sd+1 with k − 1 descents. For the second way, choose w = w1 · · · wd ∈ Sd
+with k − 2 descents, and insert d + 1 after wi if i 6∈ D(w), or insert d + 1 at the beginning.
+There are d − k + 2 ways to insert d + 1, so we obtain a further (d − k + 2)A(d, k − 1)
+permutations in Sd+1 with k − 1 descents. We have verified that the recurrence (1.39) holds,
+so the proof follows by induction.
+
+                                                  40
+The appearance of the expression md in equation (1.37) suggests that there might be a more
+conceptual proof involving functions f : [d] → [m]. We give such a proof at the end of this
+section.
+We can also give a formula for the exponential generating function of the Eulerian polyno-
+mials themselves. For this purpose define A0 (x) = 1.
+1.4.5 Proposition. We have
+                                X               td      1−x
+                                       Ad (x)      =              .                    (1.40)
+                                 d≥0
+                                                d!   1 − xe(1−x)t
+
+
+Proof. Perhaps the simplest proof at this point is to multiply equation (1.37) by td /d! and
+sum on d ≥ 0. We get (using the convention 00 = 1, which is often “correct” in enumerative
+combinatorics)
+
+                           X     Ad (x) td     XX            d
+                                                         d mt
+                                             =         m  x
+                           d≥0
+                               (1 − x)d+1 d!   d≥0 m≥0
+                                                            d!
+                                               X
+                                             =     xm emt
+                                                         m≥0
+                                                             1
+                                                   =              .
+                                                          1 − xet
+
+Now multiply both sides by 1 − x and substitute (1 − x)t for t to complete the proof. (A
+more conceptual proof will be given in Section 3.19.)
+
+A further interesting statistic associated with the descent set D(w) is the major index (orig-
+inally called the greater index ), denoted maj(w) (originally ι(w)) and defined to be the sum
+of the elements of D(w):
+                                                   X
+                                       maj(w) =         i.
+                                                        i∈D(w)
+
+We next give a bijective proof of the remarkable result that inv and maj are equidistributed,
+i.e., for any k,
+
+                  #{w ∈ Sn : inv(w) = k} = #{w ∈ Sn : maj(w) = k}.                     (1.41)
+
+Note that in terms of generating functions, equation (1.41) takes the form
+                                  X                     X
+                                        q inv(w) =          q maj(w) .
+                                 w∈Sn                w∈Sn
+
+
+1.4.6 Proposition. We have
+                                       X
+                                              q maj(w) = (n)!.                         (1.42)
+                                       w∈Sn
+
+
+
+                                                   41
+Proof. We will recursively define a bijection ϕ : Sn → Sn as follows. Let w = w1 · · · wn ∈
+Sn . We will define words (or sequences) γ1 , . . . , γn , where γk is a permutation of {w1 , . . . , wk }.
+First let γ1 = w1 . Assume that γk has been defined for some 1 ≤ k < n. If the last letter
+of γk (which turns out to be wk ) is greater (respectively, smaller) than wk+1, then split
+γk after each letter greater (respectively, smaller) than wk+1. These splits divide γk into
+compartments. Cyclically shift each compartment of γk one unit to the right, and place
+wk+1 at the end. Let γk+1 be the word thus obtained. Set ϕ(w) = γn .
+1.4.7 Example. Before analyzing the map ϕ, let us first give an example. Let w =
+683941725 ∈ S9 . Then γ1 = 6. It is irrelevant at this point whether 6 < w2 or 6 > w2
+since there can be only one compartment, and γ2 = 68. Now 8 > w3 = 3, so we split 68 after
+numbers greater than 3, getting 6 | 8. Cyclically shifting the two compartments of length
+one leaves them unchanged, so γ3 = 683. Now 3 < w4 = 9, so we split 683 after numbers
+less than 9. We get 6 | 8 | 3 and γ4 = 6839. Now 9 > w5 = 4, so we split 6839 after numbers
+greater than 4, giving 6 | 8 | 39. The cyclic shift of 39 is 93, so γ5 = 68934. Continuing in this
+manner gives the following sequence of γi’s and compartments:
+
+                                      6
+                                      6|8
+                                      6|8|3
+                                      6|8|3 9
+                                      6|8|9|3|4       .
+                                      6|8 9 3|4|1
+                                      6|3|8|9|4|17
+                                      6 3|8 9 4|71|2
+                                      3 6 4 8 9 17 25
+
+Hence ϕ(w) = 364891725. Note that maj(w) = inv(ϕ(w)) = 18.
+
+Returning to the proof of Proposition 1.4.6, we claim that ϕ is a bijection transforming maj
+to inv, i.e.,
+                                   maj(w) = inv(ϕ(w)).                                 (1.43)
+We have defined inv and maj for permutations w ∈ Sn , but precisely the same definition
+can be made for any sequence w = w1 · · · wn of integers. Namely,
+
+                              inv(w) = #{(i, j) : i < j, wi > wj }
+                                        X
+                              maj(w) =          i.
+                                             i : wi >wi+1
+
+
+Let ηk = w1 w2 · · · wk . We then prove by induction on k that inv(γk ) = maj(ηk ), from which
+the proof follows by letting k = n.
+Clearly inv(γ1 ) = maj(η1 ) = 0. Assume that inv(γk ) = maj(ηk ) for some k < n. First
+suppose that the last letter wk of γk is greater than wk+1 . Thus k ∈ D(w), so we need
+to show that inv(γk+1) = k + inv(γk ). The last letter of any compartment C of γk is the
+
+                                                    42
+largest letter of the compartment. Hence when we cyclically shift this compartment we
+create #C − 1 new inversions. Each compartment contains exactly one letter larger than
+wk+1 , so when we append wk+1 to the end of γk , the number of new inversions (i, k + 1) is
+equal to the number m of compartments. Thus altogether we have created
+                                 X
+                                    (#C − 1) + m = k
+                                        C
+
+new inversions, as desired. The proof for the case wk < wk+1 is similar and will be omitted.
+It remains to show that ϕ is a bijection. To do so we define ϕ−1 . Let v = v1 v2 · · · vn ∈ Sn .
+We want to find a (unique) w = w1 w2 · · · wn ∈ Sn so that ϕ(w) = v. Let δn−1 = v1 v2 · · · vn−1
+and wn = vn . Now suppose that δk and wk+1, wk+2 , . . . , wn have been defined for some
+1 ≤ k < n. If the first letter of δk is greater (respectively, smaller) than wk+1 , then split δk
+before each letter greater (respectively, smaller) than wk+1 . Then in each compartment of
+δk thus formed, cyclically shift the letters one unit to the left. Let the last letter of the word
+thus formed be wk , and remove this last letter to obtain δk−1 . It is easily verified that this
+procedure simply reverses the procedure used to obtain v = ϕ(w) from w, completing the
+proof.
+
+Proposition 1.4.6 establishes the equidistribution of inv and maj on Sn . Whenever we have
+two equidistributed statistics f, g : S → N on a set S, we can ask whether a stronger result
+holds, namely, whether f and g have a symmetric joint distribution. This means that for all
+j, k we have
+             #{x ∈ S : f (x) = j, g(x) = k} = #{x ∈ S : f (x) = k, g(x) = j}.              (1.44)
+This condition can be restated in terms of generating functions as
+                                X                   X
+                                    q f (x) tg(x) =   q g(x) tf (x) .
+                                  x∈S               x∈S
+
+The best way to prove (1.44) is to find a bijection ψ : S → S such that for all x ∈ S, we
+have f (x) = g(ψ(x)) and g(x) = f (ψ(x)). In other words, ψ interchanges the two statistics
+f and g.
+Our next goal is to show that inv and maj have a symmetric joint distribution on Sn . We
+will not give an explicit bijection ψ : Sn → Sn interchanging inv and maj, but rather we
+will deduce it from a surprising property of the bijection ϕ defined in the proof of Propo-
+sition 1.4.6. To explain this property, define the inverse descent set ID(w) of w ∈ Sn by
+ID(w) = D(w −1 ). Alternatively, we may think of ID(w) as the “reading set” of w as follows.
+We read the numbers 1, 2, . . . , n in w from left-to-right in their standard order, going back
+to the beginning of w when necessary. For instance, if w = 683941725, then we first read
+12, then 345, then 67, and finally 89. The cumulative number of elements in these reading
+sequences, excluding the last, form the reading set of w. It is easy to see that this reading
+set is just ID(w). For instance, ID(683941725) = {2, 5, 7}.
+We can easily extend the definition of ID(w) to arbitrary sequences w1 w2 · · · wn of distinct
+integers. (We can even drop the condition that the wi ’s are distinct, but we have no need
+
+                                               43
+here for such generality.) Simply regard w = w1 w2 · · · wn as a permutation of its elements
+written in increasing order, i.e., if S = {w1 , . . . , wn } = {u1, . . . , un }< , then identify w with
+the permutation of S defined by w(ui) = wi . We can then write w −1 as a word in the
+same way as w and hence can define ID(w) as the descent set of w −1 written as a word. For
+instance, if w = 74285, then w −1 = 54827 and ID(w) = {1, 3}. We can obtain the same result
+by reading w in the increasing order of its elements as before, obtaining reading sequences
+u1 u2 · · · ui1 , ui1 +1 · · · ui2 , . . . , uij +1 · · · uin , and then obtaining ID(w) = {i1 , i2 , . . . , ij } (the
+cumulative numbers of elements in the reading sequences). For instance, with w = 74285
+the reading sequences are 2, 45, 78, giving ID(w) = {1, 3} as before.
+1.4.8 Theorem. Let ϕ be the bijection defined in the proof of Proposition 1.4.6. Then for
+all w ∈ Sn , ID(w) = ID(ϕ(w)). In other words, ϕ preserves the inverse descent set.
+
+Proof. Preserve the notation of the proof of Proposition 1.4.6. We prove by induction on
+k that ID(γk ) = ID(ηk ), from which the proof follows by setting k = n. Clearly ID(γ1 ) =
+ID(η1 ) = ∅. Assume that ID(γk ) = ID(ηk ) for some k < n. First suppose that the last letter
+wk of γk is greater than wk+1 , so that the last letter of any compartment C of γk is the unique
+letter in the compartment larger than wk+1 . Consider the reading of ηk+1 . It will proceed
+just as for ηk until we encounter the largest letter of ηk less than wk+1 , in which case we next
+read wk+1 and then return to the beginning. Exactly the same is true for reading γk+1 , so by
+the induction hypothesis the reading sets of ηk+1 and γk+1 are the same up to this point. Let
+L be the set of remaining letters to be read. The letters in L are those greater than wk+1 .
+The reading words of these letters are the same for ηk and γk by the induction hypothesis.
+But the letters of L appear in the same order in ηk and ηk+1 by definition of ηj . Moreover,
+they also appear in the same order in γk and γk+1 since each such letter appears in exactly
+one compartment, so cyclic shifts (or indeed any permutations) within each compartment of
+γk does not change their order in γk+1. Hence the reading words of the letters in L are the
+same for ηk+1 and γk+1, so the proof follows for the case wk > wk+1 . The case wk < wk+1 is
+similar and will be omitted.
+                             P
+Let imaj(w) = maj(w −1) = i∈ID(w) i. As an immediate corollary to Theorem 1.4.8 we get
+the symmetric joint distribution of three pairs of permutations statistics including (inv, maj),
+thereby improving Proposition 1.4.6. For further information about the bidistribution of
+(maj, imaj), see Exercise 4.47 and Corollary 7.23.9.
+1.4.9 Corollary. The three pairs of statistics (inv, maj), (inv, imaj), and (maj, imaj) have
+symmetric joint distributions.
+
+Proof. Let f be any statistic on Sn , and define g by g(w) = f (w −1). Clearly (f, g) have
+a symmetric joint distribution, of which (maj, imaj) is a special case. By Theorem 1.4.8
+ϕ transforms maj to inv while preserving imaj, so (inv, imaj) have a symmetric joint dis-
+tribution. It then follows from Proposition 1.3.14 that (inv, maj) have a symmetric joint
+distribution.
+
+We conclude this section by discussing a connection between permutations w ∈ Sn and
+functions f : [n] → N (the set N could be replaced by any totally ordered set) in which the
+
+                                                         44
+descent set plays a leading role.
+1.4.10 Definition. Let w = w1 w2 · · · wn ∈ Sn . We say that the function f : [n] → N is
+w-compatible if the following two conditions hold.
+
+ (a) f (w1 ) ≥ f (w2 ) ≥ · · · ≥ f (wn )
+ (b) f (wi) > f (wi+1) if wi > wi+1 (i.e., if i ∈ D(w))
+1.4.11 Lemma. Given f : [n] → N, there is a unique permutation w ∈ Sn for which f is
+w-compatible.
+
+Proof. An ordered partition or set composition of a (finite) set S is a vector (B1 , B2 , . . . , Bk )
+of subsets Bi ⊆ S such that Bi 6= ∅, Bi ∩ Bj = ∅ for i 6= j, and B1 ∪ · · · ∪ Bk = S. Clearly
+there is a unique ordered partition (B1 , . . . , Bk ) of [n] such that f is constant on each Bi
+and f (B1 ) > f (B2 ) > · · · > f (Bk ) (where f (Bi ) means f (m) for any m ∈ Bi ). Then w
+is obtained by arranging the elements of B1 in increasing order, then the elements of B2 in
+increasing order, and so on.
+
+The enumeration of certain natural classes of w-compatible functions is closely related to the
+statistics des and maj, as shown by the next lemma. Further enumerative results concerning
+w-compatible functions appear in Subsection 3.15.1. For w ∈ Sn let A(w) denote the set
+of all w-compatible functions f : [n] → N; and for w ∈ Sd let Am (w) denote the set of
+w-compatible functions f : [d] → [m], i.e., Am (w) = A(w) ∩ [m][d] , where in general if X and
+Y are sets then Y X denotes the set of all functions f : X → Y . Note that A0 (w) = ∅.
+1.4.12 Lemma. (a) For w ∈ Sd and m ≥ 0 we have
+                                                          
+                           m + d − 1 − des(w)      m − des(w)
+              #Am (w) =                        =                                               (1.45)
+                                   d                   d
+and
+                                  X                               x1+des(w)
+                                         #Am (w) · xm =                     .                  (1.46)
+                                 m≥1
+                                                                 (1 − x)d+1
+                                           
+(If 0 ≤ m < des(w), then we set m−des(w)d
+                                                = 0.)
+                                P
+(b) For f : [n] → N write |f | = ni=1 f (i). Then for w ∈ Sn we have
+                              X                             q maj(w)
+                                       q |f | =                                      .         (1.47)
+                                                  (1 − q)(1 − q 2 ) · · · (1 − q n )
+                             f ∈A(w)
+
+
+Proof. The basic idea of both proofs is to convert “partially strictly decreasing” sequences
+to weakly
+        decreasing
+                    sequences similar to our first direct proof in Section 1.2 of the formula
+  n      n+k−1
+  k
+       =   k
+                . We will give “proofs by example” that should make the general case clear.
+(a) Let w = 4632715. Then f ∈ Am (w) if and only if
+                  m ≥ f (4) ≥ f (6) > f (3) > f (2) ≥ f (7) > f (1) ≥ f (5) ≥ 1.               (1.48)
+
+                                                          45
+Let g(5) = f (5), g(1) = f (1), g(7) = f (7)−1, g(2) = f (2)−1, g(3) = f (3)−2, g(6) = f (6)−3,
+g(4) = f (4) − 3. In general, g(j) = f (j) − hj , where hj is the number of descents of w to the
+right of j. Equation (1.48) becomes
+
+              m − 3 ≥ g(4) ≥ g(6) ≥ g(3) ≥ g(2) ≥ g(7) ≥ g(1) ≥ g(5) ≥ 1.
+                                                    
+                                  m−3          m−des(w)
+Clearly the number of such g is     7
+                                          =        d
+                                                           , and (1.45) follows. There are
+numerous ways to obtain equation (1.46) from (1.45), e.g, by observing that
+                                                                  
+                    m − des(w)             m−des(w)−1       −(d + 1)
+                                   = (−1)
+                         d                             m − des(w) − 1
+
+and using (1.20).
+(b) Let w = 4632715 as in (a). Then f ∈ A(w) if and only
+
+                       f (4) ≥ f (6) > f (3) > f (2) ≥ f (7) > f (1) ≥ f (5) ≥ 0.         (1.49)
+
+Defining g as in (a), equation (1.49) becomes
+
+                   g(4) ≥ g(6) ≥ g(3) ≥ g(2) ≥ g(7) ≥ g(1) ≥ g(5) ≥ 0.
+          P         P                P
+Moreover,   f (i) = g(i) + 10 = g(i) + maj(w). Hence
+             X                                 X
+                   q |f | = q maj(w)                            q g(4)+···+g(5) .
+              f ∈A(w)                    g(4)≥g(6)≥g(3)≥g(2)≥g(7)≥g(1)≥g(5)≥0
+
+The latter sum is easy to evaluate in a number of ways, e.g., as an iterated geometric
+progression (that is, first sum on g(4) ≥ g(6), then on g(6) ≥ g(3), etc.). It also is equivalent
+to equation (1.76). The proof follows.
+
+Let N[n] denote the set of all functions f : [n] → N, and let A(w) denote those f ∈ N[n] that
+are compatible with w ∈ Sn . Lemma 1.4.11 then says that we have a disjoint union
+                                             [
+                                      N[n] = · w∈Sn A(w).                              (1.50)
+
+It also follows that                            [
+                                        [m][d] = · w∈Sd Am (w).                           (1.51)
+We now are in a position to give more conceptual proofs of Propositions 1.4.4 and 1.4.6.
+Take the cardinality of both sides of (1.51), multiply by xm , and sum on m ≥ 0. We get
+                              X             X
+                                  md xm =       #Am (w) · xm .
+                                  m≥0            w∈Sd
+
+The proof of Proposition 1.4.4 now follows from equation (1.46). Similarly, by (1.50) we
+have                            X            X X
+                                    q |f | =        q |f | .
+                                     f ∈N[n]       w∈Sn f ∈A(w)
+
+
+                                                   46
+The left-hand side is clearly 1/(1 − q)n , while by equation (1.47) the right-hand side is
+                                 X            q maj(w)
+                                                                       .
+                                w∈S
+                                    (1 − q)(1 − q 2 ) · · · (1 − q n )
+                                     n
+
+
+Hence                                         P          maj(w)
+                                1                w∈Sn q
+                                      =                                    .
+                             (1 − q)n   (1 − q)(1 − q 2 ) · · · (1 − q n )
+Multiplying by (1 − q)(1 − q 2 ) · · · (1 − q n ) and simplifying gives Proposition 1.4.6.
+
+
+
+
+                                                  47
+               0 0 0 0 0 0 1 0 0
+               0 0 0 0 0 0 0 0 1
+               0 0 0 0 1 0 0 0 0
+               0 0 0 1 0 0 0 0 0
+               1 0 0 0 0 0 0 0 0
+               0 0 0 0 0 0 0 1 0
+               0 0 1 0 0 0 0 0 0
+               0 0 0 0 0 1 0 0 0
+               0 1 0 0 0 0 0 0 0
+
+          Figure 1.3: The permutation matrix of the permutation w = 795418362
+
+1.5      Geometric Representations of Permutations
+We have seen that a permutation can be regarded as either a function, a word, or a sequence
+(the inversion table). In this section we will consider four additional ways of representing
+permutations and will illustrate the usefulness of each such representation.
+The first representation is the most obvious, viz., a permutation matrix. Specifically, if
+w ∈ Sn then define the n × n matrix Pw , with rows and columns indexed by [n], as follows:
+                                          
+                                            1, if w(i) = j
+                                (Pw )ij =
+                                            0, otherwise.
+The matrix Pw is called the permutation matrix corresponding to w. Clearly a square (0, 1)-
+matrix is a permutation matrix if and only if it has exactly one 1 in every row and column.
+Sometimes it is more convenient to replace the 0’s and 1’s with some other symbols. For
+instance, the matrix Pw could be replaced by a n × n grid, where each square indexed by
+(i, w(i)) is filled in. Figure 1.3 shows the matrix Pw corresponding to w = 795418362,
+together with the equivalent representation as a grid with certain squares filled in.
+To illustrate the use of permutation matrices as geometric objects per se, define a decreasing
+subsequence of length k of a permutation w = w1 · · · wn ∈ Sn to be a subsequence wi1 >
+wi2 > · · · > wik (so i1 < i2 < · · · < ik by definition of subsequence). (Increasing subsequence
+is similarly defined, though we have no need for this concept in the present example.) Let
+f (n) be the number of permutations w ∈ Sn with no decreasing subsequence of length three.
+For instance, f (3) = 5 since 321 is the only excluded permutation. Let w be a permutation
+with no decreasing subsequence of length three, and let Pw be its permutation matrix, where
+for better visualization we replace the 1’s in Pw by X’s. Draw a lattice path Lw from the
+upper-left corner of Pw to the lower right corner, where each step is one unit to the right
+(east) or down (south), and where the “outside corners” (consisting of a right step followed
+by a down step) of Lw occur at the top and right of each square on or above the main
+diagonal containing an X. We trust that Figure 1.4 will make this definition clear; it shows
+the five paths for w ∈ S3 as well as the path for w = 412573968. It is not hard to see that
+
+                                               48
+           Figure 1.4: Lattice paths corresponding to 321-avoiding permutations
+
+the lattice paths so obtained are exactly those that do not pass below the main diagonal.
+Conversely, it is also not hard to see that given a lattice path L not passing below the main
+diagonal, there is a unique permutation w ∈ Sn with no decreasing subsequence of length
+three for which L = Lw .
+We have converted our permutation enumeration problem to a much more tractable lattice
+path counting problem. It is shown in Corollary 6.2.3 that the number of such paths is the
+                       1   2n
+Catalan number Cn = n+1    n
+                               , so we have shown that
+
+                                             f (n) = Cn .                                    (1.52)
+
+The growth diagrams discussed in Section 7.13 show a more sophisticated use of permutation
+matrices.
+Note. The Catalan numbers form one of the most interesting and ubiquitous sequences in
+enumerative combinatorics; see Chapter 6, especially Corollary 6.2.3 and Exercise 6.19, for
+further information.
+An object closely related to the permutation matrix Pw is the diagram of w ∈ Sn . Represent
+the set [n] × [n] as an n × n array of dots, using matrix coordinates, so the upper-left dot
+represents (1, 1), the dot to its right is (1, 2), etc. If w(i) = j, then from the point (i, j) draw
+a horizonal line to the right and vertical line to the bottom. Figure 1.5 illustrates the case
+w = 314652. The set of dots that are not covered by lines is called the diagram Dw of w.
+For instance, Figure 1.5 shows that
+
+                       D314652 = {(1, 1), (1, 2), (3, 2), (4, 2), (4, 5), (5, 2)}.
+
+The dots of the diagram are circled for greater clarity.
+It is easy to see that if aj denotes the number of elements of Dw in column j, then the
+inversion table of w is given by I(w) = (a1 , a2 , . . . , an ). Similarly, if ci is the number of
+
+                                                   49
+                  Figure 1.5: The diagram of the permutation w = 314652
+
+elements in the ith row of Dw then code(w) = (c1 , c2 , . . . , cn ). If Dwt denotes the transpose
+(relection about the main diagonal) of Dw , then Dwt = Dw−1 .
+As an illustration of the use of the diagram Dw , define a permutation w = w1 · · · wn ∈ Sn
+to be 132-avoiding if there does not exist i < j < k with wi < wk < wj . In other words,
+no subsequence of w of length three has its terms in the same relative order as 132. Clearly
+this definition can be generalized to define u-avoiding permutations, where u ∈ Sk . For
+instance, the permutations considered above with no decreasing subsequence of length three
+are just 321-avoiding permutations.
+It is not hard to see that w is 132-avoiding if and only if there exists integers λ1 ≥ λ2 ≥ · · · ≥ 0
+such that for all i ≥ 0 the ith row of Dw consists of the first λi dots in that row. In symbols,
+
+                                   Dw = {(i, j) : 1 ≤ j ≤ λi }.
+
+Equivalently, if (i, j) ∈ Dw and i′ ≤ i, j ′ ≤ j, then (i′ , j ′ ) ∈PDw . In the terminology
+of Section 1.7, the sequence λ = (λ1 , λ2 , . . . ) is a partition of λi = inv(w), and Dw is
+the Ferrers diagram of λ. In this sense diagrams of permutations are generalizations of
+diagrams of partitions. Note that in any n × n diagram Dw , where w ∈ Sn , there are at
+least i dots in the ith row that do not belong to Dw . Hence if w is 132-avoiding then the
+corresponding partition λ = (λ1 , . . . λn ) satisfies λi ≤ n − i. Conversely, it is easy to see
+that if λ satisfies λi ≤ n − i then the Ferrers diagram of λ is the diagram of a (necessarily
+132-avoiding) permutation w ∈ Sn . Hence the number of 132-avoiding permutations in
+Sn is equal to the number of integer sequences λ1 ≥ · · · ≥ λn ≥ 0 such that λi ≤ n − i.
+It follows from
+               Exercise 6.19(s) that the number of such sequences is the Catalan number
+        1  2n
+Cn = n+1 n . (There is also a simple bijection with the lattice paths that we put in one-to-
+one correspondence with 321-avoiding permutations. In fact, the lattice path construction
+we applied to 321-avoiding permutations works equally well for 132-avoiding permutations
+if our paths go from the upper right to lower left; see Figure 1.6.) Hence by equation (1.52)
+the number of 132-avoiding permutations in Sn is the same as the number of 321-avoiding
+permutations in Sn , i.e., permutations in Sn with no decreasing subsequence of length three.
+Simple symmetry arguments (e.g., replacing w1 w2 · · · wn with wn · · · w2 w1 ) then show that
+for any u ∈ S3, the number of u-avoiding permutations w ∈ Sn is Cn .
+Since #Dw = inv(w), the above characterization of diagrams of 132-avoiding permutations
+w ∈ Sn yields the following refinement of the enumeration of such w.
+
+                                                 50
+        Figure 1.6: Lattice paths corresponding to 132-avoiding permutations in S3
+
+                                                      i
+
+
+
+
+                                       T(u )              T(v )
+
+
+                                                 T(w)
+
+                              Figure 1.7: The definition of T (w)
+
+1.5.1 Proposition. Let S132 (n) denote the set of 132-avoiding w ∈ Sn . Then
+                                  X                X
+                                        q inv(w) =   q |λ| ,
+                                    w∈S132 (n)            λ
+
+
+     λ ranges over all integer sequences λ1 ≥ · · · ≥ λn ≥ 0 satisfying λi ≤ n − i, and where
+whereP
+|λ| = λi .
+
+For further information on the sums appearing in Proposition 1.5.1, see Exercise 6.34(a).
+We now consider two ways to represent a permutation w as a tree T and discuss how the
+structure of T interacts with the combinatorial properties of w. Let w = w1 w2 · · · wn be any
+word on the alphabet P with no repeated letters. Define a binary tree T (w) as follows. If
+w = ∅, then T (w) = ∅. If w 6= ∅, then let i be the least element (letter) of w. Thus w can
+be factored uniquely in the form w = uiv. Now let i be the root of T (w), and let T (u) and
+T (v) be the left and right subtrees of i; see Figure 1.7. This procedure yields an inductive
+definition of T (w). The left successor of a vertex j is the least element k to the left of j in w
+such that all elements of w between k and j (inclusive) are ≥ j, and similarly for the right
+successor.
+1.5.2 Example. Let w = 57316284. Then T (w) is given by Figure 1.8.
+
+The correspondence w 7→ T (w) is a bijection between Sn and increasing binary trees on n
+vertices; that is, binary trees with n vertices labelled 1, 2, . . . , n such that the labels along
+any path from the root are increasing. To obtain w from T (w), read the labels of w in
+symmetric order, i.e., first the labels of the left subtree (in symmetric order, recursively),
+then the label of the root, and then the labels of the right subtree.
+
+                                                 51
+                                                 1
+
+
+                                  3                           2
+
+
+                       5                    6                             4
+
+
+                                      7                   8
+                    Figure 1.8: The increasing binary tree T (57316284)
+
+Let w = w1 w2 · · · wn ∈ Sn . Define the element wi of w to be
+                    a double rise or double ascent ,      if wi−1 < wi < wi+1
+                   a double fall or double descent ,      if wi−1 > wi > wi+1
+                                            a peak ,      if wi−1 < wi > wi+1
+                                           a valley,      if wi−1 > wi < wi+1 ,
+
+where we set w0 = wn+1 = 0. It is easily seen that the property listed below of an element i
+of w corresponds to the given property of the vertex i of T (w).
+
+
+                                                     Vertex i of T (w)
+                                                     has precisely the
+                           Element i of w            successors below
+                              double rise                right
+                              double fall                left
+                              valley                     left and right
+                              peak                       none
+
+
+From this discussion of the bijection w 7→ T (w), a large number of otherwise mysterious
+properties of increasing binary trees can be trivially deduced. The following proposition
+gives a sample of such results. Exercise 1.61 provides a further application of T (w).
+1.5.3 Proposition. (a) The number of increasing binary trees with n vertices is n!.
+
+ (b) The number of such trees for which exactly k vertices have left successors is the Eulerian
+     number A(n, k + 1).
+
+ (c) The number of complete (i.e., every vertex is either an endpoint or has two successors)
+     increasing binary trees with 2n + 1 vertices is equal to the number E2n+1 of alternating
+     permutations in S2n+1 .
+
+                                                52
+                                                             0
+
+
+                                              1              3         5
+
+                                   2                         6         7
+
+
+                         4                         8
+                   Figure 1.9: The unordered increasing tree T ′ (57316284)
+
+Let us now consider a second way to represent a permutation by a tree. Given w =
+w1 w2 · · · wn ∈ Sn , construct an (unordered) tree T ′ (w) with vertices 0, 1, . . . , n by defin-
+ing vertex i to be the successor of the rightmost element j of w which precedes i and which
+is less than i. If there is no such element j, then let i be the successor of the root 0.
+1.5.4 Example. Let w = 57316284. Then T ′ (w) is given by Figure 1.9.
+
+The correspondence w 7→ T ′ (w) is a bijection between Sn and increasing trees on n + 1
+vertices. It is easily seen that the successors of 0 are just the left-to-right minima (or
+retreating elements) of w (i.e., elements wi such that wi < wj for all j < i, where w =
+w1 w2 · · · wn ). Moreover, the endpoints of T ′ (w) are just the elements wi for which i ∈ D(w)
+or i = n. Thus in analogy to Proposition 1.5.3 (using Proposition 1.3.1 and the obvious
+symmetry between left-to-right maxima and left-to-right minima) we obtain the following
+result.
+1.5.5 Proposition. (a) The number of unordered increasing trees on n + 1 vertices is n!.
+
+ (b) The number of such trees for which the root has k successors is the signless Stirling
+     number c(n, k).
+
+ (c) The number of such trees with k endpoints is the Eulerian number A(n, k).
+
+
+
+
+                                                  53
+1.6      Alternating permutations, Euler numbers, and the
+         cd-index of Sn
+In this section we consider enumerative properties of alternating permutations, as defined in
+Section 1.4. Recall that a permutation w ∈ Sn is alternating if D(w) = {1, 3, 5, . . . }∩[n−1],
+and reverse alternating if D(w) = {2, 4, 6, . . . } ∩ [n − 1].
+
+
+1.6.1     Basic properties
+
+Recall that En denotes the number of alternating permutations (or reverse alternating per-
+mutations) w ∈ Sn (with E0 = 1) and is called an Euler number. The exponential generating
+function for Euler numbers is very elegant and surprising.
+1.6.1 Proposition. We have
+     X xn
+         En    = sec x + tan x
+     n≥0
+            n!
+                              x2    x3  x4   x5   x6    x7     x8
+                 = 1+x+          + 2 + 5 + 16 + 61 + 272 + 1385 + · · · .
+                              2!    3!  4!   5!   6!    7!     8!
+
+Note that sec x is an even function (i.e, sec(−x) = sec x), while tan x is odd (tan(−x) =
+− tan x). It follows from Proposition 1.6.1 that
+                                      X             x2n
+                                             E2n         = sec x                          (1.53)
+                                       n≥0
+                                                   (2n)!
+                                X           x2n+1
+                                    E2n+1           = tan x.                              (1.54)
+                                n≥0
+                                          (2n + 1)!
+
+For this reason E2n is sometimes called a secant number and E2n+1 a tangent number.
+                                                                                      
+Proof of Proposition 1.6.1. Let 0 ≤ k ≤ n. Choose a k-subset S of [n] in nk ways, and
+set S = [n] − S. Choose a reverse alternating permutation u of S in Ek ways, and choose a
+reverse alternating permutation v of S in En−k ways. Let w be the concatenation ur , n + 1, v,
+where ur denotes the reverse of u (i.e., if u = u1 · · · uk then ur = uk · · · u1 ). When n ≥ 2,
+we obtain in this way every alternating and every reverse alternating permutation w exactly
+once. Since there is a bijection between alternating and reverse alternating permutations of
+any finite (ordered) set, the number of w obtained is 2En+1 . Hence
+                                       Xn  
+                                             n
+                              2En+1 =          Ek En−k , n ≥ 1.                            (1.55)
+                                       k=0
+                                             k
+          P          n
+Set y =      n≥0 En x /n!. Taking into account the initial conditions E0 = E1 = 1, equa-
+tion (1.55) becomes the differential equation
+                                   2y ′ = y 2 + 1, y(0) = 1.
+
+                                                   54
+

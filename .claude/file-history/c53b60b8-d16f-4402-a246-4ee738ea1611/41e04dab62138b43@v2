@@ -1,0 +1,1 @@
+- [Apptainer environment](env_apptainer.md) — $HOME is read-only; redirect caches under the project dir

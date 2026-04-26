@@ -1,0 +1,154 @@
+# Plan: Rewrite `psi_descent.v` with Well-Founded Recursion
+
+## Problem
+
+`psi_descent.v` (1517 lines) takes **16+ hours** and **150+ GB RAM per worker** to compile.
+The root cause is the fuel-based recursion pattern (`has_left_child_fuel`) which inflates
+proof terms. The proof of `has_left_child_cons` depends on `has_left_child_fuel_monotone`
+(~30 lines), and this large proof term is inlined by the kernel into every downstream
+`Qed` that rewrites with `has_left_child_cons`.
+
+## Key Insight
+
+**>90% of the file can be copied verbatim.** Almost all proofs interact with
+`has_left_child` only through two lemmas: `has_left_child_cons` and `has_left_child_0`.
+Since those will have identical *statements* in the new version, the downstream proofs
+don't change. The compilation blowup comes from the large proof *terms* of
+`has_left_child_cons` (which drags in `fuel_monotone`) being inlined by the kernel
+into every downstream `Qed`.
+
+## Prototype
+
+An agent already created `psi_descent_wf.v` (183 lines) confirming the `Function`
+approach compiles. Location: `.claude/worktrees/agent-a67b51b3/psi_descent_wf.v`
+
+**Proven (5 Qed):**
+1. `has_left_child_wf` — the `Function` definition itself (termination obligations)
+2. Two computation tests via `vm_compute`
+3. `has_left_child_wf_cons` — unfolding lemma (1 line vs ~15 lines in original)
+4. `has_left_child_wf_0` — key lemma via strong induction
+
+## Steps
+
+### Step 1: Add import + `Function` definition (~40 lines, from prototype)
+
+- Add `From Stdlib Require Import Recdef.`
+- Define `has_left_child_wf` via `Function` with `{measure size s}`
+- Define `has_left_child i w := has_left_child_wf i w`
+- **Risk: Low** — already proven in prototype
+
+### Step 2: Prove `has_left_child_cons` and `has_left_child_0` (~20 lines)
+
+- `has_left_child_cons` becomes 1 line:
+  `by rewrite /has_left_child /= has_left_child_wf_equation.`
+- `has_left_child_0` uses strong induction on size (same as prototype)
+- **Risk: Low** — already proven in prototype
+- **This is the critical change** — the proof term of `_cons` shrinks from ~30
+  lines (via fuel monotonicity) to 1 line, and every downstream proof that
+  `rewrite has_left_child_cons` inherits the smaller term
+
+### Step 3: Keep `has_left_child_fuel` + `fuel_monotone` as compat shim (~40 lines)
+
+- Keep the old definitions verbatim for `psi_cdindex.v` backward compatibility
+- These are small and don't cause blowup themselves
+- **Risk: None**
+
+### Step 4: Copy `post_window_extremum` verbatim (~155 lines)
+
+- Does NOT mention `has_left_child` at all
+- **Risk: None**
+
+### Step 5: Copy `pre_window_lt/gt_max/min` verbatim (~200 lines)
+
+- Uses `has_left_child_cons` and `has_left_child_0` as black boxes
+- Identical statements -> proofs copy verbatim
+- **Risk: None**
+
+### Step 6: Copy `exactly_one_descent_LR` verbatim (~135 lines)
+
+- Same pattern — only uses `_cons` and `_0` interfaces
+- **Risk: None**
+
+### Step 7: Copy `pre_window_extremum_R` verbatim (~160 lines) — THE MONSTER
+
+- The 240-line inductive proof. Uses `has_left_child_cons` to unfold into cases
+- Since `_cons` has identical type, proof copies verbatim
+- **But the proof term will be much smaller** because `_cons`'s proof term is now tiny
+- **Risk: None** — the proof text doesn't change, only the kernel's work
+
+### Step 8: Copy helper lemmas verbatim (~285 lines)
+
+- `window_at_uniq`, `elem_in_range`, `head_min_not_descent`, etc.
+- None mention `has_left_child`
+- **Risk: None**
+
+### Step 9: Copy main descent theorems verbatim (~340 lines)
+
+- `descent_psi_interior`, `descent_psi_rboundary`, `descent_psi_lboundary_R`,
+  `descent_psi_R_add`, `descent_psi_R_remove`, `descent_psi_LR_swap1`,
+  `descent_psi_LR_swap2`
+- Use `has_left_child` only via its statement (not unfolding)
+- **Risk: None**
+
+### Step 10: Adjust examples if needed (~35 lines)
+
+- `has_left_child` examples may need `by vm_compute.` instead of `by [].`
+  since `Function` definitions don't reduce the same way as `Fixpoint`
+- Other examples (`is_descent_seq`, `psi`) are unaffected
+- **Risk: Low**
+
+## Downstream Impact
+
+**`psi_cdindex.v`** uses `has_left_child_fuel` directly in 2 places and does
+`rewrite /has_left_child` in 1 place. Options:
+
+- **(Safest)** Keep `has_left_child_fuel` as compat shim — the 2 direct uses
+  work. The 1 unfold would break since `has_left_child` now unfolds to
+  `has_left_child_wf` not `has_left_child_fuel`. Minor fix needed in
+  `psi_cdindex.v`.
+- **Recommendation:** Accept the small `psi_cdindex.v` update (1-2 lines).
+
+## Risk Summary
+
+| Section                | Lines | Changes       | Risk |
+|------------------------|-------|---------------|------|
+| Function definition    | ~40   | New           | Low (proven) |
+| `_cons` / `_0`        | ~20   | Rewritten     | Low (proven) |
+| Compat shim            | ~40   | Kept          | None |
+| Everything else        | ~1350 | Verbatim copy | None |
+| Examples               | ~35   | Maybe `vm_compute` | Low |
+
+## Expected Result
+
+- **Compile time**: 16+ hours -> likely **minutes**
+  (the proof terms shrink dramatically)
+- **Peak memory**: 150+ GB -> likely **<5 GB**
+- **Lines changed**: ~60 out of 1517
+
+## Build Measurements (2026-04-20)
+
+For reference, the compilation we monitored showed this memory growth pattern
+(per worker, with `make -j4` running two `psi_descent.v` instances):
+
+| Time (hours) | RSS per worker |
+|--------------|----------------|
+| 0.5          | 5 GB           |
+| 1.0          | 10 GB          |
+| 2.0          | 21 GB          |
+| 4.0          | 44 GB          |
+| 6.0          | 60 GB          |
+| 8.0          | 82 GB          |
+| 10.0         | 94 GB          |
+| 12.0         | 118 GB         |
+| 14.0         | 138 GB         |
+| 16.0 (killed)| 156 GB         |
+
+Total peak: **312 GB** across two workers (killed at 16 hours, never completed).
+Available RAM: 3 TB (Slurm allocation).
+
+## Files
+
+- **Target**: `/scratch/lelarge/mathcomp-eulerian/psi_descent.v`
+- **Prototype**: `.claude/worktrees/agent-a67b51b3/psi_descent_wf.v`
+- **Downstream**: `/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v` (minor update needed)
+- **Dependencies (do not modify)**: `psi_core.v`, `psi_comm.v`, `mmtree.v`

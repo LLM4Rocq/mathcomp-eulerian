@@ -1,0 +1,9 @@
+{
+  "id": "3",
+  "subject": "Rebuild and verify compilation",
+  "description": "Run make clean && make -j4 to verify the optimized file compiles correctly",
+  "activeForm": "Building project",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

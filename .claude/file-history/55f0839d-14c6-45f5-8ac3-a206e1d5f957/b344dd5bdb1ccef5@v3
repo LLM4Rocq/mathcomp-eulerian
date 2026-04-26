@@ -1,0 +1,20 @@
+---
+name: cd-index formalization status
+description: COMPLETE — 0 axioms, 0 Admitted; beta_alt_max fully proved; beta_swap_lt_caseB was false
+type: project
+originSessionId: e78b04d9-7991-4d3e-8dbd-5cb72f2c77bd
+---
+cd-index formalization COMPLETE as of 2026-04-24.
+
+**0 axioms, 0 Admitted** across all 15 active .v files (down from 13 axioms originally).
+
+**Main theorem** `beta_alt_max` fully proved: alternating descent set maximises beta.
+
+**Key results this session**:
+- `omega_proper_beta_lt` proved via M-class injection in perm_seq_bridge.v (NEW file, ~580 LOC)
+- `phi_w_support_general` proved in psi_cdindex.v (~350 LOC added)
+- `beta_swap_lt_caseB` was **FALSE** (counterexample: n=3, D={0,1}); eliminated
+- `char_mono_phi_w_injective` was **FALSE** (counterexample: [2;1;3;4] vs [3;1;2;4]); replaced by weaker correct `char_mono_class_inj`
+- `beta_alt_max` reproved directly via omega sets (30 lines vs 6 intermediate lemmas)
+
+**Build**: `_CoqProject` has 17 files. All compile with -vos. psi_cdindex split into 3 files (core/witness/support) for -vo memory (~15GB/file vs >100GB monolith). fact3 proved structurally (perm_eq via membership + injectivity), avoiding vm_compute.

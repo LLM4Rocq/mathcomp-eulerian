@@ -1,0 +1,7 @@
+(* Layer 1: drop_perm / lift_perm — permutation compression and expansion. *)
+From mathcomp Require Import all_ssreflect fingroup perm.
+From mathcomp_eulerian Require Import ordinal_reindex.
+
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.

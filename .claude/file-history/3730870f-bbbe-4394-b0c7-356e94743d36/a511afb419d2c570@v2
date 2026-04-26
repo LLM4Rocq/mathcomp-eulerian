@@ -1,0 +1,43 @@
+#!/bin/bash
+# Phase 4: Final verification script
+set -e
+
+echo "=== Step 1: Check no Admitted remain ==="
+ADMITTED=$(grep -l "Admitted" mmtree.v psi_core.v psi_comm.v psi_descent.v psi_cdindex.v \
+  ordinal_reindex.v perm_compress.v descent.v eulerian.v beta.v beta_swap.v 2>/dev/null || true)
+if [ -n "$ADMITTED" ]; then
+  echo "FAIL: Admitted found in: $ADMITTED"
+  grep -n "Admitted" $ADMITTED
+  exit 1
+fi
+echo "PASS: No Admitted in any project file."
+
+echo ""
+echo "=== Step 2: Clean rebuild ==="
+rm -f *.vo *.vos *.vok *.glob
+for f in mmtree psi_core psi_comm psi_descent psi_cdindex \
+         ordinal_reindex perm_compress descent eulerian beta beta_swap; do
+  echo -n "  Compiling ${f}.v ... "
+  if coqc -native-compiler no -R . mathcomp_eulerian ${f}.v > /dev/null 2>&1; then
+    echo "OK"
+  else
+    echo "FAILED"
+    echo "Re-running with errors:"
+    coqc -native-compiler no -R . mathcomp_eulerian ${f}.v 2>&1 | tail -20
+    exit 1
+  fi
+done
+echo "PASS: All files compiled successfully."
+
+echo ""
+echo "=== Step 3: Axiom hygiene ==="
+coqtop -R . mathcomp_eulerian -batch <<'EOF'
+Require Import psi_cdindex beta_swap.
+Print Assumptions strict_witness_exists.
+Print Assumptions psi_comm.
+Print Assumptions descent_psi_LR_swap1.
+EOF
+echo "PASS: Axiom check complete (review output above)."
+
+echo ""
+echo "=== All checks passed ==="

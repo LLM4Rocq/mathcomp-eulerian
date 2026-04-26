@@ -1,0 +1,22 @@
+---
+name: cd-index formalization status
+description: 2 axioms remain (omega_proper_beta_lt, beta_swap_lt_caseB); see NEXT_SESSION.md for action plan
+type: project
+originSessionId: e78b04d9-7991-4d3e-8dbd-5cb72f2c77bd
+---
+cd-index formalization status as of 2026-04-24.
+
+**2 axioms remain** (down from 13 originally):
+1. `omega_proper_beta_lt` (beta_bridge.v:155) — Stanley Prop 1.6.4
+2. `beta_swap_lt_caseB` (beta_swap.v:72) — omega-incomparable toggle case
+
+**Next session plan** in `NEXT_SESSION.md`:
+- Path 1 (recommended): perm_to_seq bijection → phi_w_support_general → close omega_proper_beta_lt
+- Path 2 (independent): direct Foata piecewise injection → close beta_swap_lt_caseB
+
+**Key infrastructure already built**:
+- set_to_seq + omega_set_seq_local_bridge (beta_bridge.v) — finset↔seq omega correspondence
+- fact3 + omega_monotone_class_count + strict_witness_exists (psi_cdindex.v) — seq-level Prop 1.6.4
+- FoataBlocks (beta_omega.v) — block_left/block_right for Foata rotation
+
+**Build**: `_CoqProject` updated. All 14 active .v files compile. 0 Admitted.

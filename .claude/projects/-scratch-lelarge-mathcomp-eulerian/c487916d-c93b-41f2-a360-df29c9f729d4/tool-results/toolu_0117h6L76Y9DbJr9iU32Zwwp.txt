@@ -1,0 +1,252 @@
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-658-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-659-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-660-
+psi_cdindex_test3.v:661:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-662-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-663-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-664-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-665-
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-666-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+psi_cdindex_test3.v:667:Lemma phi_w_support_S3 :
+psi_cdindex_test3.v:668:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-669-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+psi_cdindex_test3.v-670-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-671-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-672-
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-673-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+psi_cdindex_test3.v:674:Lemma phi_w_support_S4 :
+psi_cdindex_test3.v:675:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-676-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+psi_cdindex_test3.v-677-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+psi_cdindex_test3.v-678-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-684-   expand_cde [d] = [[false;true]; [true;false]].
+psi_cdindex_test3.v-685-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+psi_cdindex_test3.v-686-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+psi_cdindex_test3.v:687:Example phi_w_support_ex1 :
+psi_cdindex_test3.v-688-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-689-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test3.v-690-
+--
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-672-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-673-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-674-
+psi_cdindex_test.v:675:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-676-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-677-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-678-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-679-
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-680-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+psi_cdindex_test.v:681:Lemma phi_w_support_S3 :
+psi_cdindex_test.v:682:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-683-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+psi_cdindex_test.v-684-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-685-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-686-
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-687-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+psi_cdindex_test.v:688:Lemma phi_w_support_S4 :
+psi_cdindex_test.v:689:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-690-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+psi_cdindex_test.v-691-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+psi_cdindex_test.v-692-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-698-   expand_cde [d] = [[false;true]; [true;false]].
+psi_cdindex_test.v-699-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+psi_cdindex_test.v-700-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+psi_cdindex_test.v:701:Example phi_w_support_ex1 :
+psi_cdindex_test.v-702-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-703-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test.v-704-
+--
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-657-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-658-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-659-
+psi_cdindex_test4.v:660:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-661-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-662-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-663-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-664-
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-665-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+psi_cdindex_test4.v:666:Lemma phi_w_support_S3 :
+psi_cdindex_test4.v:667:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-668-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+psi_cdindex_test4.v-669-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-670-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-671-
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-672-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+psi_cdindex_test4.v:673:Lemma phi_w_support_S4 :
+psi_cdindex_test4.v:674:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-675-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+psi_cdindex_test4.v-676-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+psi_cdindex_test4.v-677-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-683-   expand_cde [d] = [[false;true]; [true;false]].
+psi_cdindex_test4.v-684-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+psi_cdindex_test4.v-685-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+psi_cdindex_test4.v:686:Example phi_w_support_ex1 :
+psi_cdindex_test4.v-687-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-688-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex_test4.v-689-
+--
+.claude/history.jsonl-146-{"display":"while repairing psi_comm.v you were killed probably OOM. You have now a node with a lot of memory.","pastedContents":{},"timestamp":1776616582037,"project":"/scratch/lelarge/mathcomp-eulerian","sessionId":"c487916d-c93b-41f2-a360-df29c9f729d4"}
+.claude/history.jsonl-147-{"display":"what is the status?","pastedContents":{},"timestamp":1776620645825,"project":"/scratch/lelarge/mathcomp-eulerian","sessionId":"c487916d-c93b-41f2-a360-df29c9f729d4"}
+.claude/history.jsonl-148-{"display":"what is left to do?","pastedContents":{},"timestamp":1776629066971,"project":"/scratch/lelarge/mathcomp-eulerian","sessionId":"c487916d-c93b-41f2-a360-df29c9f729d4"}
+.claude/history.jsonl:149:{"display":"yes fix the toggle-direction bug first and then prove phi_w_support.","pastedContents":{},"timestamp":1776629271040,"project":"/scratch/lelarge/mathcomp-eulerian","sessionId":"c487916d-c93b-41f2-a360-df29c9f729d4"}
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1312-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1313-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1314-
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1:1315:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1316-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1317-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1318-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1319-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1320-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1:1321:Lemma phi_w_support_S3 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1:1322:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1323-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1324-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1325-Proof. by native_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1326-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1327-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1:1328:Lemma phi_w_support_S4 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1:1329:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1330-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1331-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1332-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1338-   expand_cde [d] = [[false;true]; [true;false]].
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1339-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1340-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1:1341:Example phi_w_support_ex1 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1342-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1343-Proof. by native_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v1-1344-
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-871-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-872-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-873-
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5:874:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-875-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-876-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-877-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-878-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-879-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5:880:Lemma phi_w_support_S3 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5:881:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-882-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-883-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-884-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-885-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-886-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5:887:Lemma phi_w_support_S4 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5:888:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-889-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-890-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-891-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-897-   expand_cde [d] = [[false;true]; [true;false]].
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-898-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-899-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5:900:Example phi_w_support_ex1 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-901-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-902-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v5-903-
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5939-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5940-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5941-
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2:5942:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5943-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5944-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5945-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5946-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5947-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2:5948:Lemma phi_w_support_S3 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2:5949:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5950-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5951-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5952-Proof. by native_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5953-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5954-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2:5955:Lemma phi_w_support_S4 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2:5956:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5957-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5958-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5959-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5965-   expand_cde [d] = [[false;true]; [true;false]].
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5966-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5967-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2:5968:Example phi_w_support_ex1 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5969-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5970-Proof. by native_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/e94a394888d353ac@v2-5971-
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1312-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1313-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1314-
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3:1315:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1316-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1317-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1318-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1319-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1320-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3:1321:Lemma phi_w_support_S3 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3:1322:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1323-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1324-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1325-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1326-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1327-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3:1328:Lemma phi_w_support_S4 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3:1329:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1330-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1331-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1332-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1338-   expand_cde [d] = [[false;true]; [true;false]].
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1339-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1340-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3:1341:Example phi_w_support_ex1 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1342-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1343-Proof. by vm_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v3-1344-
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1312-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1313-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1314-
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2:1315:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1316-  (X \in expand_cde (phi_w w)) ==
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1317-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1318-      (S_w_seq w).
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1319-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1320-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2:1321:Lemma phi_w_support_S3 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2:1322:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1323-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1324-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1325-Proof. by native_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1326-
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1327-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2:1328:Lemma phi_w_support_S4 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2:1329:  all id [seq all id [seq check_phi_w_support w X
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1330-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1331-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1332-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1338-   expand_cde [d] = [[false;true]; [true;false]].
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1339-   X = [false;true]: descent positions = {1}, omega = {0,1} ⊇ {0}. ✓
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1340-   X = [true;false]: descent positions = {0}, omega = {0}   ⊇ {0}. ✓ *)
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2:1341:Example phi_w_support_ex1 :
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1342-  expand_cde (phi_w [:: 2; 1; 3]) = [:: [:: false; true]; [:: true; false]].
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1343-Proof. by native_compute. Qed.
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v2-1344-
+--
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v7-1347-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v7-1348-(* Verified exhaustively for all permutations up to S_7.                     *)
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v7-1349-
+.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v7:1350:Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
+/scratch/lelarge/mathcomp-eulerian/.claude/file-history/e0c6fbf4-8526-4901-8b2d-3c95fc0968ba/50553cfe8d80cebc@v7-1351-  (X \in expand_cde (phi_w w)) ==
+
+[Showing results with pagination = limit: 250]

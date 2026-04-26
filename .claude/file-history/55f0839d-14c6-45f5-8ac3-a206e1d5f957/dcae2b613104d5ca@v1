@@ -1,0 +1,136 @@
+# Next Session: Close the last 2 axioms
+
+## Current state
+
+**2 axioms remain**, both in the beta_swap dependency chain:
+
+```
+fact3 (PROVED, psi_cdindex.v)
+  |
+  v
+phi_w_support_general (NOT PROVED — only verified for n≤4)
+  |
+  v
+omega_proper_beta_lt (AXIOM, beta_bridge.v:155)
+  |                         \
+  v                          v
+beta_swap_lt_caseA         beta_swap_lt_caseB (AXIOM, beta_swap.v:72)
+  (PROVED)                   |
+  |                          |
+  v                          v
+beta_swap_lt_both_in (PROVED from A+B)
+  |
+  v
+beta_alt_max (PROVED — the target theorem)
+```
+
+## The two paths
+
+### Path 1: Close omega_proper_beta_lt (Prop 1.6.4)
+
+This is the mathematically clean path. It requires:
+
+**Step 1.1: perm_to_seq bijection** (~200 LOC, in a new file `perm_seq_bridge.v`)
+
+```coq
+(* Convert a permutation to its value sequence *)
+Definition perm_to_seq {n} (s : {perm 'I_n}) : seq nat :=
+  [seq val (s i) | i <- enum 'I_n].
+
+(* Key properties to prove: *)
+Lemma perm_to_seq_uniq n (s : {perm 'I_n}) : uniq (perm_to_seq s).
+Lemma size_perm_to_seq n (s : {perm 'I_n}) : size (perm_to_seq s) = n.
+Lemma descent_perm_seq n (s : {perm 'I_n.+1}) (i : 'I_n) :
+  is_descent s i = is_descent_seq (perm_to_seq s) (val i).
+```
+
+The last lemma is the critical bridge: descent at position i in the
+permutation world equals descent at position (val i) in the seq world.
+
+**Step 1.2: phi_w_support_general** (~500 LOC)
+
+Prove: for all uniq w with size w = n, for all X : seq bool with size X = n.-1:
+```
+X ∈ expand_cde (phi_w w) ⟺ all (fun k => k ∈ omega_seq (desc_positions X)) (S_w_seq w)
+```
+
+where `desc_positions X = [seq i <- iota 0 (size X) | nth false X i]`.
+
+This follows from `fact3` (proved) which gives the cd-expansion identity.
+The argument: `fact3` says the multiset of descent patterns of the M-class
+[w] equals expand_cde(phi_w w). The support characterization says which
+descent patterns appear, in terms of omega and S_w.
+
+Key insight: `expand_cde` expands c → {[true],[false]} and d → {[true,false],[false,true]}.
+A boolean vector X ∈ expand_cde(m) iff m's d-positions match where X has
+a descent-ascent or ascent-descent pattern. This is exactly the omega condition.
+
+**Step 1.3: Close omega_proper_beta_lt** (~40 LOC)
+
+With Steps 1.1 and 1.2:
+- beta(D) = #{w : S_w ⊆ omega(D)} via phi_w_support_general + perm_to_seq
+- omega(D) ⊊ omega(E) ⟹ every class for D is counted by E (omega_monotone)
+- strict_witness_exists gives a class counted by E but not D
+- Therefore beta(D) < beta(E)
+
+### Path 2: Close beta_swap_lt_caseB directly
+
+Independent of Path 1. Requires a Foata piecewise injection.
+
+**Step 2.1: Define the injection** (~150 LOC)
+
+For σ with desc(σ) = D where i,j=i+1 ∈ D and j+1 ∉ D:
+
+Case "good" (σ(j) < σ(j+2)): apply transposition (j, j+1) to σ.
+Case "bad" (σ(j) > σ(j+2)): cyclically rotate the maximal ascending
+  run starting at position j+1.
+
+**Step 2.2: Verify the injection** (~200 LOC)
+
+Show: desc(f(σ)) = D \ {j} for all σ with desc(σ) = D.
+Show: f is injective.
+Show: there exists τ with desc(τ) = D \ {j} not in image of f.
+
+## Recommended approach
+
+**Do Path 1 first.** It closes omega_proper_beta_lt, which is the cleaner
+axiom and is reusable. Path 2 might then become unnecessary if the cd-index
+marginal-contribution argument (Option A in AXIOMS_TODO.md §4) becomes
+available.
+
+If Path 1 is too long, Path 2 can be attempted independently — it's a
+self-contained injection argument that doesn't need the cd-index theorem.
+
+## Existing infrastructure to use
+
+| Component | Location | Status |
+|-----------|----------|--------|
+| `fact3` | psi_cdindex.v:1157 | PROVED |
+| `expand_cde` | psi_cdindex.v | defined |
+| `phi_w` | psi_cdindex.v | defined |
+| `S_w_seq` | psi_cdindex.v:1272 | defined |
+| `omega_seq` | psi_cdindex.v:1261 | defined |
+| `omega_monotone_class_count` | psi_cdindex.v:1343 | PROVED |
+| `strict_witness_exists` | psi_cdindex.v:1905 | PROVED |
+| `set_to_seq` | beta_bridge.v:32 | defined + 5 lemmas |
+| `omega_set_seq_local_bridge` | beta_bridge.v | PROVED |
+| `toggle_at_j_omega_strict_superset` | beta_omega.v | PROVED |
+| `beta_swap_lt_caseA` | beta_bridge.v:109 | PROVED |
+| FoataBlocks | beta_omega.v | block_left, block_right defined |
+
+## Build order
+
+```
+mmtree → psi_core → psi_comm → psi_descent_v2 → psi_descent_thms
+                                                        ↓
+                                                  psi_cdindex
+                                                        ↓
+ordinal_reindex → perm_compress → descent → eulerian → beta
+                                                        ↓
+                                            beta_omega → beta_bridge → beta_swap
+```
+
+New file `perm_seq_bridge.v` would go between `psi_cdindex` and `beta_bridge`:
+```
+psi_cdindex + beta → perm_seq_bridge → beta_bridge (revised)
+```

@@ -1,0 +1,26 @@
+---
+name: cd-index formalization status
+description: Only 2 axioms remain (beta_swap_lt_caseA/B); psi_comm.v repaired; all other proofs complete
+type: project
+originSessionId: c487916d-c93b-41f2-a360-df29c9f729d4
+---
+cd-index formalization status as of 2026-04-20.
+
+**Only 2 axioms remain in the entire build** (both in beta_swap.v):
+- `beta_swap_lt_caseA` (line 120): j at boundary or j+1 in D
+- `beta_swap_lt_caseB` (line 131): j+1 not in D
+
+No `Admitted` proofs in any compiled file.
+
+**Why:** These are the last two pieces needed for the Eulerian formalization.
+
+**How to apply:**
+- Read `NEXT_SESSION.md` for detailed instructions
+- Need Slurm `--mem=32G` to compile psi_descent.v and psi_cdindex.v
+- The type bridge (seq nat <-> {perm 'I_n.+1}) is the main engineering gap
+- See `M7_CLOSING_AXIOMS_INFORMAL.md` for proof strategy
+- See `AXIOMS_TODO.md` for dependency graph
+
+Key files: mmtree.v, psi_core.v, psi_comm.v, psi_descent.v, psi_cdindex.v, beta_swap.v.
+Toggle-direction bug (toggle i vs j) was fixed in a prior session.
+`phi_w_support` is no longer an axiom — resolved previously.

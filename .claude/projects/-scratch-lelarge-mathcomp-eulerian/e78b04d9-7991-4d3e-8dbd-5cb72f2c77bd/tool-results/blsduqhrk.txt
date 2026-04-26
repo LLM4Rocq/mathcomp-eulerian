@@ -1,0 +1,474 @@
+/scratch/lelarge/mathcomp-eulerian/psi.v:19:Definition mm_pos (s : seq nat) : nat :=
+/scratch/lelarge/mathcomp-eulerian/psi.v:38:Lemma mm_pos_lt s : s <> [::] -> mm_pos s < size s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:40:move=> Hs; rewrite /mm_pos; case: ifP => _; [exact: min_pos_lt | exact: max_pos_lt].
+/scratch/lelarge/mathcomp-eulerian/psi.v:50:          let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi.v:68:have Hj : mm_pos s0 < size s0 by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:69:have Hleft : size (take (mm_pos s0) s0) <= fuel.
+/scratch/lelarge/mathcomp-eulerian/psi.v:72:have Hright : size (drop (mm_pos s0).+1 s0) <= fuel.
+/scratch/lelarge/mathcomp-eulerian/psi.v:77:rewrite -[RHS](cat_take_drop (mm_pos s0) s0).
+/scratch/lelarge/mathcomp-eulerian/psi.v:100:          let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi.v:130:have Hj : mm_pos s < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:131:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:481:have Hj : mm_pos s < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:482:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:500:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi.v:506:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:507:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:550:(* Window-at decomposition by the mm_pos split *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:553:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi.v:559:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:560:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:680:  w <> [::] -> i < mm_pos w -> i + window_size i w <= mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi.v:684:set j := mm_pos (a :: s0).
+/scratch/lelarge/mathcomp-eulerian/psi.v:686:have Hj : j < size (a :: s0) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:787:  let j := mm_pos w in
+/scratch/lelarge/mathcomp-eulerian/psi.v:792:set j := mm_pos (a :: s).
+/scratch/lelarge/mathcomp-eulerian/psi.v:793:have Hj : j < size (a :: s) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:794:split; rewrite (in_take_leq _ (ltnW Hj)) -leqNgt /j /mm_pos /min_pos /max_pos.
+/scratch/lelarge/mathcomp-eulerian/psi.v:849:(* ----- T4d: mm_pos characterization --------------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:851:Lemma mm_pos_char (s : seq nat) (j : nat) :
+/scratch/lelarge/mathcomp-eulerian/psi.v:857:  mm_pos s = j.
+/scratch/lelarge/mathcomp-eulerian/psi.v:873:  rewrite /mm_pos /min_pos /max_pos.
+/scratch/lelarge/mathcomp-eulerian/psi.v:880:  rewrite /mm_pos /min_pos /max_pos.
+/scratch/lelarge/mathcomp-eulerian/psi.v:887:Lemma nth_w_mm_pos w :
+/scratch/lelarge/mathcomp-eulerian/psi.v:889:  nth 0 w (mm_pos w) = foldr minn (head 0 w) (behead w) \/
+/scratch/lelarge/mathcomp-eulerian/psi.v:890:  nth 0 w (mm_pos w) = foldr maxn (head 0 w) (behead w).
+/scratch/lelarge/mathcomp-eulerian/psi.v:893:rewrite /mm_pos /min_pos /max_pos; case: ifP => _.
+/scratch/lelarge/mathcomp-eulerian/psi.v:965:(* ----- T4e2: Head-flip lemmas (moved up for use in mm_pos_psi_eq) -------- *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1011:(* ----- T4: mm_pos_psi_eq -------------------------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1013:Lemma mm_pos_psi_eq i w :
+/scratch/lelarge/mathcomp-eulerian/psi.v:1015:  mm_pos (psi i w) = mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1018:set j := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1020:have Hj : j < size w by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1050:  have Hnth_w := nth_w_mm_pos Hw_ne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1060:    have Hjw : mm_pos (a :: s0) = j by rewrite /j Hw_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1129:(* Conclude using mm_pos_char *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1130:apply: mm_pos_char => //; first by rewrite size_psi.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1146:  i < mm_pos w ->
+/scratch/lelarge/mathcomp-eulerian/psi.v:1147:  take (mm_pos w) (psi i w) = psi i (take (mm_pos w) w).
+/scratch/lelarge/mathcomp-eulerian/psi.v:1150:set j := mm_pos (a :: s0); set s := a :: s0.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1151:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1176:  mm_pos w < i ->
+/scratch/lelarge/mathcomp-eulerian/psi.v:1177:  drop (mm_pos w).+1 (psi i w) =
+/scratch/lelarge/mathcomp-eulerian/psi.v:1178:    psi (i - mm_pos w - 1) (drop (mm_pos w).+1 w).
+/scratch/lelarge/mathcomp-eulerian/psi.v:1181:set j := mm_pos (a :: s0); set s := a :: s0.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1182:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1233:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1234:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1235:have Hj' : mm_pos (psi i s) = j by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1243:have Hj'c : mm_pos (a' :: s0') = j by rewrite -Hpsi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1291:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1292:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1293:have Hj' : mm_pos (psi i s) = j by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1300:have Hj'c : mm_pos (a' :: s0') = j by rewrite -Hpsi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1371:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1372:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1406:  have Hnth := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1467:(* At each level, mm_pos separates left from right subtree. Positions in      *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1489:set j0 := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1491:have Hj0 : j0 < size w := mm_pos_lt Hw_ne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1671:(* mm_pos and window_size depend only on comparison structure.               *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1683:Lemma mm_pos_order_iso (s1 s2 : seq nat) :
+/scratch/lelarge/mathcomp-eulerian/psi.v:1689:  mm_pos s1 = mm_pos s2.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1784:by rewrite /mm_pos Hmin_eq Hmax_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1794:(* Follows from mm_pos_order_iso by structural induction on the     *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1795:(* Cartesian tree. At each level, mm_pos is the same (by order      *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1823:have Hmm := mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1824:set m := mm_pos (a1 :: t1).
+/scratch/lelarge/mathcomp-eulerian/psi.v:1827:have Hm1 : m < size (a1 :: t1) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1833:       -(mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord).
+/scratch/lelarge/mathcomp-eulerian/psi.v:1865:(* mm_pos of drop (mm_pos w) w is 0.                                *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1866:Lemma mm_pos_drop_mm w :
+/scratch/lelarge/mathcomp-eulerian/psi.v:1868:  mm_pos (drop (mm_pos w) w) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1871:set m := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1872:have Hm : m < size w by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1876:have Hnth_m := nth_w_mm_pos Hw_ne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1882:apply: mm_pos_char => //.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1896:(* Helper: psi 0 s = rank_shift_seq s when mm_pos s = 0 and 1 < size s. *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1898:  mm_pos s = 0 -> 1 < size s ->
+/scratch/lelarge/mathcomp-eulerian/psi.v:1913:(* ----- Order-isomorphism lemmas for mm_pos and window_size --------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1914:(* Two sequences with the same comparison structure have the same mm_pos     *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1915:(* and window_size at every position. Used for the j = mm_pos case of       *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:1952:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1953:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1955:have Hm' : mm_pos (psi j s) = m by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:1961:have Hm'c : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi.v:2011:    have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi.v:2012:      by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2220:(* the wrap-around element is at position i, outside W_j). Therefore mm_pos  *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:2224:(* Also depends on M2_SUBTASKS.md T4-T5 (mm_pos stability / window           *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:2424:(* interior positions. When mm_pos d = 0 and k > 0:                       *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:2427:  uniq d -> 1 < size d -> mm_pos d = 0 -> 0 < k ->
+/scratch/lelarge/mathcomp-eulerian/psi.v:2443:(* mm_pos d = 0 means head is min or max *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:2526:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2527:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2529:have Hm_pi : mm_pos (psi i s) = m
+/scratch/lelarge/mathcomp-eulerian/psi.v:2530:  by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2531:have Hm_pj : mm_pos (psi j s) = m
+/scratch/lelarge/mathcomp-eulerian/psi.v:2532:  by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2578:    have Hm_pj'' : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi.v:2582:    have Him' : i < mm_pos (psi j s) by rewrite Hm_pj.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2589:    have Hjm' : j < mm_pos (psi i s) by rewrite Hm_pi.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2654:  have Hmi' : mm_pos (psi j s) < i by rewrite Hm_pj.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2665:  have Hmj' : mm_pos (psi i s) < j by rewrite Hm_pi.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2727:  have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi.v:2728:    by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2801:  have Hmm_pm : mm_pos (psi m s) = m by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2804:  have Hmj_pm : mm_pos (psi m s) < j by rewrite Hmm_pm.
+/scratch/lelarge/mathcomp-eulerian/psi.v:2864:     it equals psi j' d when mm_pos d = 0 if we account
+/scratch/lelarge/mathcomp-eulerian/psi.v:2868:  (* But psi (j'+1) d when mm_pos d = 0:
+/scratch/lelarge/mathcomp-eulerian/psi.v:2871:  (* Wait, we computed earlier that for mm_pos d = 0 and k > 0:
+/scratch/lelarge/mathcomp-eulerian/psi.v:2881:  (* But psi (j-m) d when mm_pos d = 0: this is NOT the same as
+/scratch/lelarge/mathcomp-eulerian/psi.v:2885:     psi (j-m) d: d has mm_pos 0. The window at (j-m) in d
+/scratch/lelarge/mathcomp-eulerian/psi.v:2991:(* mm_pos of the containing subarray is strictly to the right of the          *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:3001:          let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi.v:3011:(* Vertex 2 (value 4) in [3;1;4;7;5;9;2;6]: subarray [4;7;5], mm_pos=0,
+/scratch/lelarge/mathcomp-eulerian/psi.v:3017:(* Vertex 5 (value 9): subarray [4;7;5;9;2;6], mm_pos=3 (relative),
+/scratch/lelarge/mathcomp-eulerian/psi.v:3043:have Hj : mm_pos s < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3044:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3061:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi.v:3067:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3068:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3246:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3247:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3281:    have Hnth_j := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3429:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3430:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3533:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3534:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3640:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3641:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3714:  have Hnth := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3808:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3809:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:3891:    have := nth_w_mm_pos Hne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:4797:have Hmm := mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord.
+/scratch/lelarge/mathcomp-eulerian/psi.v:4798:set m := mm_pos (a1 :: t1).
+/scratch/lelarge/mathcomp-eulerian/psi.v:4801:have Hm1 : m < size (a1 :: t1) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:4807:       -(mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord).
+/scratch/lelarge/mathcomp-eulerian/psi.v:4854:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:4855:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:4857:have Hm' : mm_pos (psi j s) = m by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi.v:4863:have Hm'c : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi.v:4913:    have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi.v:4914:      by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5007:set j := mm_pos (a :: s0).
+/scratch/lelarge/mathcomp-eulerian/psi.v:5008:have Hj : j < (size s0).+1 by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5099:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5100:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5152:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5153:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5436:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5437:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5523:(* has_left_child i w means mm_pos of window at i is > 0, *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5538:rewrite /= -/(mm_pos _).
+/scratch/lelarge/mathcomp-eulerian/psi.v:5539:set j := mm_pos (a :: s0).
+/scratch/lelarge/mathcomp-eulerian/psi.v:5540:have Hj : j < (size s0).+1 by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5721:(* ---- Key decomposition at mm_pos -------------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5722:(* For w = take j w ++ [:: nth 0 w j] ++ drop j.+1 w  where j = mm_pos, *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5735:(* -- check_fact3 via mm_pos decomposition ------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5746:(* Proof uses strong induction on size w with mm_pos decomposition.       *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5754:(* Step: decompose at mm_pos into L and R (both smaller).         *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5758:(*     (formal proof of the decomposition at mm_pos).             *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5776:(* size w = n.+1. Decompose at mm_pos. *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:5778:set j := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5779:have Hj : j < size w := mm_pos_lt Hne.
+/scratch/lelarge/mathcomp-eulerian/psi.v:5810:(* decomposing classify_vertex_cde at mm_pos.               *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6111:Lemma mm_pos_iota' m n : mm_pos (iota m n.+1) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6112:Proof. by rewrite /mm_pos min_pos_iota' max_pos_iota'. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6217:   tree, because mm_pos is always 0 (the minimum is at position 0). *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6222:- by rewrite has_left_child_cons mm_pos_iota'.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6223:- rewrite has_left_child_cons mm_pos_iota' /=.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6238:(* mm_pos = 0 when first element is the strict minimum *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6239:Lemma mm_pos_min_first a s :
+/scratch/lelarge/mathcomp-eulerian/psi.v:6241:  mm_pos (a :: s) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6244:rewrite /mm_pos /min_pos /max_pos /=.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6291:(* mm_pos of the witness core = 1 when suffix is non-empty *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6292:Lemma mm_pos_core k m :
+/scratch/lelarge/mathcomp-eulerian/psi.v:6294:  mm_pos ([:: k.+2; k.+1] ++ iota k.+3 m) = 1.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6297:rewrite /mm_pos min_pos_core.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6304:   - k+1: peel first element (mm_pos = 0), reduce to k via IH +
+/scratch/lelarge/mathcomp-eulerian/psi.v:6319:  rewrite mm_pos_core //.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6332:by rewrite mm_pos_core.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6335:(* window_size at mm_pos position 1 in the core *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6344:rewrite mm_pos_core //.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6409:(* For k >= 1: classify_vertex_cde i (1 :: rest) when mm_pos = 0 *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6411:  mm_pos (a :: rest) = 0 -> 0 < i ->
+/scratch/lelarge/mathcomp-eulerian/psi.v:6417:rewrite (window_size_cons i a rest) -/(mm_pos (a :: rest)) Hmm.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6419:        -/(mm_pos (a :: rest)) Hmm.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6428:(* S_w_seq shift via mm_pos = 0 *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6430:  mm_pos (a :: rest) = 0 ->
+/scratch/lelarge/mathcomp-eulerian/psi.v:6537:(* mm_pos of witness_perm is 0 when k >= 1 *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6538:Lemma mm_pos_witness k n :
+/scratch/lelarge/mathcomp-eulerian/psi.v:6540:  mm_pos (witness_perm n k) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6543:apply: mm_pos_min_first => x.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6564:  (* mm_pos = 0 *)
+/scratch/lelarge/mathcomp-eulerian/psi.v:6570:  have Hmm : mm_pos (witness_perm n k.+1) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi.v:6571:    exact: mm_pos_witness Hk1 Hkn.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:159:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:160:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:162:have Hm' : mm_pos (psi j s) = m by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:168:have Hm'c : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:218:    have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:219:      by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:429:(* the wrap-around element is at position i, outside W_j). Therefore mm_pos  *)
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:433:(* Also depends on M2_SUBTASKS.md T4-T5 (mm_pos stability / window           *)
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:633:(* interior positions. When mm_pos d = 0 and k > 0:                       *)
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:636:  uniq d -> 1 < size d -> mm_pos d = 0 -> 0 < k ->
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:652:(* mm_pos d = 0 means head is min or max *)
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:735:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:736:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:738:have Hm_pi : mm_pos (psi i s) = m
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:739:  by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:740:have Hm_pj : mm_pos (psi j s) = m
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:741:  by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:787:    have Hm_pj'' : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:791:    have Him' : i < mm_pos (psi j s) by rewrite Hm_pj.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:798:    have Hjm' : j < mm_pos (psi i s) by rewrite Hm_pi.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:863:  have Hmi' : mm_pos (psi j s) < i by rewrite Hm_pj.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:874:  have Hmj' : mm_pos (psi i s) < j by rewrite Hm_pi.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:936:  have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:937:    by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1010:  have Hmm_pm : mm_pos (psi m s) = m by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1013:  have Hmj_pm : mm_pos (psi m s) < j by rewrite Hmm_pm.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1073:     it equals psi j' d when mm_pos d = 0 if we account
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1077:  (* But psi (j'+1) d when mm_pos d = 0:
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1080:  (* Wait, we computed earlier that for mm_pos d = 0 and k > 0:
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1090:  (* But psi (j-m) d when mm_pos d = 0: this is NOT the same as
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1094:     psi (j-m) d: d has mm_pos 0. The window at (j-m) in d
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1200:(* mm_pos of the containing subarray is strictly to the right of the          *)
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1210:          let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1220:(* Vertex 2 (value 4) in [3;1;4;7;5;9;2;6]: subarray [4;7;5], mm_pos=0,
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1226:(* Vertex 5 (value 9): subarray [4;7;5;9;2;6], mm_pos=3 (relative),
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1252:have Hj : mm_pos s < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1253:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1270:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1276:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1277:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1329:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1330:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1364:    have Hnth_j := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1512:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1513:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1616:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1617:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1723:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1724:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1797:  have Hnth := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1891:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1892:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_base.v:1974:    have := nth_w_mm_pos Hne.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:170:have Hmm := mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:171:set m := mm_pos (a1 :: t1).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:174:have Hm1 : m < size (a1 :: t1) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:180:       -(mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:229:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:230:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:232:have Hm' : mm_pos (psi j s) = m by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:238:have Hm'c : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:288:    have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:289:      by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:382:set j := mm_pos (a :: s0).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:383:have Hj : j < (size s0).+1 by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:473:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:474:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:526:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:527:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:816:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:817:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:918:rewrite /= -/(mm_pos _).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:919:set j := mm_pos (a :: s0).
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:920:have Hj : j < (size s0).+1 by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1082:(* ---- Key decomposition at mm_pos -------------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1083:(* For w = take j w ++ [:: nth 0 w j] ++ drop j.+1 w  where j = mm_pos, *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1096:(* -- check_fact3 via mm_pos decomposition ------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1107:(* Proof uses strong induction on size w with mm_pos decomposition.       *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1115:(* Step: decompose at mm_pos into L and R (both smaller).         *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1119:(*     (formal proof of the decomposition at mm_pos).             *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1136:set j := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1137:have Hj : j < size w := mm_pos_lt Hne.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1459:Lemma mm_pos_iota' m n : mm_pos (iota m n.+1) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1460:Proof. by rewrite /mm_pos min_pos_iota' max_pos_iota'. Qed.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1561:   tree, because mm_pos is always 0 (the minimum is at position 0). *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1567:- by rewrite has_left_child_cons mm_pos_iota'.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1568:- rewrite has_left_child_cons mm_pos_iota' /=.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1583:(* mm_pos = 0 when first element is the strict minimum *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1584:Lemma mm_pos_min_first a s :
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1586:  mm_pos (a :: s) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1589:rewrite /mm_pos /min_pos /max_pos /=.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1634:(* mm_pos of the witness core = 1 when suffix is non-empty *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1635:Lemma mm_pos_core k m :
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1637:  mm_pos ([:: k.+2; k.+1] ++ iota k.+3 m) = 1.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1640:rewrite /mm_pos min_pos_core.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1647:   - k+1: peel first element (mm_pos = 0), reduce to k via IH +
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1664:  rewrite mm_pos_core //.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1677:by rewrite mm_pos_core.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1680:(* window_size at mm_pos position 1 in the core *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1690:rewrite mm_pos_core //.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1744:(* For k >= 1: classify_vertex_cde i (1 :: rest) when mm_pos = 0 *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1746:  mm_pos (a :: rest) = 0 -> 0 < i ->
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1753:  -/(mm_pos (a :: rest)) Hmm.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1755:        -/(mm_pos (a :: rest)) Hmm.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1766:(* S_w_seq shift via mm_pos = 0 *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1768:  mm_pos (a :: rest) = 0 ->
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1860:(* mm_pos of witness_perm is 0 when k >= 1 *)
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1861:Lemma mm_pos_witness k n :
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1863:  mm_pos (witness_perm n k) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1866:apply: mm_pos_min_first => x.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1885:  have Hmm : mm_pos (witness_perm n k.+1) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi_cdindex.v:1886:    exact: mm_pos_witness Hk1 Hkn.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:142:Opaque mm_pos_psi_eq mm_pos_lt mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:173:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:174:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:176:have Hm' : mm_pos (psi j s) = m
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:177:  by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:185:have Hm'c : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:243:    have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:244:      by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:457:(* the wrap-around element is at position i, outside W_j). Therefore mm_pos  *)
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:461:(* Also depends on M2_SUBTASKS.md T4-T5 (mm_pos stability / window           *)
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:697:(* interior positions. When mm_pos d = 0 and k > 0:                       *)
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:700:  uniq d -> 1 < size d -> mm_pos d = 0 -> 0 < k ->
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:733:  have Hmm_at : mm_pos (a :: t) = 0 by rewrite -Hd.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:846:set m := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:847:have Hm : m < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:849:have Hm_pi : mm_pos (psi i s) = m
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:850:  by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:851:have Hm_pj : mm_pos (psi j s) = m
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:852:  by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:887:    have Hm_pj'' : mm_pos (a' :: s0') = m
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:892:    have Him' : i < mm_pos (psi j s)
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:899:    have Hjm' : j < mm_pos (psi i s)
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:986:  have Hmi' : mm_pos (psi j s) < i
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1004:  have Hmj' : mm_pos (psi i s) < j
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1086:  have Hmm_drop : mm_pos (drop m s) = 0
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1087:    by exact: mm_pos_drop_mm.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1146:  have Hmm_pm : mm_pos (psi m s) = m
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1147:    by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1151:  have Hmj_pm : mm_pos (psi m s) < j
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1261:    have Hmm0 : mm_pos d < j - m
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1294:  have Hmm_rd0 : mm_pos rd = 0.
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1296:      (mm_pos_psi_eq Huniq_dm Hws_0_d
+/scratch/lelarge/mathcomp-eulerian/psi_comm.v:1299:  have Hmm_rd : mm_pos rd < j - m
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:19:Definition mm_pos (s : seq nat) : nat :=
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:38:Lemma mm_pos_lt s : s <> [::] -> mm_pos s < size s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:40:move=> Hs; rewrite /mm_pos; case: ifP => _; [exact: min_pos_lt | exact: max_pos_lt].
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:50:          let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:68:have Hj : mm_pos s0 < size s0 by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:69:have Hleft : size (take (mm_pos s0) s0) <= fuel.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:72:have Hright : size (drop (mm_pos s0).+1 s0) <= fuel.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:77:rewrite -[RHS](cat_take_drop (mm_pos s0) s0).
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:100:          let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:130:have Hj : mm_pos s < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:131:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:481:have Hj : mm_pos s < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:482:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:500:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:506:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:507:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:550:(* Window-at decomposition by the mm_pos split *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:553:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:559:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:560:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:680:  w <> [::] -> i < mm_pos w -> i + window_size i w <= mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:684:set j := mm_pos (a :: s0).
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:686:have Hj : j < size (a :: s0) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:787:  let j := mm_pos w in
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:792:set j := mm_pos (a :: s).
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:793:have Hj : j < size (a :: s) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:794:split; rewrite (in_take_leq _ (ltnW Hj)) -leqNgt /j /mm_pos /min_pos /max_pos.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:849:(* ----- T4d: mm_pos characterization --------------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:851:Lemma mm_pos_char (s : seq nat) (j : nat) :
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:857:  mm_pos s = j.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:873:  rewrite /mm_pos /min_pos /max_pos.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:880:  rewrite /mm_pos /min_pos /max_pos.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:887:Lemma nth_w_mm_pos w :
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:889:  nth 0 w (mm_pos w) = foldr minn (head 0 w) (behead w) \/
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:890:  nth 0 w (mm_pos w) = foldr maxn (head 0 w) (behead w).
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:893:rewrite /mm_pos /min_pos /max_pos; case: ifP => _.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:965:(* ----- T4e2: Head-flip lemmas (moved up for use in mm_pos_psi_eq) -------- *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1011:(* ----- T4: mm_pos_psi_eq -------------------------------------------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1013:Lemma mm_pos_psi_eq i w :
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1015:  mm_pos (psi i w) = mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1018:set j := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1020:have Hj : j < size w by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1050:  have Hnth_w := nth_w_mm_pos Hw_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1060:    have Hjw : mm_pos (a :: s0) = j by rewrite /j Hw_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1129:(* Conclude using mm_pos_char *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1130:apply: mm_pos_char => //; first by rewrite size_psi.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1146:  i < mm_pos w ->
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1147:  take (mm_pos w) (psi i w) = psi i (take (mm_pos w) w).
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1150:set j := mm_pos (a :: s0); set s := a :: s0.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1151:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1176:  mm_pos w < i ->
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1177:  drop (mm_pos w).+1 (psi i w) =
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1178:    psi (i - mm_pos w - 1) (drop (mm_pos w).+1 w).
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1181:set j := mm_pos (a :: s0); set s := a :: s0.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1182:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1233:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1234:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1235:have Hj' : mm_pos (psi i s) = j by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1243:have Hj'c : mm_pos (a' :: s0') = j by rewrite -Hpsi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1291:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1292:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1293:have Hj' : mm_pos (psi i s) = j by apply: mm_pos_psi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1300:have Hj'c : mm_pos (a' :: s0') = j by rewrite -Hpsi_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1371:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1372:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1406:  have Hnth := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1466:(* At each level, mm_pos separates left from right subtree. Positions in      *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1488:set j0 := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1490:have Hj0 : j0 < size w := mm_pos_lt Hw_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1670:(* mm_pos and window_size depend only on comparison structure.               *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1682:Lemma mm_pos_order_iso (s1 s2 : seq nat) :
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1688:  mm_pos s1 = mm_pos s2.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1783:by rewrite /mm_pos Hmin_eq Hmax_eq.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1850:have Hmm := mm_pos_order_iso Hszeq' Hu1 Hu2 Hne1 Hord.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1851:set m := mm_pos (a1 :: t1).
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1854:have Hm1 : m < size (a1 :: t1) by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1883:(* mm_pos of drop (mm_pos w) w is 0.                                *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1884:Lemma mm_pos_drop_mm w :
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1886:  mm_pos (drop (mm_pos w) w) = 0.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1889:set m := mm_pos w.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1890:have Hm : m < size w by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1894:have Hnth_m := nth_w_mm_pos Hw_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1900:apply: mm_pos_char => //.
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1914:(* Helper: psi 0 s = rank_shift_seq s when mm_pos s = 0 and 1 < size s. *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1916:  mm_pos s = 0 -> 1 < size s ->
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1931:(* ----- Order-isomorphism lemmas for mm_pos and window_size --------------- *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1932:(* Two sequences with the same comparison structure have the same mm_pos     *)
+/scratch/lelarge/mathcomp-eulerian/psi_core.v:1933:(* and window_size at every position. Used for the j = mm_pos case of       *)
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:29:(* mm_pos of the containing subarray is strictly to the right of the          *)
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:42:          let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:75:have Hj : mm_pos s < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:76:set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:97:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:103:set s := a :: s0. set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:104:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:117:(* Vertex 2 (value 4) in [3;1;4;7;5;9;2;6]: subarray [4;7;5], mm_pos=0,
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:123:(* Vertex 5 (value 9): subarray [4;7;5;9;2;6], mm_pos=3 (relative),
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:158:  (Hlc : 0 < mm_pos (a :: s0))
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:159:  (Heq_ij : i = mm_pos (a :: s0)) :
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:165:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:166:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:198:  (Hlc : 0 < mm_pos (a :: s0))
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:199:  (Heq_ij : i = mm_pos (a :: s0)) :
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:204:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:205:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:238:  (Hlc : 0 < mm_pos (a :: s0))
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:239:  (Hws : 1 < size (a :: s0) - mm_pos (a :: s0))
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:240:  (Heq_ij : i = mm_pos (a :: s0)) :
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:245:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:246:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:254:have Hnth := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:368:set s := a :: s0; set j := mm_pos s.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:369:have Hj : j < size s by apply: mm_pos_lt.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:414:      have Hnth_j := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_descent.v:705:      have := nth_w_mm_pos Hs_ne.
+/scratch/lelarge/mathcomp-eulerian/psi_descent_wf.v:24:      let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_descent_wf.v:33:  have Hlt := mm_pos_lt Hne.
+/scratch/lelarge/mathcomp-eulerian/psi_descent_wf.v:38:  have Hlt := mm_pos_lt Hne2.
+/scratch/lelarge/mathcomp-eulerian/psi_descent_wf.v:67:  let j := mm_pos s in
+/scratch/lelarge/mathcomp-eulerian/psi_descent_wf.v:85:have Hj := mm_pos_lt Hne.
+/scratch/lelarge/mathcomp-eulerian/psi_descent_wf.v:91:  have H1 : size (a :: t) - (mm_pos (a :: t)).+1
+/scratch/lelarge/mathcomp-eulerian/psi_descent_wf.v:108:          let j := mm_pos s in

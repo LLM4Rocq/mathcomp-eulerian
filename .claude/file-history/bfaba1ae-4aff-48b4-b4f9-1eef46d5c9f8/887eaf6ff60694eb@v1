@@ -1,0 +1,252 @@
+# Open axioms — status after M1–M7 iteration (2026-04-16)
+
+## Executive summary
+
+The original two axioms in `beta_swap.v` (`beta_swap_monotone_both_in`,
+`beta_swap_lt_both_in`) have been **converted to lemmas**. They now derive
+from two smaller, well-scoped axioms: `beta_swap_lt_caseA` and
+`beta_swap_lt_caseB`. In addition, 22 axioms exist in `psi.v` supporting
+the cd-index infrastructure (M2–M6). All are documented below with their
+mathematical justification, non-triviality witnesses, and estimated
+difficulty to close.
+
+**Bug fix (2026-04-16):** The original axioms toggled `i` (the lower
+index), which is incorrect — counterexample: n=4, D={2,3}, β(D)=6 > 4 =
+β(D\{2}). The correct formulation toggles `j` (the upper index).
+Propagated through `beta_swap_monotone`, `beta_swap_lt`, and
+`beta_alt_max_bounded`.
+
+---
+
+## 1. Target axioms in `beta_swap.v` (2 axioms)
+
+These are the only axioms that `beta_alt_max` (the project's end goal)
+depends on.
+
+### `beta_swap_lt_caseA` (line ~120)
+
+```coq
+Axiom beta_swap_lt_caseA : forall n (D : {set 'I_n}) (i j : 'I_n),
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  (forall q : 'I_n, val q = (val j).+1 -> q \in D) ->
+  beta D < beta (toggle_at D j).
+```
+
+**Meaning:** When both i, j=i+1 are descents AND the successor j+1 is
+also in D (or j is at the boundary), toggling j strictly increases β.
+
+**Why true:** Under this hypothesis, `toggle_at_j_omega_strict_superset`
+(proved in §H) gives ω(D) ⊊ ω(toggle_at D j). Prop 1.6.4 then gives
+β(D) < β(toggle_at D j).
+
+**Gap to close:** The type bridge from `psi.v`'s seq-level `omega_seq` /
+`fact3` / `strict_witness_exists` to `beta_swap.v`'s finset-level
+`omega_set` / `beta`. Specifically:
+- Define a bijection between `seq nat`-permutations and `{perm 'I_n.+1}`.
+- Show `is_descent_seq w k ↔ is_descent (perm_of_seq w) k`.
+- Show `omega_seq w = omega_set (descent_set (perm_of_seq w))` (under
+  appropriate encoding).
+- Connect `|{[w] : S_w ⊆ ω(S)}|` to `beta(S)` via the M-class counting.
+
+**Estimated difficulty:** Medium (~80 LOC). The math is done; this is
+plumbing between two type universes.
+
+### `beta_swap_lt_caseB` (line ~131)
+
+```coq
+Axiom beta_swap_lt_caseB : forall n (D : {set 'I_n}) (i j : 'I_n),
+  val j = (val i).+1 -> i \in D -> j \in D ->
+  (exists q : 'I_n, val q = (val j).+1 /\ q \notin D) ->
+  beta D < beta (toggle_at D j).
+```
+
+**Meaning:** When both i, j=i+1 are descents AND j+1 ∉ D (so the ω-sets
+are incomparable — bit i enters, bit j leaves), toggling j still strictly
+increases β.
+
+**Why true:** The cd-index coefficient structure guarantees that the
+"marginal contribution" of ω-bit i exceeds that of ω-bit j = i+1 in the
+expansion. Informally: gaining a lower-index ω-bit always compensates for
+losing a higher-index one, because cd-monomials with d at position i are
+a strict superset (in the ω-containment ordering) of those with d at
+position j.
+
+**Gap to close:** Same type bridge as Case A, PLUS a marginal-contribution
+comparison lemma at the cd-index level. This requires showing that for
+any cd-word Φ_w, if S_w ⊆ C ∪ {j} then S_w ⊆ C ∪ {i} (where C is the
+common ω-bits), which follows from the structural constraint that d at
+position j in the cde-string implies d at position i is "compatible".
+
+**Estimated difficulty:** Hard (~60 LOC for the marginal lemma + ~80 LOC
+for the type bridge shared with Case A). The mathematical argument is in
+M7_CLOSING_AXIOMS_INFORMAL.md §4.5.
+
+---
+
+## 2. Infrastructure axioms in `psi.v` (22 axioms)
+
+Grouped by milestone. Each has a non-triviality `Example` in `psi.v`.
+
+### M2: ψᵢ involutivity (1 axiom)
+
+| Axiom | Line | Difficulty | Gap |
+|-------|------|------------|-----|
+| `psi_involutive` | 594 | **Hard** | Shape stability: `mm_pos` is preserved under `psi`. See M2_SUBTASKS.md T4–T5. Decomposed into `window_head_extremum` + `psi_window_shape_stable` + assembly. ~135 LOC. Three agent runs attempted; scaffolding (`rank_shift_seq_involutive`) proved, shape stability unfinished. |
+
+### M3: ψᵢ commutativity (4 axioms)
+
+| Axiom | Line | Difficulty | Gap |
+|-------|------|------------|-----|
+| `window_trichotomy` | 639 | Easy | Structural property of binary trees: subtrees disjoint or nested. ~15 LOC by induction on tree. |
+| `psi_comm_disjoint` | 663 | Medium | Disjoint windows act on non-overlapping slices. ~30 LOC. Blocked on T4–T5 (window stability). |
+| `window_size_psi_ancestor` | 687 | Medium | Window-size stable when ancestor window is rank-shifted. ~25 LOC. Blocked on T4. |
+| `psi_comm_nested` | 714 | Medium | Nested windows: RS commutes by modular arithmetic. ~30 LOC. Core algebra is straightforward; blocked on window stability. |
+
+### M4: Descent-set effect (10 axioms)
+
+| Axiom | Line | Difficulty | Gap |
+|-------|------|------------|-----|
+| `rank_shift_preserves_interior_order` | 855 | Medium | Interior (non-head) elements preserve relative order under rank-shift. ~20 LOC. Modular arithmetic. |
+| `window_head_is_extremum` | 877 | Medium | Head of non-trivial window is min or max (F2 property). ~30 LOC by induction on size. Proved once (lost to backup error). |
+| `post_window_extremum` | 896 | Medium | Element after window is outside window's range. ~25 LOC. Tree-structural. |
+| `pre_window_lt_max_when_min_head` | 916 | Medium | Case LR boundary: w[i-1] < max(window). ~20 LOC. |
+| `pre_window_gt_min_when_max_head` | 922 | Medium | Symmetric to above. ~20 LOC. |
+| `exactly_one_descent_LR` | 941 | Medium | XOR of descents at {i-1, i} in Case LR. ~25 LOC. |
+| `descent_psi_R_add` | 961 | Medium | Case R, not a descent → becomes descent. ~20 LOC. Follows from head-extremum flip. |
+| `descent_psi_R_remove` | 968 | Medium | Case R, is a descent → removed. ~20 LOC. Symmetric. |
+| `descent_psi_LR_swap1` | 975 | Medium | Case LR swap (i ∉ D). ~25 LOC. |
+| `descent_psi_LR_swap2` | 985 | Medium | Case LR swap (i ∈ D). ~25 LOC. |
+
+### M5: Fact #3 — cd-index identity (5 axioms)
+
+| Axiom | Line | Difficulty | Gap |
+|-------|------|------------|-----|
+| `window_size_psi` | 1145 | Medium | Tree shape invariant: `window_size i (psi j w) = window_size i w`. ~30 LOC. Same blocker as M2 T5. |
+| `has_left_child_psi` | 1164 | Medium | Tree shape invariant: `has_left_child` stable under psi. ~20 LOC. |
+| `endpoint_implies_next_has_left_child` | 1181 | Easy | Structural: endpoint k < n-1 ⟹ k+1 has left child. ~15 LOC. |
+| `LR_pred_is_endpoint` | 1203 | Easy | If vertex i is Case LR, then i-1 is endpoint. ~15 LOC. Stanley line 259. |
+| `fact3` | 1241 | **Hard** | The main Fact #3 identity. Requires induction on |internal_vertices| using M4 descent-effect axioms + independence of disjoint bit-operations. ~100 LOC once M4 axioms are closed. |
+
+### M6: Theorem 1.6.3 assembly (2 axioms)
+
+| Axiom | Line | Difficulty | Gap |
+|-------|------|------------|-----|
+| `phi_w_support` | 1360 | Medium | Φ_w support characterization: X ∈ expand(Φ_w) ↔ S_w ⊆ ω(X). ~40 LOC. Combinatorial identity on cd-expansion. |
+| `strict_witness_exists` | 1417 | Easy | For any k < n-1, ∃ w with S_w = {k}. ~15 LOC. Construct explicit permutation c^{k} d c^{n-2-k}. |
+
+---
+
+## 3. Dependency graph (what blocks what)
+
+```
+psi_involutive (M2, HARD)
+  └── blocks: psi_comm_disjoint (M3)
+  └── blocks: window stability axioms (M3, M5)
+
+window_head_is_extremum (M4)
+  └── blocks: descent_psi_* axioms (M4)
+  └── blocks: fact3 (M5)
+
+fact3 (M5, HARD)
+  └── blocks: phi_w_support (M6)
+  └── blocks: beta_swap_lt_caseA (M7)
+  └── blocks: beta_swap_lt_caseB (M7)
+
+TYPE BRIDGE (seq nat ↔ {perm 'I_n.+1})
+  └── blocks: beta_swap_lt_caseA (M7)
+  └── blocks: beta_swap_lt_caseB (M7)
+```
+
+**Critical path:** `psi_involutive` → window stability → M4 descent axioms
+→ `fact3` → type bridge → close `beta_swap_lt_caseA/B`.
+
+---
+
+## 4. Recommended attack order for next iteration
+
+### Phase 1: Close the shape-stability bottleneck (~135 LOC)
+
+This unblocks everything. Follow M2_SUBTASKS.md:
+1. **T4: `mm_pos_stable`** (~40 LOC) — the mathematical crux.
+2. **T5: `window_stable`** (~50 LOC) — window_size and window_at preserved.
+3. **T6: `window_head_extremum`** (~30 LOC) — independent, can run in parallel.
+4. **T7: `psi_involutive` assembly** (~15 LOC).
+
+Once T4–T5 land, the following axioms fall like dominoes:
+- `psi_involutive` (M2)
+- `window_size_psi`, `has_left_child_psi` (M5)
+- `window_trichotomy`, `psi_comm_disjoint`, `window_size_psi_ancestor`,
+  `psi_comm_nested` (M3)
+
+### Phase 2: Close M4 descent-effect axioms (~230 LOC)
+
+All 10 M4 axioms depend on `window_head_is_extremum` (closed in Phase 1)
+plus straightforward rank-shift algebra. Each is ~20–25 LOC.
+
+### Phase 3: Close Fact #3 and M6 (~155 LOC)
+
+- `endpoint_implies_next_has_left_child` (~15 LOC, easy)
+- `LR_pred_is_endpoint` (~15 LOC, easy)
+- `fact3` (~100 LOC, hard — induction on internal vertices)
+- `phi_w_support` (~40 LOC)
+- `strict_witness_exists` (~15 LOC, easy — explicit construction)
+
+### Phase 4: Type bridge + close target axioms (~160 LOC)
+
+- Define `seq_of_perm : {perm 'I_n.+1} -> seq nat` and inverse.
+- Bridge `is_descent_seq ↔ is_descent`, `omega_seq ↔ omega_set`.
+- Bridge M-class counting to `beta`.
+- Close `beta_swap_lt_caseA` and `beta_swap_lt_caseB`.
+
+### Total remaining: ~680 LOC across 4 phases.
+
+---
+
+## 5. Don't-repeat-these-mistakes log
+
+Documented failure modes from prior agent rounds:
+
+1. **`2*i` indexing for internal vertices.** The i-th label in the in-order
+   word of M(w) is at position `i`, not `2i`.
+
+2. **Packaged-hypothesis "bridges."** Defining
+   `tree_well_c_at t i := is_node_c ∧ seq_type_c_at` and declaring the
+   bridge closed. The bridge is the *implication*, not the conjunction.
+
+3. **`psi_stanley := psi` as an alias** without genuine operator content.
+
+4. **`psi := id` as a "scaffold".** Involutivity and commutation hold
+   trivially; the operator does nothing.
+
+5. **Toggling the wrong index.** The original axioms toggled `i` (lower
+   descent); the correct formulation toggles `j = i+1` (upper descent).
+   Counterexample: n=4, D={2,3}, toggle i=2: β goes from 6 to 4 (DOWN).
+   Toggle j=3: β goes from 6 to 9 (UP).
+
+6. **Agent backup-restore errors.** One agent proved `window_head_extremum`
+   and several shape-stability helpers (~180 LOC) but lost all work by
+   restoring from a stale backup. Keep incremental saves or use
+   `rocq_compile_file` after each completed lemma.
+
+7. **Shape stability is the bottleneck.** Three agents attempted
+   `psi_involutive` end-to-end without success. The correct decomposition
+   (M2_SUBTASKS.md) identifies `mm_pos_stable` (T4, ~40 LOC) as the crux.
+   Attack T4 first, in isolation, with a dedicated agent.
+
+---
+
+## 6. Files and documentation
+
+| File | LOC | Role |
+|------|-----|------|
+| `mmtree.v` | 158 | M1: min-max tree inductive + round-trip |
+| `psi.v` | 1448 | M2–M6: ψᵢ operators, cd-index infrastructure |
+| `beta_swap.v` | 898 | Target: β-swap lemmas, ω-bridge, alt-max |
+| `M2_PSI_INFORMAL.md` | ~820 | ψᵢ definition and involutivity proof |
+| `M2_SUBTASKS.md` | ~160 | Decomposition of psi_involutive into T1–T7 |
+| `M3_COMMUTATIVITY_INFORMAL.md` | ~860 | Commutativity proof |
+| `M4_DESCENT_EFFECT_INFORMAL.md` | ~1100 | Descent-set effect proof |
+| `M5_FACT3_INFORMAL.md` | ~400 | Fact #3 proof |
+| `M6_THM163_INFORMAL.md` | ~370 | Theorem 1.6.3 assembly |
+| `M7_CLOSING_AXIOMS_INFORMAL.md` | ~925 | Axiom-closing analysis + bug discovery |
+| `refs/stanley_1_6_cdindex.txt` | — | Stanley EC1 §1.6 source text |
