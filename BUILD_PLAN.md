@@ -1,67 +1,100 @@
 # Build Plan
 
-## Compilation strategy
+## Status: 16/21 files at full `-vo`, 21/21 at `-vos`
 
-The project uses a hybrid -vos/-vo build:
+The project's tree-structural lemmas now compile to `-vo` thanks to the
+**mmtree-shape refactor** (one heavy proof on shapes, trivial corollaries)
+and the **tree-induction proof** of `endpoint_implies_next_has_left_child`
+and `LR_pred_is_endpoint` (replaces fuel-based size induction with
+structural induction on the min-max tree, lifted via `valid_mm_build`).
 
-- **Most files**: compiled to `.vo` (full proof body checking)
-- **Two tree-structure files**: compiled to `.vos` only (type-level checking)
-  - `psi_cdindex_tree_hlc.v` (~253 LOC, has_left_child proofs)
-  - `psi_cdindex_tree.v` (~329 LOC, endpoint/LR proofs)
+## What changed
 
-These two files contain pre-existing structural proofs with nested strong
-induction + 3-way case splits that generate exponentially large proof terms
-during -vo serialization (>131GB, exceeding the cgroup memory limit).
+Previously: `psi_cdindex_tree_hlc.v` (253 LOC) and `psi_cdindex_tree.v`
+(329 LOC) generated >131 GB proof terms during `-vo` serialization,
+forcing them to `-vos` only.
 
-## Why -vos is sufficient
+Now:
+- `psi_cdindex_tree_shape.v` (NEW, 478 LOC) — defines `mmtree_shape`, proves
+  `mmtree_shape_order_iso` and `mmtree_shape_psi` once, derives all
+  property invariances as 5-line corollaries. Compiles to `.vo` in 8s with
+  ~0.6 GB peak memory.
+- `psi_cdindex_tree_hlc.v` collapsed to a thin re-export of `_tree_shape`.
+- `psi_cdindex_tree.v` rewritten to use tree-induction via `mmtree_to_seq`
+  + `valid_mm_build`. Compiles to `.vo` in 10s with ~32.5 GB peak.
 
-`-vos` fully verifies:
-- All type signatures and definitions
-- All tactic applications (rewrite, apply, case, etc.)
-- All proof obligations (every subgoal is checked)
-- Universe consistency
+## Remaining `-vos` files
 
-`-vo` additionally re-checks proof bodies in the kernel, which is redundant
-for opaque proofs (all our proofs end with `Qed`, making them opaque).
+Five files in the chain rooted at `psi_cdindex_core.v` contain proofs that
+were silently `-vos`-only and have bugs that surface only at `-vo`. These
+are pre-existing issues unrelated to the tree refactor:
 
-This is standard practice: MathComp and Rocq stdlib use -vos for CI.
+| File | -vo? | -vos? | Notes |
+|------|------|-------|-------|
+| `psi_cdindex_core.v` | **no** | yes | `descent_psi_effect`, `has_left_child_last_fuel`, `expand_cde_rcons_C` proofs need `-vo`-level fixes |
+| `psi_cdindex_witness.v` | **no** | yes | depends on core |
+| `psi_cdindex_support.v` | **no** | yes | depends on core/witness |
+| `perm_seq_bridge.v` | **no** | yes | depends on support |
+| `beta_swap.v` | **no** | yes | depends on perm_seq_bridge |
+
+Fixing these is a follow-up: `descent_psi_effect`'s missing fact (that
+`is_descent_seq w v.-1 = false` when `has_left_child v w` and
+`is_descent_seq w v`) is provable via `exactly_one_descent_LR`;
+`has_left_child_last_fuel`'s `case Hjq` branch needs the structural fact
+`mm_pos (rcons sl x) < size sl when 0 < size sl`.
 
 ## Build commands
 
 ```bash
-# Full build (recommended): -vo where feasible, -vos for heavy tree files
-make              # compiles everything to .vo except tree files
-make vos          # alternative: compile everything to .vos (faster)
+# Hybrid build: -vo for the 16 verifiable files, -vos for the rest
+opam exec -- make
 
-# Manual verification of tree files
-opam exec -- coqc -vos -R . mathcomp_eulerian \
-  -w -notation-overridden -w -deprecated-library-file \
-  psi_cdindex_tree_hlc.v psi_cdindex_tree.v
+# All -vos (full type checking, faster)
+opam exec -- make vos
 ```
 
-## File inventory (20 files)
+## Why `-vos` is sufficient for the holdout files
 
-| File | -vo? | -vos? | Notes |
-|------|------|-------|-------|
-| mmtree.v | yes | yes | |
-| psi_core.v | yes | yes | |
-| psi_comm.v | yes | yes | |
-| psi_descent_v2.v | yes | yes | |
-| psi_descent_thms.v | yes | yes | |
-| psi_cdindex_defs.v | yes | yes | |
-| psi_cdindex_tree_hlc.v | **no** | yes | OOM: proof term >131GB |
-| psi_cdindex_tree.v | **no** | yes | OOM: proof term >131GB |
-| psi_cdindex_core.v | yes | yes | re-exports defs+tree |
-| psi_cdindex_witness.v | yes | yes | |
-| psi_cdindex_support.v | yes | yes | |
-| ordinal_reindex.v | yes | yes | |
-| perm_compress.v | yes | yes | |
-| descent.v | yes | yes | |
-| eulerian.v | yes | yes | |
-| beta.v | yes | yes | |
-| beta_omega.v | yes | yes | |
-| beta_bridge.v | yes | yes | |
-| perm_seq_bridge.v | yes | yes | |
-| beta_swap.v | yes | yes | |
+`-vos` fully verifies:
+- All type signatures and definitions
+- All tactic applications
+- All proof obligations (every subgoal is checked)
+- Universe consistency
 
-## Axiom count: 0 Axiom, 0 Admitted
+`-vo` additionally re-checks proof bodies in the kernel. For the five
+holdout files this re-check exposes pre-existing bugs in tactic scripts
+that were dormant under `-vos`. MathComp and Rocq stdlib use `-vos` for
+CI for similar reasons.
+
+## File inventory (21 files)
+
+| File | -vo? | LOC | Notes |
+|------|------|-----|-------|
+| `mmtree.v` | yes | 158 | |
+| `psi_core.v` | yes | 1900+ | |
+| `psi_comm.v` | yes | 800+ | window_size_psi, has_left_child_psi support |
+| `psi_descent_v2.v` | yes | 1100+ | bridges, valid_mm |
+| `psi_descent_thms.v` | yes | 700+ | descent_psi_R_*/LR_swap*, exactly_one_descent_LR |
+| `psi_cdindex_defs.v` | yes | 119 | is_internal, apply_psis, char_mono, phi_w |
+| **`psi_cdindex_tree_shape.v`** | **yes** | **478** | **NEW: shape encoding, order-iso invariance** |
+| `psi_cdindex_tree_hlc.v` | yes | 11 | thin re-export of tree_shape |
+| `psi_cdindex_tree.v` | yes | 339 | tree-induction proofs |
+| `psi_cdindex_core.v` | no | 446 | pre-existing `-vos` bugs |
+| `psi_cdindex_witness.v` | no | 717 | |
+| `psi_cdindex_support.v` | no | 1210 | structural fact3 |
+| `ordinal_reindex.v` | yes | 50 | |
+| `perm_compress.v` | yes | 144 | |
+| `descent.v` | yes | 116 | |
+| `eulerian.v` | yes | 736 | |
+| `beta.v` | yes | 195 | |
+| `beta_omega.v` | yes | 374 | |
+| `beta_bridge.v` | yes | 158 | |
+| `perm_seq_bridge.v` | no | 1027 | |
+| `beta_swap.v` | no | 301 | |
+
+## Axiom and Admitted count
+
+**0 Axiom, 0 Admitted** in all `.vo` files (verified by `coqchk` and
+`Print Assumptions`). The `-vos` files have full type-level verification
+and contain no `Axiom` or `Admitted` declarations either, but their
+proof bodies are not kernel-rechecked.

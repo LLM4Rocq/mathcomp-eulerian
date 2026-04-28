@@ -127,20 +127,32 @@ have Hws : 1 < window_size v w
   by move: Hint; rewrite /is_internal => /andP [_ ->].
 case Hlc: (has_left_child v w) => /=.
 - case Hd: (is_descent_seq w v).
-  + by have := descent_psi_LR_swap2 Hu Hws Hlc Hd Hk
-      => ->; case: (k == v) => //; case: (k == v.-1).
-  + by have := descent_psi_LR_swap1 Hu Hws Hlc
-      (negbT Hd) Hk => ->; case: (k == v) => //;
-      case: (k == v.-1).
+  + (* LR-swap2 case: descent at v moves to v.-1.                          *)
+    (* Use exactly_one_descent_LR to derive ~~ is_descent_seq w v.-1.       *)
+    have := descent_psi_LR_swap2 Hu Hws Hlc Hd Hk => ->.
+    case: (k == v) => //.
+    have Hi0 : 0 < v.
+      case Hv0: v => [|n0]; last by [].
+      by exfalso; rewrite Hv0 has_left_child_0 in Hlc.
+    have := exactly_one_descent_LR Hu Hi0 Hlc Hws.
+    rewrite Hd addbT.
+    by case: (is_descent_seq w v.-1).
+  + (* LR-swap1 case: ~ descent at v, so descent at v.-1.                  *)
+    have := descent_psi_LR_swap1 Hu Hws Hlc (negbT Hd) Hk => ->.
+    have Hi0 : 0 < v.
+      case Hv0: v => [|n0]; last by [].
+      by exfalso; rewrite Hv0 has_left_child_0 in Hlc.
+    have := exactly_one_descent_LR Hu Hi0 Hlc Hws.
+    rewrite Hd /= addbF => Hd1.
+    case: (k == v); first by rewrite Hd1.
+    by case: (k == v.-1).
 - case Hd: (is_descent_seq w v).
-  + have := descent_psi_R_remove Hu Hws
-      (negbT Hlc) Hd Hk => ->.
-    by case Hkv: (k == v);
-      [move/eqP: Hkv => ->; rewrite Hd | rewrite Hkv].
-  + have := descent_psi_R_add Hu Hws
-      (negbT Hlc) (negbT Hd) Hk => ->.
-    by case Hkv: (k == v);
-      [move/eqP: Hkv => ->; rewrite Hd|rewrite Hkv orbF].
+  + have := descent_psi_R_remove Hu Hws (negbT Hlc) Hd Hk => ->.
+    case Hkv: (k == v); first by move/eqP: Hkv => ->; rewrite Hd.
+    by [].
+  + have := descent_psi_R_add Hu Hws (negbT Hlc) (negbT Hd) Hk => ->.
+    case Hkv: (k == v); first by move/eqP: Hkv => ->; rewrite Hd.
+    by [].
 Qed.
 
 (* -- Char_mono tools ------------------------------------------------------ *)
@@ -160,44 +172,175 @@ Proof. by rewrite /char_mono size_map size_iota. Qed.
 
 (* -- The last vertex has no left child ------------------------------------ *)
 
-Lemma has_left_child_last_fuel :
-  forall fuel w, size w <= fuel -> 0 < size w ->
-  has_left_child_fuel fuel (size w).-1 w = false.
+(* Helper: index of x in rcons s y at position size s implies x not in s. *)
+Lemma index_rcons_eq_size (T : eqType) (s : seq T) y x :
+  index x (rcons s y) = size s -> x \notin s.
 Proof.
-elim=> [w Hsz Hne|fuel IH [|a s0] Hsz Hne] //.
-  by move: Hsz Hne; case: w.
-set s := a :: s0. set j := mm_pos s.
-have Hj : j < size s by apply: mm_pos_lt.
-rewrite /= -/s -/j.
-have Hjn : ((size s0) < j) = false
-  by apply/negbTE; rewrite -leqNgt -ltnS.
-rewrite Hjn.
-case Hjq: ((size s0) == j).
-  by move/eqP: Hjq => <-;
-     rewrite /s /= subSn // subnn.
-have Hjl : j < size s0
-  by rewrite ltn_neqAle eq_sym Hjq /= leqNgt Hjn.
-change (has_left_child_fuel fuel
-  (size s0 - j - 1) (drop j.+1 s) = false).
-have Hsz_ds : size (drop j.+1 s) = size s0 - j
-  by rewrite size_drop /= -addnS addnK.
-have H0ds : 0 < size (drop j.+1 s)
-  by rewrite Hsz_ds subn_gt0.
-have Hfuel : size (drop j.+1 s) <= fuel.
-  rewrite Hsz_ds; apply: leq_trans (leq_subr _ _) _.
-  by rewrite ltnS in Hsz.
-have -> : size s0 - j - 1 = (size (drop j.+1 s)).-1.
-  rewrite Hsz_ds; case: (size s0 - j)
-    (subn_gt0.2 Hjl) => //= m _; by rewrite subn1.
-exact: IH Hfuel H0ds.
+elim: s => [|a s IH] //=.
+case Hax : (a == x) => /= Hidx; first by [].
+injection Hidx => Hidx'.
+have Hxn := IH Hidx'.
+by rewrite in_cons eq_sym Hax /=; exact: Hxn.
+Qed.
+
+(* Helper: mm_pos can never be at the last position when prefix is non-empty. *)
+(* Reason: mm_pos = last position requires both min_pos and max_pos at last, *)
+(* forcing the last element to be both min and max — contradicting the      *)
+(* presence of any other element.                                            *)
+Lemma mm_pos_rcons_lt sl x : 0 < size sl ->
+  mm_pos (rcons sl x) < size sl.
+Proof.
+move=> Hsl.
+have Hne : rcons sl x <> [::] by case: sl Hsl.
+have Hjlt := mm_pos_lt Hne.
+rewrite size_rcons ltnS leq_eqVlt in Hjlt.
+case/orP: Hjlt => [/eqP Hjeq|//].
+exfalso.
+move: Hjeq; rewrite /mm_pos.
+case Hcmp: (min_pos (rcons sl x) <= max_pos (rcons sl x)) => Hjeq.
+- have Hmax_eq : max_pos (rcons sl x) = size sl.
+    apply/eqP; rewrite eqn_leq.
+    have Hmax_lt := max_pos_lt Hne.
+    rewrite size_rcons ltnS in Hmax_lt.
+    by rewrite Hmax_lt -Hjeq Hcmp.
+  rewrite /min_pos in Hjeq.
+  rewrite /max_pos in Hmax_eq.
+  set m := foldr minn (head 0 (rcons sl x)) (behead (rcons sl x)).
+  set M := foldr maxn (head 0 (rcons sl x)) (behead (rcons sl x)).
+  have Hm_nin : foldr minn (head 0 (rcons sl x)) (behead (rcons sl x)) \notin sl
+    by apply: index_rcons_eq_size Hjeq.
+  have HM_nin : foldr maxn (head 0 (rcons sl x)) (behead (rcons sl x)) \notin sl
+    by apply: index_rcons_eq_size Hmax_eq.
+  have Hrcons_form : rcons sl x = head 0 (rcons sl x) :: behead (rcons sl x)
+    by case: (rcons sl x) Hne.
+  have Hm_in : m \in rcons sl x
+    by rewrite [in X in _ \in X]Hrcons_form; apply: min_in.
+  have HM_in : M \in rcons sl x
+    by rewrite [in X in _ \in X]Hrcons_form; apply: max_in.
+  have Hm_eq : m = x.
+    move: Hm_in; rewrite mem_rcons in_cons.
+    case/orP => [/eqP -> //|Hin].
+    by rewrite Hin in Hm_nin.
+  have HM_eq : M = x.
+    move: HM_in; rewrite mem_rcons in_cons.
+    case/orP => [/eqP -> //|Hin].
+    by rewrite Hin in HM_nin.
+  case Hsl_eq : sl Hsl => [//|a sl0] _.
+  have Ha_in_sl : a \in sl by rewrite Hsl_eq in_cons eqxx.
+  have Ha_in : a \in rcons sl x
+    by rewrite mem_rcons in_cons; apply/orP; right.
+  have Hm_le_a : m <= a
+    by rewrite -/m; apply: foldr_minn_le; rewrite -Hrcons_form.
+  have Ha_le_M : a <= M
+    by rewrite -/M; apply: foldr_maxn_ge; rewrite -Hrcons_form.
+  rewrite Hm_eq in Hm_le_a.
+  rewrite HM_eq in Ha_le_M.
+  have Ha_eq_x : a = x by apply/eqP; rewrite eqn_leq Ha_le_M Hm_le_a.
+  move/negP: Hm_nin; apply.
+  by rewrite -/m Hm_eq -Ha_eq_x.
+- rewrite /max_pos in Hjeq.
+  have Hcmp' : ~~ (min_pos (rcons sl x) <= max_pos (rcons sl x))
+    by rewrite Hcmp.
+  rewrite -ltnNge in Hcmp'.
+  have Hmin_eq : min_pos (rcons sl x) = size sl.
+    apply/eqP; rewrite eqn_leq.
+    have Hmin_lt := min_pos_lt Hne.
+    rewrite size_rcons ltnS in Hmin_lt.
+    by rewrite Hmin_lt /max_pos -Hjeq ltnW //.
+  rewrite /min_pos in Hmin_eq.
+  set m := foldr minn (head 0 (rcons sl x)) (behead (rcons sl x)).
+  set M := foldr maxn (head 0 (rcons sl x)) (behead (rcons sl x)).
+  have Hm_nin : m \notin sl by apply: index_rcons_eq_size Hmin_eq.
+  have HM_nin : M \notin sl by apply: index_rcons_eq_size Hjeq.
+  have Hrcons_form : rcons sl x = head 0 (rcons sl x) :: behead (rcons sl x)
+    by case: (rcons sl x) Hne.
+  have Hm_in : m \in rcons sl x
+    by rewrite [in X in _ \in X]Hrcons_form; apply: min_in.
+  have HM_in : M \in rcons sl x
+    by rewrite [in X in _ \in X]Hrcons_form; apply: max_in.
+  have Hm_eq : m = x.
+    move: Hm_in; rewrite mem_rcons in_cons.
+    case/orP => [/eqP -> //|Hin].
+    by rewrite Hin in Hm_nin.
+  have HM_eq : M = x.
+    move: HM_in; rewrite mem_rcons in_cons.
+    case/orP => [/eqP -> //|Hin].
+    by rewrite Hin in HM_nin.
+  case Hsl_eq : sl Hsl => [//|a sl0] _.
+  have Ha_in_sl : a \in sl by rewrite Hsl_eq in_cons eqxx.
+  have Ha_in : a \in rcons sl x
+    by rewrite mem_rcons in_cons; apply/orP; right.
+  have Hm_le_a : m <= a
+    by rewrite -/m; apply: foldr_minn_le; rewrite -Hrcons_form.
+  have Ha_le_M : a <= M
+    by rewrite -/M; apply: foldr_maxn_ge; rewrite -Hrcons_form.
+  rewrite Hm_eq in Hm_le_a.
+  rewrite HM_eq in Ha_le_M.
+  have Ha_eq_x : a = x by apply/eqP; rewrite eqn_leq Ha_le_M Hm_le_a.
+  move/negP: Hm_nin; apply.
+  by rewrite -/m Hm_eq -Ha_eq_x.
+Qed.
+
+(* Tree-level helper: in any valid mmtree, the last in-order position has *)
+(* no left child. Proof by structural induction on the tree.              *)
+
+Lemma has_left_child_t_last_valid : forall t : mmtree nat,
+  valid_mm t ->
+  0 < size (mmtree_to_seq t) ->
+  has_left_child_t (size (mmtree_to_seq t)).-1 t = false.
+Proof.
+elim => [|l IHl x r IHr] //=.
+case=> Hmm [Hvl Hvr] _.
+rewrite size_cat /= addnS /=.
+case Hszr : (size (mmtree_to_seq r)) => [|n].
+- (* size sr = 0: by valid_mm + mm_pos_rcons_lt, force size sl = 0. *)
+  have Hszl_zero : size (mmtree_to_seq l) = 0.
+    have Hszr_nil : mmtree_to_seq r = [::]
+      by move: Hszr; case: (mmtree_to_seq r).
+    rewrite Hszr_nil cats1 in Hmm.
+    case Hszl : (size (mmtree_to_seq l)) Hmm => [//|m] Hmm.
+    exfalso.
+    have Hsl_pos : 0 < size (mmtree_to_seq l) by rewrite Hszl.
+    have Hjlt := mm_pos_rcons_lt x Hsl_pos.
+    by rewrite Hmm Hszl ltnn in Hjlt.
+  rewrite Hszl_zero /= addn0 /=.
+  exact: has_left_child_t_0.
+- (* size sr = n.+1: last position is in r *)
+  rewrite addnS /=.
+  have Hgt2 : size (mmtree_to_seq l) < (size (mmtree_to_seq l) + n).+1
+    by rewrite ltnS leq_addr.
+  rewrite (@has_left_child_t_Node_gt l x r _ Hgt2).
+  rewrite subSS.
+  have -> : size (mmtree_to_seq l) + n - size (mmtree_to_seq l) = n
+    by rewrite addnC addnK.
+  have -> : n = (size (mmtree_to_seq r)).-1 by rewrite Hszr.
+  apply: IHr; first exact: Hvr.
+  by rewrite Hszr.
 Qed.
 
 Lemma has_left_child_last w :
   0 < size w ->
   has_left_child (size w).-1 w = false.
 Proof.
-move=> Hne; rewrite /has_left_child.
-exact: has_left_child_last_fuel (leqnn _) Hne.
+move=> Hne.
+have Hroundtrip : mmtree_to_seq (mmtree_of_seq_mm w) = w
+  by exact: mmtree_of_seq_mmK.
+have Hv : valid_mm (mmtree_of_seq_mm w) by exact: valid_mm_build.
+rewrite -Hroundtrip (has_left_child_t_eq _ Hv).
+apply: has_left_child_t_last_valid; first exact: Hv.
+by rewrite Hroundtrip.
+Qed.
+
+Lemma has_left_child_last_fuel :
+  forall fuel w, size w <= fuel -> 0 < size w ->
+  has_left_child_fuel fuel (size w).-1 w = false.
+Proof.
+move=> fuel w Hsz Hne.
+have Heq : has_left_child_fuel fuel (size w).-1 w =
+           has_left_child_fuel (size w) (size w).-1 w
+  by apply: has_left_child_fuel_monotone Hsz.
+rewrite Heq.
+exact: (has_left_child_last Hne).
 Qed.
 
 (* -- Penultimate vertex is internal --------------------------------------- *)
@@ -220,33 +363,16 @@ have Hne : 0 < size w
 by rewrite has_left_child_last // in Hlc.
 Qed.
 
-(* -- expand_cde rcons ----------------------------------------------------- *)
-
-Lemma expand_cde_rcons_C rest :
-  expand_cde (rcons rest C_letter) =
-  [seq s ++ [:: false] | s <- expand_cde rest] ++
-  [seq s ++ [:: true] | s <- expand_cde rest].
-Proof.
-elim: rest => [|[| |] rest IH] //=;
-  rewrite IH !map_cat -!catA; congr (_ ++ _);
-  [congr (_ ++ _); [|]; apply: eq_map => s
-  |congr (_ ++ _); [|]; apply: eq_map => s
-  |congr (_ ++ _); [|]; apply: eq_map => s];
-  by rewrite -!catA /= ?cat_rcons.
-Qed.
-
-Lemma expand_cde_rcons_D rest :
-  expand_cde (rcons rest D_letter) =
-  [seq s ++ [:: false; true] | s <- expand_cde rest] ++
-  [seq s ++ [:: true; false] | s <- expand_cde rest].
-Proof.
-elim: rest => [|[| |] rest IH] //=;
-  rewrite IH !map_cat -!catA; congr (_ ++ _);
-  [congr (_ ++ _); [|]; apply: eq_map => s
-  |congr (_ ++ _); [|]; apply: eq_map => s
-  |congr (_ ++ _); [|]; apply: eq_map => s];
-  by rewrite -!catA /= ?cat_rcons.
-Qed.
+(* expand_cde_rcons_C and expand_cde_rcons_D have been removed.            *)
+(* Both claimed that appending a letter at the END of a cd-word commutes   *)
+(* with prepending a letter — but `expand_cde` recurses on the FIRST       *)
+(* letter, so the OUTPUT ORDER differs.  Computationally verified false:   *)
+(*   expand_cde (rcons [C_letter] C_letter) = [[ff];[ft];[tf];[tt]]        *)
+(*   ([seq s ++ [::false] | s <- expand_cde [C_letter]]                    *)
+(*      ++ [seq s ++ [::true] | s <- expand_cde [C_letter]]) =             *)
+(*       [[ff];[tf];[ft];[tt]]                                              *)
+(*   These differ at positions 1, 2.                                       *)
+(* The lemmas were unused outside this file, so removed entirely.          *)
 
 (* -- fact3: helper infrastructure ---------------------------------------- *)
 
@@ -254,49 +380,39 @@ Qed.
 Lemma has_left_child_is_internal i w :
   i < size w -> has_left_child i w -> is_internal i w.
 Proof.
-move=> Hi Hlc; rewrite /is_internal Hi /=.
-apply: contraTT Hlc => /negbNE.
-rewrite -leqNgt leqn1; case/orP => [/eqP Hws0 | /eqP Hws1].
-  by rewrite /has_left_child;
-     suff: forall n, has_left_child_fuel n i w = false
-       by move=> H; apply: H;
-     elim => [//|n' IH'] /=; case: w Hi Hws0 =>
-       [//|a s0] Hi Hws0;
-     rewrite /window_size_fuel in Hws0.
-suff: forall n, size w <= n ->
-  has_left_child_fuel n i w = false.
-  by move=> H; rewrite /has_left_child; apply: H.
-elim => [|n' IHn]; first by case: w Hi Hws1.
-case: w Hi Hws1 => [//|a s0] Hi Hws1 Hsz.
-rewrite /= -/(mm_pos _).
-set j := mm_pos (a :: s0).
-have Hj : j < (size s0).+1 by apply: mm_pos_lt.
-case: ltnP => Hij.
-  have Htake_sz : size (take j (a :: s0)) = j
-    by rewrite size_take Hj.
-  have Hi_t : i < size (take j (a :: s0))
-    by rewrite Htake_sz.
-  have Hws_t : window_size i (take j (a :: s0)) = 1.
-    by rewrite (window_size_cons i a s0) -/j Hij.
-  apply: IHn.
-    by rewrite Htake_sz; apply: leq_trans (ltnW Hij) _;
-       rewrite ltnS in Hsz.
-case: ifP => [/eqP Heq|Hne].
-  by subst j; rewrite /= subnn.
-have Hji : j < i by rewrite ltn_neqAle eq_sym Hne /=;
-  apply/negP => /negP; rewrite -ltnNge => H;
-  by move: Hij; rewrite leqNgt H.
-have Hdrop_sz :
-  size (drop j.+1 (a :: s0)) = (size s0) - j
-  by rewrite size_drop /=; ring_simplify;
-     rewrite addnK.
-have Hws_d :
-  window_size (i - j - 1) (drop j.+1 (a :: s0)) = 1.
-  rewrite (window_size_cons i a s0) -/j.
-  by rewrite ltnNge (ltnW Hji) /= eq_sym (ltn_eqF Hji).
-apply: IHn.
-rewrite Hdrop_sz; apply: leq_trans (leq_subr _ _) _.
-by rewrite ltnS in Hsz.
+have Hgen : forall t : mmtree nat, valid_mm t ->
+  forall i0, i0 < size (mmtree_to_seq t) ->
+  has_left_child_t i0 t -> 1 < window_size_t i0 t.
+  elim => [//|l IHl x r IHr] /=.
+  case=> Hmm [Hvl Hvr] i0 Hi0 Hlc0.
+  rewrite size_cat /= addnS in Hi0.
+  case: (ltngtP i0 (size (mmtree_to_seq l))) => Hil.
+  + rewrite (@window_size_t_Node_lt l x r i0 Hil).
+    apply: IHl => //.
+    by rewrite (@has_left_child_t_Node_lt l x r i0 Hil) in Hlc0.
+  + rewrite (@window_size_t_Node_gt l x r i0 Hil).
+    rewrite (@has_left_child_t_Node_gt l x r i0 Hil) in Hlc0.
+    apply: IHr => //.
+    rewrite ltn_subLR; last exact: Hil.
+    by rewrite addSn.
+  + rewrite Hil (@window_size_t_Node_eq l x r) ltnS.
+    rewrite Hil (@has_left_child_t_Node_eq l x r) in Hlc0.
+    case Hszr : (size (mmtree_to_seq r)) => [|n0]; last by [].
+    exfalso.
+    have Hszr_nil : mmtree_to_seq r = [::]
+      by move: Hszr; case: (mmtree_to_seq r).
+    rewrite Hszr_nil cats1 in Hmm.
+    have Hsl_pos : 0 < size (mmtree_to_seq l) by exact: Hlc0.
+    have Hjlt := mm_pos_rcons_lt x Hsl_pos.
+    by rewrite Hmm ltnn in Hjlt.
+move=> Hi Hlc.
+rewrite /is_internal Hi /=.
+have Hroundtrip : mmtree_to_seq (mmtree_of_seq_mm w) = w
+  by exact: mmtree_of_seq_mmK.
+have Hv : valid_mm (mmtree_of_seq_mm w) by exact: valid_mm_build.
+rewrite -Hroundtrip (window_size_t_eq i Hv).
+apply: (Hgen _ Hv); first by rewrite Hroundtrip.
+by rewrite -(has_left_child_t_eq i Hv) Hroundtrip.
 Qed.
 
 (* Every endpoint k < (size w).-1 is the predecessor of a    *)
@@ -310,26 +426,7 @@ have Hlc := endpoint_implies_next_has_left_child Hu Hk1 Hep.
 by rewrite (has_left_child_is_internal Hk1 Hlc) Hlc.
 Qed.
 
-(* -- expand_cde concatenation --------------------------------------------- *)
-Lemma expand_cde_cat letters1 letters2 :
-  expand_cde (letters1 ++ letters2) =
-  flatten [seq [seq x ++ y | y <- expand_cde letters2]
-          | x <- expand_cde letters1].
-Proof.
-elim: letters1 => [|[||] l1 IH] //=.
-- (* C_letter *)
-  rewrite IH !map_cat flatten_cat; congr (_ ++ _);
-  rewrite -!map_comp; apply: eq_map => x /=;
-  by rewrite -map_comp; apply: eq_map => y /=;
-     rewrite catA.
-- (* D_letter *)
-  rewrite IH !map_cat flatten_cat; congr (_ ++ _);
-  rewrite -!map_comp; apply: eq_map => x /=;
-  by rewrite -map_comp; apply: eq_map => y /=;
-     rewrite catA.
-- (* E_letter *)
-  exact: IH.
-Qed.
+(* expand_cde_cat removed: unused outside this file. *)
 
 (* -- fact3: size lemmas --------------------------------------------------- *)
 
@@ -338,10 +435,16 @@ Lemma size_powerset_of (ivs : seq nat) :
     acc ++ [seq s ++ [:: i] | s <- acc]) [:: [::]] ivs)
   = 2 ^ size ivs.
 Proof.
-elim: ivs [:: [::]] => [|v ivs IH] acc //=.
-  by rewrite expn0.
-rewrite size_cat size_map IH.
-by rewrite -addnn -mul2n -expnSr.
+have Hgen : forall acc : seq (seq nat),
+  size (foldl (fun (acc' : seq (seq nat)) (i : nat) =>
+    acc' ++ [seq s ++ [:: i] | s <- acc']) acc ivs) =
+  size acc * 2 ^ size ivs.
+  elim: ivs => [|v ivs IH] acc //=.
+    by rewrite expn0 muln1.
+  rewrite IH size_cat size_map.
+  rewrite expnS mulnCA.
+  by rewrite mulnA mul2n addnn.
+by rewrite Hgen /= mul1n.
 Qed.
 
 Lemma size_powerset_internal w :
@@ -355,8 +458,10 @@ Lemma size_expand_cde letters :
                         | _ => true end].
 Proof.
 elim: letters => [|[||] l IH] //=.
-- by rewrite size_cat !size_map IH -addnn -mul2n -expnSr.
-- by rewrite size_cat !size_map IH -addnn -mul2n -expnSr.
+- rewrite size_cat !size_map IH expnS.
+  by rewrite mul2n -addnn.
+- rewrite size_cat !size_map IH expnS.
+  by rewrite mul2n -addnn.
 Qed.
 
 Lemma size_phi_w w :
@@ -369,18 +474,10 @@ Lemma size_expand_cde_phi_w w :
 Proof.
 rewrite size_expand_cde.
 congr (2 ^ _).
-rewrite phi_w_as_map.
-rewrite size_filter size_map.
-rewrite -(size_map
-  (fun i => if has_left_child i w then D_letter else C_letter)
-  (internal_vertices w)).
-rewrite -[RHS](@count_predT _ (map _ _)).
-rewrite -size_filter.
-congr size.
-apply: eq_in_filter => x.
-rewrite mem_map; last by move=> a b [].
-move=> Hx; rewrite /predT /=.
-by case: (has_left_child x w).
+rewrite phi_w_as_map filter_map size_map size_filter.
+rewrite -[RHS](count_predT (internal_vertices w)).
+apply: eq_in_count => i _ /=.
+by case: (has_left_child i w).
 Qed.
 
 (* -- fact3: the proof ----------------------------------------------------- *)
@@ -403,14 +500,26 @@ Lemma check_fact3P w :
     (check_fact3 w).
 Proof. exact: eqP. Qed.
 
-(* Base case for check_fact3: size <= 1 is trivial (tiny computation). *)
+(* Base case for check_fact3: size <= 1 is trivial. *)
 Lemma check_fact3_size1 w :
   size w <= 1 -> check_fact3 w.
 Proof.
 case: w => [|a [|b s]] //= _.
-by rewrite /check_fact3 /powerset_internal
-           /internal_vertices /phi_w /phi'_w /expand_cde
-           /char_mono /apply_psis /=.
+apply/eqP.
+have Hws : window_size 0 [:: a] = 1.
+  apply/eqP; rewrite eqn_leq.
+  apply/andP; split.
+    have := window_size_bound 0 [:: a].
+    by rewrite subn0.
+  by apply: window_size_gt0.
+have Hphi : phi_w [:: a] = [::].
+  rewrite /phi_w /phi'_w /= /classify_vertex_cde /is_internal /=.
+  by rewrite Hws.
+have Hpw : powerset_internal [:: a] = [:: [::]].
+  rewrite /powerset_internal /internal_vertices /=.
+  by rewrite /is_internal /= Hws.
+rewrite Hphi Hpw /=.
+by rewrite /apply_psis /char_mono /=.
 Qed.
 
 (* check_fact3_true, fact3, and examples are in psi_cdindex_support.v     *)

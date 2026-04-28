@@ -13,6 +13,13 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+(* Block /=-driven reduction through the fuel parameters of window_size and *)
+(* has_left_child.  These Fixpoints recurse over fuel = size s, and any /= *)
+(* that fires inside a deep proof unfolds them through every layer.  Heavy *)
+(* proofs (D_vertex_descent_transition, lines 1064+) burn 35+GB on this.   *)
+Arguments window_size_fuel : simpl never.
+Arguments has_left_child_fuel : simpl never.
+
 (* ========================================================================= *)
 (* ===== M6.8: phi_w_support_general ======================================= *)
 (* X ∈ expand_cde(Φ_w) ⟺ S_w ⊆ ω(desc(X))                               *)
@@ -47,52 +54,77 @@ Proof.
 elim: m X => [|[||] m IH] X /=.
 - by rewrite mem_seq1 => /eqP ->.
 - rewrite mem_cat => /orP [Hm|Hm];
-    move: Hm; rewrite mem_map; try (by move=> a b []);
-    move=> /mapP [t Ht ->] /=; by rewrite (IH t Ht).
+    case/mapP: Hm => t Ht -> /=; by rewrite (IH t Ht).
 - rewrite mem_cat => /orP [Hm|Hm];
-    move: Hm; rewrite mem_map; try (by move=> a b []);
-    move=> /mapP [t Ht ->] /=; by rewrite (IH t Ht).
+    case/mapP: Hm => t Ht -> /=; by rewrite (IH t Ht).
 - exact: IH.
 Qed.
 
 (* -- Core: expand_cde membership as D-transition condition ---------------- *)
 (* Forward: membership implies transitions at all D-offsets.                *)
 
+Lemma has_transition_cons b s k :
+  has_transition (b :: s) k.+1 = has_transition s k.
+Proof. by rewrite /has_transition. Qed.
+
+Lemma has_transition_cons2 b1 b2 s k :
+  has_transition (b1 :: b2 :: s) k.+2 = has_transition s k.
+Proof. by rewrite /has_transition. Qed.
+
+Lemma cde_offset_C_succ m j :
+  cde_offset (C_letter :: m) j.+1 = (cde_offset m j).+1.
+Proof. by rewrite /cde_offset /= /cde_width. Qed.
+
+Lemma cde_offset_D_succ m j :
+  cde_offset (D_letter :: m) j.+1 = (cde_offset m j).+2.
+Proof. by rewrite /cde_offset /= /cde_width. Qed.
+
 Lemma expand_cde_mem_transitions m X :
   X \in expand_cde m -> all_D_transitions m X.
 Proof.
 elim: m X => [|[||] m IH] X //=.
-- (* C_letter *)
+- (* C_letter: after /= the filter starts at iota 1 (size m) *)
   rewrite mem_cat => /orP [Hm|Hm];
-    move: Hm; rewrite mem_map; try (by move=> a b []);
-    move=> /mapP [t Ht ->];
+    case/mapP: Hm => t Ht ->;
     rewrite /all_D_transitions /D_offsets /=;
     apply/allP => k;
-    rewrite mem_map; try (by move=> a b; rewrite /cde_offset /= !add0n => []);
-    move=> /mapP [j]; rewrite mem_filter => /andP [Hd Hj] ->;
-    rewrite /has_transition /cde_offset /=;
-    move: (IH t Ht);
-    rewrite /all_D_transitions /D_offsets;
-    move/allP => Hall; apply: Hall;
-    apply/mapP; exists j; by [|rewrite mem_filter Hd].
-- (* D_letter *)
+    case/mapP => j; rewrite mem_filter mem_iota =>
+      /andP [Hd /andP [Hj1 Hjsz]] ->;
+    (case: j Hj1 Hd Hjsz => [//|j0] _ Hd Hjsz;
+     rewrite cde_offset_C_succ has_transition_cons;
+     have Hall := allP (IH t Ht) (cde_offset m j0);
+     rewrite /all_D_transitions /D_offsets in Hall;
+     apply: Hall;
+     apply/mapP; exists j0; last done;
+     by rewrite mem_filter mem_iota; apply/andP; split; first done;
+        apply/andP; split; first by []).
+- (* D_letter: after /= the 0 case is solved, rest uses iota 1 (size m) *)
   rewrite mem_cat => /orP [Hm|Hm];
-    move: Hm; rewrite mem_map; try (by move=> a b []);
-    move=> /mapP [t Ht ->];
+    case/mapP: Hm => t Ht ->;
     rewrite /all_D_transitions /D_offsets /=;
-    apply/allP => k; rewrite inE;
-    move=> /orP [/eqP -> | Hrest];
-      try by rewrite /has_transition /=;
-    move: Hrest;
-    rewrite mem_map; try (by move=> a b; rewrite /cde_offset /= !add0n => []);
-    move=> /mapP [j]; rewrite mem_filter => /andP [Hd Hj] ->;
-    rewrite /has_transition /cde_offset /=;
-    move: (IH t Ht);
-    rewrite /all_D_transitions /D_offsets;
-    move/allP => Hall; apply: Hall;
-    apply/mapP; exists j; by [|rewrite mem_filter Hd].
-- (* E_letter *)
-  exact: IH.
+    apply/allP => k;
+    case/mapP => j; rewrite mem_filter mem_iota =>
+      /andP [Hd /andP [Hj1 Hjsz]] ->;
+    (case: j Hj1 Hd Hjsz => [//|j0] _ Hd Hjsz;
+     rewrite cde_offset_D_succ has_transition_cons2;
+     have Hall := allP (IH t Ht) (cde_offset m j0);
+     rewrite /all_D_transitions /D_offsets in Hall;
+     apply: Hall;
+     apply/mapP; exists j0; last done;
+     by rewrite mem_filter mem_iota; apply/andP; split;
+        first (by move: Hd => /=); apply/andP; split; first by []).
+- (* E_letter: cde_width E = 0, offsets shift by 0 *)
+  rewrite /all_D_transitions /D_offsets /=.
+  move=> HX; apply/allP => k.
+  case/mapP => j; rewrite mem_filter mem_iota =>
+    /andP [Hd /andP [Hj1 Hjsz]] ->.
+  case: j Hj1 Hd Hjsz => [//|j0] _ Hd Hjsz.
+  rewrite /cde_offset /= /cde_width add0n.
+  have Hall := allP (IH X HX) (cde_offset m j0).
+  rewrite /all_D_transitions /D_offsets in Hall.
+  apply: Hall; apply/mapP; exists j0; last done.
+  by rewrite mem_filter mem_iota; apply/andP; split;
+     first (by move: Hd => /=); apply/andP; split; first by [].
 Qed.
 
 (* Backward: correct size + transitions at D-offsets implies membership.    *)
@@ -119,56 +151,56 @@ elim: m X => [|[||] m IH] X /=.
       apply/mapP; exists j.+1 => //.
       move: Hj; rewrite !mem_filter => /andP [Hd Hj2].
       rewrite /= Hd /=.
-      by move: Hj2; rewrite !mem_iota /= !add0n ltnS.
+      rewrite inE mem_iota; apply/orP; right.
+      move: Hj2; rewrite mem_iota /= !add0n add1n => Hj2.
+      by rewrite ltnS Hj2.
     move: (Hall2 _ Hin).
     by rewrite /has_transition /cde_offset /=.
-  case: b; [right|left]; apply/mapP; exists X => //; exact: IH.
+  clear Hall; case: b; [right|left]; apply/mapP; exists X => //; exact: IH.
 - (* D_letter *)
   case: X => [// | b1 [// | b2 X]] /= [HszX] Hall.
   rewrite mem_cat; apply/orP.
   have Htrans : b1 != b2.
     move: Hall; rewrite /all_D_transitions /D_offsets /=.
-    move/allP => Hall2.
-    have : (0 : nat) \in
-      (0 :: [seq cde_offset (D_letter :: m) i
-            | i <- iota 1 (size m)
-            & is_D_letter (nth C_letter (D_letter :: m) i)]).
-      by rewrite inE eqxx.
-    move=> Hin; move: (Hall2 _ Hin).
+    case/andP => Htrans0 _; move: Htrans0.
     by rewrite /has_transition /=.
   have HallT : all_D_transitions m X.
     rewrite /all_D_transitions /D_offsets.
     apply/allP => k /mapP [j Hj ->].
     move: Hall; rewrite /all_D_transitions /D_offsets /=.
-    move/allP => Hall2.
+    case/andP => _ /allP Hall2.
     have Hin : cde_offset (D_letter :: m) j.+1 \in
-      (0 :: [seq cde_offset (D_letter :: m) i
+      [seq cde_offset (D_letter :: m) i
             | i <- iota 1 (size m)
-            & is_D_letter (nth C_letter (D_letter :: m) i)]).
-      rewrite inE; apply/orP; right.
+            & is_D_letter (nth C_letter (D_letter :: m) i)].
       apply/mapP; exists j.+1 => //.
       move: Hj; rewrite !mem_filter => /andP [Hd Hj2].
       rewrite /= Hd /=.
-      by move: Hj2; rewrite !mem_iota /= !add0n addn1 ltnS.
+      rewrite mem_iota; move: Hj2.
+      rewrite mem_iota /= !add0n add1n => Hj2.
+      by rewrite ltnS.
     move: (Hall2 _ Hin).
     by rewrite /has_transition /cde_offset /=.
-  case: b1 Htrans => /=; case: b2 => //= _.
-  + left; apply/mapP; exists X => //; exact: IH.
+  clear Hall; case: b1 Htrans => /=; case: b2 => //= _.
   + right; apply/mapP; exists X => //; exact: IH.
+  + left; apply/mapP; exists X => //; exact: IH.
 - (* E_letter *)
   move=> HszX Hall; apply: IH => //.
   move: Hall; rewrite /all_D_transitions /D_offsets /=.
-  move/allP => Hall2.
+  move=> Hall2.
   rewrite /all_D_transitions /D_offsets.
   apply/allP => k /mapP [j Hj ->].
+  move/allP: Hall2 => Hall2.
   have Hin : cde_offset (E_letter :: m) j.+1 \in
     [seq cde_offset (E_letter :: m) i
-    | i <- iota 0 (size m).+1
+    | i <- iota 1 (size m)
     & is_D_letter (nth C_letter (E_letter :: m) i)].
     apply/mapP; exists j.+1 => //.
     move: Hj; rewrite !mem_filter => /andP [Hd Hj2].
     rewrite /= Hd /=.
-    by move: Hj2; rewrite !mem_iota /= !add0n ltnS.
+    rewrite mem_iota; move: Hj2.
+    rewrite mem_iota /= !add0n add1n => Hj2.
+    by rewrite ltnS.
   move: (Hall2 _ Hin).
   by rewrite /has_transition /cde_offset /=.
 Qed.
@@ -258,7 +290,7 @@ rewrite mem_filter => /andP [Hd Hi] ->.
 move: Hi; rewrite mem_iota => /andP [Hi1 Hi2].
 (* Need: i.-1 < (size w).-1.-1, i.e., i < (size w).-1 *)
 suff Hlt : i < (size w).-1.
-  by case: i Hi1 Hlt => [//|i] _ /=; rewrite ltnS.
+  by case: i Hi1 Hi2 Hd Hlt => [//|i'] _ _ _ /=; case: (size w) => [|[|n]] //=.
 rewrite ltn_neqAle.
 have Hle : i <= (size w).-1.
   by rewrite -ltnS; case: (size w) Hi2 => [|n] //=.
@@ -268,8 +300,9 @@ apply/negP => /eqP Heqi.
 move: Hd; rewrite Heqi /is_D_letter /classify_vertex_cde.
 (* is_internal (size w).-1 w = false because window_size = 1 *)
 have Hws1 : window_size (size w).-1 w <= 1.
-  have := window_size_bound (size w).-1 w.
-  by case: (size w) Hi2 => [|[|n]] //=; rewrite subSS subn0.
+  apply: leq_trans (window_size_bound (size w).-1 w) _.
+  case: (size w) Hi2 => [|[|n]] //= _.
+  by rewrite subSS subSnn.
 have Hnint : is_internal (size w).-1 w = false.
   rewrite /is_internal.
   case Hlt : ((size w).-1 < size w) => //=.
@@ -293,9 +326,8 @@ Lemma S_w_seq_psi j w :
 Proof.
 move=> Hu.
 rewrite /S_w_seq size_psi.
-congr map; congr filter.
-apply: eq_in_filter => i _.
-exact: classify_vertex_cde_psi.
+congr map; apply: eq_in_filter => i _.
+by rewrite classify_vertex_cde_psi.
 Qed.
 
 (* -- Structural helpers for cde_total_width and D_offsets --------------- *)
@@ -318,23 +350,29 @@ set s := a :: s0. set j := mm_pos s.
 have Hne : s <> [::] by [].
 have Hj : j < size s := mm_pos_lt Hne.
 apply/negP => /negP; rewrite -leqNgt => Hle.
-have Heq : j = (size s).-1
-  by apply/eqP; rewrite eqn_leq Hle -ltnS prednK //
-     (leq_trans _ Hsz).
-have Hdrop_sz : size (drop j s) = 1
-  by rewrite size_drop Heq;
-     case: (size s) Hsz => [|[|n]].
+have Heq : j = (size s).-1.
+  apply/eqP; rewrite eqn_leq Hle andbT.
+  by case: (size s) Hj => [|n] //=; rewrite ltnS.
+have Hdrop_sz : size (drop j s) = 1.
+  rewrite size_drop Heq.
+  by case: (size s) Hsz Hj => [//|[//|n]] _ _ /=; rewrite subSS subSnn.
 have [Hno_min Hno_max] := notin_take_mm Hne.
 have Hmin_drop :
   foldr minn (head 0 s) (behead s) \in drop j s.
-  have := min_in s.
-  by rewrite -(cat_take_drop j s) mem_cat =>
-     /orP [/(negP Hno_min)//|].
+  have Hmin_in_s : foldr minn (head 0 s) (behead s) \in s.
+    have := min_in (behead s) (head 0 s).
+    by have ->: head 0 s :: behead s = s by [].
+  rewrite -[X in _ \in X](cat_take_drop j s) mem_cat in Hmin_in_s.
+  case/orP: Hmin_in_s => [Hin|//].
+  by rewrite Hin in Hno_min.
 have Hmax_drop :
   foldr maxn (head 0 s) (behead s) \in drop j s.
-  have := max_in s.
-  by rewrite -(cat_take_drop j s) mem_cat =>
-     /orP [/(negP Hno_max)//|].
+  have Hmax_in_s : foldr maxn (head 0 s) (behead s) \in s.
+    have := max_in (behead s) (head 0 s).
+    by have ->: head 0 s :: behead s = s by [].
+  rewrite -[X in _ \in X](cat_take_drop j s) mem_cat in Hmax_in_s.
+  case/orP: Hmax_in_s => [Hin|//].
+  by rewrite Hin in Hno_max.
 have [x Hdrop_eq] : exists x, drop j s = [:: x]
   by case: (drop j s) Hdrop_sz =>
      [//|x [|y t]] //= _; exists x.
@@ -348,19 +386,25 @@ have Hall_eq : forall y, y \in s -> y = x.
     foldr maxn (head 0 s) (behead s) = x
     by move: Hmax_drop; rewrite Hdrop_eq mem_seq1
        => /eqP.
-  have := foldr_minn_le Hy;
-  have := foldr_maxn_ge Hy.
-  rewrite Hmin_x Hmax_x => H2 H1.
-  by apply/eqP; rewrite eqn_leq H1 H2.
+  have Hmin' : x <= y.
+    rewrite -Hmin_x; apply: psi_core.foldr_minn_le.
+    by have ->: head 0 s :: behead s = s by [].
+  have Hmax' : y <= x.
+    rewrite -Hmax_x; apply: psi_core.foldr_maxn_ge.
+    by have ->: head 0 s :: behead s = s by [].
+  by apply/eqP; rewrite eqn_leq Hmax' Hmin'.
 move: Hu; rewrite /s /= => /andP [Hnotin _].
-have := Hall_eq a (mem_head a s0).
-have : head 0 s0 \in s.
-  case: s0 Hsz Hnotin => [//|b t] /= _ _.
-  by rewrite /s /= !inE eqxx orbT.
-move=> Hb Ha_eq; have := Hall_eq _ Hb.
-rewrite Ha_eq => Hh_eq.
-case: s0 Hsz Hnotin => [//|b t] /= _ Hnotin.
-by rewrite Ha_eq Hh_eq inE eqxx in Hnotin.
+have Ha_eq : a = x by apply: Hall_eq; rewrite mem_head.
+have Hb : head 0 s0 \in s.
+  rewrite [in X in _ \in X]/s !inE; apply/orP; right.
+  by case: (s0) Hsz => [|b t] _ //=; rewrite mem_head.
+have Hh_eq : head 0 s0 = x by apply: Hall_eq.
+have Hsz0 : 0 < size s0 by case: (s0) Hsz.
+have Hh_eq2 : head 0 s0 = a by rewrite Hh_eq.
+have : a \in s0.
+  rewrite -Hh_eq2.
+  by case: (s0) Hsz0 => [|b t] //= _; rewrite mem_head.
+move=> Hain; by rewrite Hain in Hnotin.
 Qed.
 
 (* classify_vertex_cde decomposition at mm_pos *)
@@ -380,7 +424,8 @@ rewrite (window_size_cons i a s0) -/s -/j Hij.
 rewrite (has_left_child_cons i a s0) -/s -/j Hij.
 have -> : i < size s = true
   by exact: ltn_trans Hij Hj.
-by rewrite size_takel // ltnW // Hij.
+have ->: size (take j s) = j by rewrite size_takel // ltnW.
+by rewrite Hij.
 Qed.
 
 Lemma classify_vertex_right i a s0 :
@@ -402,10 +447,11 @@ have -> : (i < j) = false by rewrite ltnNge ltnW.
 have -> : (i == j) = false by apply: gtn_eqF.
 suff -> : (i < size s) =
   (i - j - 1 < size (drop j.+1 s)) by done.
-rewrite size_drop.
-case: i Hji => [//|i] /= Hji.
-rewrite subSS subn0.
-by rewrite ltn_sub2r // ltnS.
+rewrite size_drop /s /=.
+case: i Hji => [//|i] Hji /=.
+rewrite ltnS subSS.
+have ->: i.+1 - j - 1 = i - j by rewrite subnAC subn1.
+by rewrite ltn_sub2rE // ltnW.
 Qed.
 
 Lemma classify_vertex_mm a s0 :
@@ -419,8 +465,7 @@ set j := mm_pos (a :: s0). set s := a :: s0.
 have Hj : j < size s
   := mm_pos_lt
      (fun H : s = [::] => ltac:(discriminate H)).
-have Hjp : j < (size s).-1
-  := mm_pos_lt_pred Hu Hsz.
+have Hjp : j < (size s).-1 by apply: mm_pos_lt_pred; rewrite /s.
 rewrite /classify_vertex_cde /is_internal.
 rewrite (window_size_cons j a s0) -/s -/j
   ltnn eqxx.
@@ -454,7 +499,11 @@ move=> k Hk.
 rewrite size_map size_iota in Hk.
 rewrite !(nth_map 0) ?size_iota //.
 rewrite !nth_iota // add0n.
-exact: classify_skip_mm0 Hmm (ltn0Sn k).
+have H := classify_skip_mm0 Hmm (ltn0Sn k).
+rewrite /classify_vertex_cde /is_internal in H.
+rewrite -[1 + k]/(k.+1).
+rewrite subn1 /= in H.
+exact H.
 Qed.
 
 (* phi_w decomposition when mm_pos > 0 *)
@@ -471,16 +520,19 @@ have Hne : s <> [::] by [].
 have Hj : j < size s := mm_pos_lt Hne.
 rewrite /phi_w /phi'_w.
 have Hiota_split : iota 0 (size s) =
-  iota 0 j ++ j :: iota j.+1 (size s - j.+1)
-  by rewrite -cat1s catA -iota_add addnC subnK //
-     ltnW.
+  iota 0 j ++ j :: iota j.+1 (size s - j.+1).
+  rewrite -cat1s catA.
+  have ->: iota 0 j ++ [:: j] = iota 0 j.+1.
+    by rewrite -addn1 iotaD /= add0n.
+  by rewrite -iotaD subnKC.
 rewrite Hiota_split !map_cat /= !filter_cat /=.
 rewrite (classify_vertex_mm Hu Hsz) Hj0 /=.
 congr (_ ++ _ :: _).
 - congr (filter _ _).
-  apply: eq_in_map => i.
-  rewrite mem_iota add0n => /andP [_ Hi].
-  exact: classify_vertex_left Hi.
+  have Hsz_take : size (take j s) = j by rewrite size_takel // ltnW.
+  rewrite Hsz_take.
+  apply/eq_in_map => i; rewrite mem_iota add0n => /andP [_ Hi].
+  by apply: classify_vertex_left Hi.
 - congr (filter _ _).
   rewrite -[RHS]/(map _ (iota 0
     (size (drop j.+1 s)))).
@@ -494,7 +546,7 @@ congr (_ ++ _ :: _).
   have Hjk : j < j.+1 + k
     by rewrite addSn ltnS leq_addr.
   rewrite (classify_vertex_right Hjk).
-  by rewrite addSn /= addnK.
+  by rewrite addSn -addnS addKn subn1.
 Qed.
 
 (* D_offsets decomposition: C_letter :: m *)
@@ -504,16 +556,12 @@ Lemma D_offsets_cons_C m :
 Proof.
 rewrite /D_offsets /=.
 rewrite -map_comp.
-transitivity
-  [seq (cde_offset m i).+1
-  | i <- [seq i <- iota 0 (size m)
-  | is_D_letter (nth C_letter m i)]]; last done.
-congr map.
-- apply: eq_in_filter => i.
-  rewrite mem_iota add0n => /andP [_ Hi].
-  by rewrite /= nth_cat /= Hi.
-- apply: funext => i.
-  by rewrite /cde_offset /= /cde_width add1n.
+have Hiota : iota 1 (size m) = [seq j.+1 | j <- iota 0 (size m)].
+  by elim: (size m) 1 0 => [|n IH] m1 m2 //=; rewrite IH.
+rewrite Hiota filter_map -map_comp.
+rewrite (eq_filter (a2 := fun i => is_D_letter (nth C_letter m i))); last by move=> i.
+apply/eq_in_map => i Hi /=.
+by rewrite /cde_offset /= /cde_width add1n.
 Qed.
 
 (* D_offsets decomposition: m1 ++ D_letter :: m2 *)
@@ -528,7 +576,7 @@ rewrite /D_offsets.
 have Hsz : size (m1 ++ D_letter :: m2) =
   size m1 + (size m2).+1
   by rewrite size_cat /=.
-rewrite Hsz iota_add add0n filter_cat map_cat.
+rewrite Hsz iotaD add0n filter_cat map_cat.
 have Hleft :
   [seq cde_offset (m1 ++ D_letter :: m2) i
   | i <- [seq i <- iota 0 (size m1)
@@ -536,48 +584,53 @@ have Hleft :
       (nth C_letter
         (m1 ++ D_letter :: m2) i)]]
   = D_offsets m1.
-  congr map; congr filter.
-  - apply: eq_in_filter => i.
-    rewrite mem_iota add0n => /andP [_ Hi].
+  rewrite /D_offsets.
+  rewrite (eq_in_filter
+    (a2 := fun i => is_D_letter (nth C_letter m1 i))); last first.
+    move=> i; rewrite mem_iota add0n => /andP [_ Hi].
     by rewrite nth_cat Hi.
-  - apply: eq_in_map => i.
-    rewrite mem_filter => /andP [_ Hi_iota].
-    have Hi : i < size m1.
-      by move: Hi_iota; rewrite mem_iota add0n
-         => /andP [].
-    by rewrite /cde_offset take_cat Hi.
-rewrite Hleft [iota _ _]/=.
+  apply/eq_in_map => i Hi.
+  have Hi_lt : i < size m1.
+    move: Hi; rewrite mem_filter mem_iota add0n.
+    by case/andP=> _ /andP [].
+  by rewrite /cde_offset take_cat Hi_lt.
 have Hmid_f : is_D_letter (nth C_letter
   (m1 ++ D_letter :: m2) (size m1)) = true
   by rewrite nth_cat ltnn subnn.
-rewrite Hmid_f /=.
 have Hmid_o : cde_offset (m1 ++ D_letter :: m2)
   (size m1) = cde_total_width m1.
   rewrite /cde_offset /cde_total_width.
   by rewrite take_cat ltnn subnn take0 cats0.
-rewrite Hmid_o.
-congr cons; rewrite -map_comp.
-transitivity
-  [seq cde_total_width m1 + 2 + x
-  | x <- D_offsets m2]; last done.
-rewrite /D_offsets -map_comp.
+have Hcons : iota (size m1) (size m2).+1 =
+  size m1 :: iota (size m1).+1 (size m2) by [].
+rewrite Hleft Hcons /= Hmid_f /= Hmid_o.
+congr (cat (D_offsets m1)); congr (cons (cde_total_width m1)).
+(* Goal: map (cde_offset (m1 ++ D_letter :: m2))
+     (filter (is_D_letter ∘ nth C_letter (m1 ++ D_letter :: m2))
+       (iota (size m1).+1 (size m2)))
+   = [seq cde_total_width m1 + 2 + x | x <- D_offsets m2]
+   Use iota shift: iota (size m1).+1 (size m2) = map (addn (size m1).+1) (iota 0 (size m2)) *)
+have Hshift : iota (size m1).+1 (size m2) =
+  [seq (size m1).+1 + i | i <- iota 0 (size m2)].
+  by rewrite -iotaDl addn0.
+rewrite Hshift filter_map -map_comp /D_offsets -map_comp.
 rewrite (eq_filter (a2 := fun i =>
   is_D_letter (nth C_letter m2 i))); last first.
-  move=> k /=; rewrite nth_cat.
-  have -> : (size m1 + k.+1 < size m1) = false
-    by rewrite ltnNge leq_addr.
-  by rewrite addnS addKn.
-rewrite (eq_map (f2 := fun i =>
-  cde_total_width m1 + 2 +
-  cde_offset m2 i)); last first.
   move=> k /=.
-  rewrite /cde_offset /cde_total_width take_cat.
-  have -> : (size m1 + k.+1 < size m1) = false
-    by rewrite ltnNge leq_addr.
-  rewrite addnS addKn /= map_cat sumn_cat.
-  by rewrite take_cat ltnn subnn take0 cats0
-     addnA.
-done.
+  rewrite nth_cat.
+  have HltF : ((size m1).+1 + k < size m1) = false
+    by rewrite ltnNge
+       (leq_trans (leqnSn (size m1)) (leq_addr k (size m1).+1)).
+  by rewrite HltF addSn -addnS addKn.
+apply/eq_in_map => k Hk /=.
+have Hk_lt : k < size m2.
+  move: Hk; rewrite mem_filter mem_iota add0n.
+  by case/andP=> _ /andP [].
+rewrite /cde_offset /cde_total_width take_cat.
+have HltF : ((size m1).+1 + k < size m1) = false
+  by rewrite ltnNge
+     (leq_trans (leqnSn (size m1)) (leq_addr k (size m1).+1)).
+by rewrite HltF addSn -addnS addKn /= map_cat sumn_cat addnA.
 Qed.
 
 (* S_w_seq decomposition at mm_pos > 0 *)
@@ -596,19 +649,21 @@ have Hj : j < size s := mm_pos_lt Hne.
 rewrite /S_w_seq.
 have Hsplit : iota 1 (size s).-1 =
   iota 1 j.-1 ++ j :: iota j.+1 ((size s).-1 - j).
-  have Hj1 : 1 <= j by [].
-  rewrite -{1}(subnK Hj1) iota_add addn1.
-  rewrite -cat1s catA; congr (_ ++ _).
-  rewrite -iota_add addSn addnC subnK //.
-  by case: (size s) Hsz => [|[|n]].
+  have Hjpred : j <= (size s).-1 by
+    rewrite -ltnS (prednK (ltnW Hsz)).
+  have Hlen : (size s).-1 = j.-1 + ((size s).-1 - j).+1 by
+    rewrite -addn1 addnA addnAC addn1 (prednK Hj0) subnKC.
+  by rewrite {1}Hlen iotaD add1n (prednK Hj0).
 rewrite Hsplit !filter_cat /= !map_cat /=.
 have Hleft_filter : forall i,
   i \in iota 1 j.-1 ->
   is_D_letter (classify_vertex_cde i s) =
   is_D_letter (classify_vertex_cde i (take j s)).
   move=> i; rewrite mem_iota => /andP [_ Hij].
-  by rewrite (classify_vertex_left
-    (ltn_trans Hij (ltn_predK Hj0) : i < j)).
+  have Hij' : i < j.
+    have Heq : 1 + j.-1 = j by rewrite add1n prednK.
+    by rewrite -Heq.
+  by rewrite (classify_vertex_left Hij').
 rewrite (eq_in_filter Hleft_filter).
 have Hmid :
   is_D_letter (classify_vertex_cde j s) = true
@@ -624,36 +679,34 @@ have Hright_filter : forall i,
 rewrite (eq_in_filter Hright_filter).
 congr (_ ++ _ :: _).
 - by rewrite size_takel // ltnW.
-- rewrite -map_comp size_drop.
-  rewrite -[iota j.+1 _]/(map (addn j.+1)
-    (iota 0 _)).
-  rewrite filter_map /= map_comp map_comp.
-  rewrite (eq_filter (a2 := fun k =>
-    is_D_letter (classify_vertex_cde k
-      (drop j.+1 s)))); last first.
-    by move=> k /=; rewrite addnS /= addnK.
-  rewrite (eq_map (f2 := fun k => k + j));
-    last first.
-    by move=> k /=; rewrite addnS.
-  rewrite /S_w_seq -map_comp.
-  rewrite (eq_map (f2 := fun k => k + j));
-    last first.
-    by move=> k /=;
-       rewrite -addnS subn1 -pred_Sn.
-  congr map; rewrite size_drop.
-  set n := (size s).-1 - j.
-  rewrite -[n]/(size (drop j.+1 s)).
-    2: by rewrite size_drop /n;
-        case: (size s) Hsz => [|[|m]].
-  rewrite [iota 0 _]/=.
-  have -> : is_D_letter (classify_vertex_cde 0
-    (drop j.+1 s)) = false.
+- (* After eq_in_filter Hright_filter, filter uses classify (i-j-1) d.
+     Strategy: shift index, simplify predicate, exclude 0, use eq_in_map. *)
+  set d := drop j.+1 s.
+  have Hq0 : is_D_letter (classify_vertex_cde 0 d) = false.
     rewrite /classify_vertex_cde /is_internal.
-    case E : (0 < size (drop j.+1 s)) => //=.
-    case E2 : (1 < window_size 0 (drop j.+1 s))
-      => //=.
+    case E : (0 < size d) => //=.
+    case E2 : (1 < window_size 0 d) => //=.
     by rewrite has_left_child_0.
-  by [].
+  have Hnd : (size s).-1 - j = size d.
+    rewrite /d size_drop.
+    case: (size s) Hsz => [//|[//|m]] _; by rewrite !subSS.
+  rewrite Hnd.
+  have Hshift : iota j.+1 (size d) = [seq j.+1 + k | k <- iota 0 (size d)]
+    by rewrite -iotaDl addn0.
+  rewrite Hshift filter_map -map_comp.
+  rewrite (eq_filter (a2 := fun k =>
+    is_D_letter (classify_vertex_cde k d))); last first.
+    by move=> k /=; rewrite addSn -addnS addKn subn1.
+  have Hfilt :
+    filter (fun k => is_D_letter (classify_vertex_cde k d)) (iota 0 (size d)) =
+    filter (fun k => is_D_letter (classify_vertex_cde k d)) (iota 1 (size d).-1).
+    case: (size d) => [//|m]; by rewrite /= Hq0.
+  rewrite Hfilt /S_w_seq -map_comp.
+  apply: (@eq_in_map nat nat _ _ _).1 => k Hk.
+  rewrite mem_filter mem_iota in Hk.
+  move: Hk => /andP [_ /andP [Hk1 _]].
+  case: k Hk1 => [//|k'] _.
+  unfold comp. simpl. by rewrite addnC addnS.
 Qed.
 
 (* -- Total width of phi_w = (size w).-1 (structural) ------------------- *)
@@ -678,7 +731,7 @@ case Hsz1 : (size w <= 1).
   rewrite /cde_total_width /phi_w /phi'_w
     /classify_vertex_cde /is_internal
     /window_size /window_size_fuel
-    /mm_pos /min_pos /max_pos /=.
+    /mm_pos /min_pos /max_pos /= eqxx /=.
   by [].
 have Hsz2 : 1 < size w
   by case: (size w) Hsz1 => [|[|m]].
@@ -704,29 +757,42 @@ have IHL := IH _ HszL HuL.
 have IHR := IH _ HszR HuR.
 case Hj0 : (0 < j).
   rewrite (phi_w_decomp_mm Hu Hsz2 Hj0).
-  rewrite cde_total_width_cat /=
-    /cde_total_width /= -/cde_total_width.
-  rewrite IHL IHR.
+  (* Use have to state explicit equalities *)
+  have HtotalL : cde_total_width (phi_w (take j s)) = (size (take j s)).-1 := IHL.
+  have HtotalR : cde_total_width (phi_w (drop j.+1 s)) = (size (drop j.+1 s)).-1 := IHR.
+  rewrite cde_total_width_cat HtotalL.
+  (* Goal: (size (take j s)).-1 + cde_total_width (D_letter :: phi_w (drop j.+1 s)) = ... *)
+  have -> : cde_total_width (D_letter :: phi_w (drop j.+1 s)) =
+    2 + cde_total_width (phi_w (drop j.+1 s)).
+    by rewrite /cde_total_width /=.
+  rewrite HtotalR.
   rewrite size_takel; last exact: ltnW.
   rewrite size_drop.
   have HszR1 : 0 < size s - j.+1.
     rewrite subn_gt0.
     exact: mm_pos_lt_pred Hu Hsz2.
-  rewrite prednK // -addnA addnC -addnA.
-  rewrite [2 + _]addnC subnS prednK //.
-  rewrite addnC -subnS.
-  rewrite -[j in _ + (size s - j)]prednK //.
-  rewrite subnS addnS addnC subnK //.
-  exact: ltnW (ltnW (mm_pos_lt_pred Hu Hsz2)).
-move: Hj0; rewrite lt0n negbK => /eqP Hj0.
+  (* Goal: j.-1 + (2 + (size s - j.+1).-1) = (size s).-1 *)
+  (* We know 0 < j and 0 < size s - j.+1 and j < size s *)
+  (* Massage: j.-1 + 2 = j + 1, then j + 1 + (size s - j.+1).-1 *)
+  (* = j + 1 + (size s - j.+1 - 1) = j + 1 + size s - j.+1 - 1 = size s - 1 *)
+  have Hstep1 : j.-1 + 2 = j.+1 by rewrite addn2 (prednK Hj0).
+  have Hstep2 : (size s - j.+1).-1.+1 = size s - j.+1 := prednK HszR1.
+  rewrite [j.-1 + _]addnA Hstep1.
+  (* now: j.+1 + (size s - j.+1).-1 = (size s).-1 *)
+  rewrite -subn1 (addnBA _ HszR1) subnKC; last exact: Hj.
+  by rewrite subn1.
+move: Hj0; rewrite lt0n => /negbFE /eqP Hj0.
 rewrite (phi_w_cons_mm0 Hj0 Hsz2).
-rewrite /= /cde_total_width /= -/cde_total_width.
 have HszR' : size rest <= n.
-  by move: Hsz; rewrite /s /= ltnS ltnNge Hszn.
+  by move: Hsz; rewrite /s /= ltnS.
 have HuR' : uniq rest.
   by move: Hu; rewrite /s cons_uniq => /andP [].
-rewrite (IH rest HszR' HuR').
-by case: (size rest) Hsz2 => [|k] //.
+have HconsC : cde_total_width (C_letter :: phi_w rest) =
+  1 + cde_total_width (phi_w rest) by rewrite /cde_total_width /=.
+have H0rest : 0 < size rest
+  by move: Hsz2; rewrite /s /= ltnS.
+rewrite HconsC (IH rest HszR' HuR') /s /=.
+by rewrite add1n prednK.
 Qed.
 
 Lemma cde_total_width_phi_w w :
@@ -757,7 +823,7 @@ case Hsz1 : (size w <= 1).
   rewrite /D_offsets /S_w_seq /phi_w /phi'_w
     /classify_vertex_cde /is_internal
     /window_size /window_size_fuel
-    /mm_pos /min_pos /max_pos /=.
+    /mm_pos /min_pos /max_pos /= eqxx /=.
   by [].
 have Hsz2 : 1 < size w
   by case: (size w) Hsz1 => [|[|m]].
@@ -790,15 +856,13 @@ case Hj0 : (0 < j).
   rewrite HwL size_takel; last exact: ltnW.
   congr (_ ++ _ :: _).
   apply: eq_map => x /=.
-  by rewrite addnC;
-     case: j Hj0 => [//|j'] _ /=;
-     rewrite addn2.
-move: Hj0; rewrite lt0n negbK => /eqP Hj0.
+  by rewrite addnC addn2 prednK.
+move: Hj0; rewrite lt0n => /negbFE /eqP Hj0.
 rewrite (phi_w_cons_mm0 Hj0 Hsz2).
 rewrite D_offsets_cons_C.
 rewrite (S_w_seq_shift Hj0).
 have HszR' : size rest <= n.
-  by move: Hsz; rewrite /s /= ltnS ltnNge Hszn.
+  by move: Hsz; rewrite /s /= ltnS.
 have HuR' : uniq rest.
   by move: Hu; rewrite /s cons_uniq => /andP [].
 by rewrite (IH rest HszR' HuR').
@@ -834,11 +898,11 @@ rewrite /all_D_transitions (D_offsets_phi_w_eq_S_w_seq Hu Hsz2).
 apply/allP/allP.
 - move=> Hall k Hk.
   have Hkb := S_w_seq_bound Hk.
-  rewrite -(has_transition_omega_seq X (size w).-1 Hkb).
+  rewrite -(has_transition_omega_seq X Hkb).
   exact: Hall Hk.
 - move=> Hall k Hk.
   have Hkb := S_w_seq_bound Hk.
-  rewrite (has_transition_omega_seq X (size w).-1 Hkb).
+  rewrite (has_transition_omega_seq X Hkb).
   exact: Hall Hk.
 Qed.
 
@@ -1004,6 +1068,73 @@ congr (_ < _); congr (nth 0 w _);
   by rewrite ?addnS addnC subnK.
 Qed.
 
+(* -- Hoisted opaque helpers: contain the kernel cost of                    *)
+(* D_vertex_descent_transition's case branches.  Each helper's proof        *)
+(* term is checked once at Qed; the main lemma references it by name.      *)
+
+Lemma D_vertex_descent_take_step a s0 i :
+  let s := a :: s0 in let j := mm_pos s in
+  i < j ->
+  is_internal i s -> has_left_child i (take j s) ->
+  is_internal i (take j s) /\ i < j.-1.
+Proof.
+move=> /=.
+set s := a :: s0; set j := mm_pos s.
+have Hne : s <> [::] by [].
+have Hj : j < size s := mm_pos_lt Hne.
+move=> Hij Hint Hlc.
+have His : i < size s by move: Hint; rewrite /is_internal => /andP [].
+have Hws : 1 < window_size i s by move: Hint; rewrite /is_internal => /andP [_ ->].
+have Hj0 : 0 < j := leq_ltn_trans (leq0n i) Hij.
+have Hint_L : is_internal i (take j s).
+  rewrite /is_internal size_takel ?ltnW //.
+  rewrite (ltn_trans Hij Hj) /=.
+  by rewrite (window_size_cons i a s0) -/s -/j Hij in Hws.
+have Hi_lt_jpred : i < j.-1.
+  rewrite -ltnS (prednK Hj0).
+  rewrite ltn_neqAle Hij andbT.
+  apply/negP => /eqP Heq_ij.
+  have : has_left_child j.-1 (take j s) = false.
+    apply: has_left_child_last.
+    by rewrite size_takel ?ltnW // -Heq_ij.
+  by rewrite -Heq_ij Hlc.
+exact: conj Hint_L Hi_lt_jpred.
+Qed.
+
+Lemma D_vertex_descent_drop_step a s0 i :
+  let s := a :: s0 in let j := mm_pos s in
+  j < i ->
+  is_internal i s -> has_left_child (i - j - 1) (drop j.+1 s) ->
+  [/\ is_internal (i - j - 1) (drop j.+1 s),
+      j.+1 < i &
+      0 < i - j - 1].
+Proof.
+move=> /=.
+set s := a :: s0; set j := mm_pos s.
+have Hne : s <> [::] by [].
+have Hj : j < size s := mm_pos_lt Hne.
+move=> Hji Hint Hlc.
+have His : i < size s by move: Hint; rewrite /is_internal => /andP [].
+have Hws : 1 < window_size i s by move: Hint; rewrite /is_internal => /andP [_ ->].
+have Hint_R : is_internal (i - j - 1) (drop j.+1 s).
+  rewrite /is_internal size_drop.
+  have -> : (i - j - 1 < size s - j.+1) = (i < size s)
+    by rewrite ltn_sub2r // ltn_sub2r // ltnS ltnW.
+  rewrite His /=.
+  by rewrite (window_size_cons i a s0) -/s -/j (ltnNge i j) (ltnW Hji) /=
+            (negbTE (ltn_eqF Hji)) in Hws.
+have Hi_ge_j2 : j.+1 < i.
+  rewrite ltnNge; apply/negP => Hle.
+  have : i - j - 1 = 0 by
+    rewrite -subn1 subnA //; apply/eqP;
+    rewrite subn_eq0; exact: Hle.
+  move=> Heq0.
+  have : has_left_child 0 (drop j.+1 s) = false := has_left_child_0 _.
+  by rewrite -Heq0 Hlc.
+have Hi0R : 0 < i - j - 1 by rewrite subn_gt0 ltn_sub2r.
+by [].
+Qed.
+
 Lemma D_vertex_descent_transition w i :
   uniq w -> 0 < i -> is_internal i w -> has_left_child i w ->
   is_descent_seq w i.-1 != is_descent_seq w i.
@@ -1026,19 +1157,7 @@ have Hws : 1 < window_size i s
   by move: Hint; rewrite /is_internal => /andP [_ ->].
 rewrite (has_left_child_cons i a s0) -/s -/j in Hlc.
 case: (ltngtP i j) => [Hij | Hji | Heq].
-- have Hint_L : is_internal i (take j s).
-    rewrite /is_internal size_takel ?ltnW //.
-    rewrite (ltn_trans Hij Hj) /=.
-    by rewrite (window_size_cons i a s0) -/s -/j Hij in Hws.
-  have Hlc_L : has_left_child i (take j s) := Hlc.
-  have Hi_lt_jpred : i < j.-1.
-    rewrite -ltnS prednK //.
-    rewrite ltn_neqAle Hij andbT.
-    apply/negP => /eqP Heq_ij.
-    have : has_left_child j.-1 (take j s) = false.
-      apply: has_left_child_last.
-      by rewrite size_takel ?ltnW // -Heq_ij.
-    by rewrite -Heq_ij Hlc_L.
+- have [Hint_L Hi_lt_jpred] := D_vertex_descent_take_step Hij Hint Hlc.
   have Hi1_lt_j : i.+1 < j := Hi_lt_jpred.
   rewrite -(is_descent_seq_take w i.-1 (leq_ltn_trans (leq_pred i) Hi1_lt_j)).
   rewrite -(is_descent_seq_take w i Hi1_lt_j).
@@ -1046,23 +1165,7 @@ case: (ltngtP i j) => [Hij | Hji | Heq].
   + rewrite size_takel; last exact: ltnW.
     exact: leq_trans (ltnW Hj) Hsz.
   + exact: take_uniq j Hu.
-- have Hlc_R : has_left_child (i - j - 1) (drop j.+1 s) := Hlc.
-  have Hint_R : is_internal (i - j - 1) (drop j.+1 s).
-    rewrite /is_internal size_drop.
-    have -> : (i - j - 1 < size s - j.+1) = (i < size s)
-      by rewrite ltn_sub2r // ltn_sub2r // ltnS ltnW.
-    rewrite His /=.
-    by rewrite (window_size_cons i a s0) -/s -/j (ltnNge i j) (ltnW Hji) /=
-              (negbTE (ltn_eqF Hji)) in Hws.
-  have Hi_ge_j2 : j.+1 < i.
-    rewrite ltnNge; apply/negP => Hle.
-    have : i - j - 1 = 0 by
-      rewrite -subn1 subnA //; apply/eqP;
-      rewrite subn_eq0; exact: Hle.
-    move=> Heq0.
-    have : has_left_child 0 (drop j.+1 s) = false := has_left_child_0 _.
-    by rewrite -Heq0 Hlc_R.
-  have Hi0R : 0 < i - j - 1 by rewrite subn_gt0 ltn_sub2r.
+- have [Hint_R Hi_ge_j2 Hi0R] := D_vertex_descent_drop_step Hji Hint Hlc.
   rewrite -(is_descent_seq_drop s i.-1 (n:=j.+1) _ _); last first.
       by rewrite -[i.-1.+1](prednK Hi0).
     by rewrite -ltnS (prednK Hi0).
@@ -1096,7 +1199,7 @@ have Hszx : size (char_mono w) = (size w).-1 by rewrite size_char_mono.
 rewrite (phi_w_support_general Hu Hsz2 Hszx).
 apply/allP => k Hk.
 have Hkb := S_w_seq_bound Hk.
-rewrite -(has_transition_omega_seq (char_mono w) (size w).-1 Hkb).
+rewrite -(has_transition_omega_seq (char_mono w) Hkb).
 rewrite /has_transition.
 move: Hk; rewrite /S_w_seq => /mapP [i].
 rewrite mem_filter => /andP [Hid Hiota] Hkeq.
@@ -1153,8 +1256,7 @@ have Hsz_lhs : size lhs = size rhs.
 have Huniq_rhs : uniq rhs := uniq_expand_cde _.
 apply/negPn/negP => Hnuniq.
 have : size lhs > size (undup lhs).
-  rewrite size_undup_uniq; last exact: Hnuniq.
-  by case: (lhs) Hnuniq => [//|x xs]; rewrite /= ltnS size_filter count_size.
+  by rewrite ltn_size_undup.
 move=> Hdup.
 have Hsub : size (undup lhs) <= size rhs.
   apply: uniq_leq_size; first exact: undup_uniq.

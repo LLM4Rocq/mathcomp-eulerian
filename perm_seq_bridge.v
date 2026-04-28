@@ -152,6 +152,18 @@ rewrite IH //.
 by rewrite psi_apply_psis_comm.
 Qed.
 
+Lemma apply_psis_revK ss w :
+  uniq w ->
+  apply_psis (rev ss) (apply_psis ss w) = w.
+Proof.
+move=> Hu.
+elim: ss w Hu => [|i ss IH] w Hu //=.
+rewrite -/(apply_psis ss (psi i w)).
+rewrite rev_cons -cats1 apply_psis_cat /= psi_involutive //.
+  exact: IH (uniq_psi i Hu).
+exact: uniq_apply_psis (uniq_psi i Hu).
+Qed.
+
 Lemma apply_psis_cancel ss w :
   uniq w ->
   apply_psis ss (apply_psis ss w) = w.
@@ -170,6 +182,16 @@ Proof.
 move=> Hu.
 by rewrite /powerset_internal
    internal_vertices_apply_psis.
+Qed.
+
+Lemma class_char_monos_uniq w :
+  uniq w ->
+  uniq [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
+Proof.
+move=> Hu.
+have Hfact := fact3 Hu.
+rewrite -(sort_uniq leq_seqb) Hfact sort_uniq.
+exact: uniq_expand_cde.
 Qed.
 
 (* Within the M-class, char_mono is injective: two class members
@@ -372,28 +394,6 @@ have : char_mono w \in
     exact: nil_in_powerset_internal.
   by rewrite apply_psis_nil.
 by rewrite -(mem_sort leq_seqb) Hfact mem_sort.
-Qed.
-
-Lemma class_char_monos_uniq w :
-  uniq w ->
-  uniq [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
-Proof.
-move=> Hu.
-have Hfact := fact3 Hu.
-have := sort_uniq leq_seqb [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
-by rewrite Hfact sort_uniq uniq_expand_cde.
-Qed.
-
-Lemma apply_psis_revK ss w :
-  uniq w ->
-  apply_psis (rev ss) (apply_psis ss w) = w.
-Proof.
-move=> Hu.
-elim: ss w Hu => [|i ss IH] w Hu //=.
-rewrite -/(apply_psis ss (psi i w)).
-rewrite rev_cons -cats1 apply_psis_cat /= psi_involutive //.
-  exact: IH (uniq_psi i Hu).
-exact: uniq_apply_psis (uniq_psi i Hu).
 Qed.
 
 (* ========================================================================= *)
@@ -911,38 +911,35 @@ have phi_w_order_iso : forall (s1 s2 : seq nat),
     case Hisz: (i < size s2) => //=.
     by rewrite (window_size_order_iso Hszeq Hu1 Hu2 Hord).
   rewrite Hint.
-  case: (is_internal i s1) Hint => // _.
-  exact: has_left_child_order_iso Hszeq Hu1 Hu2 Hord.
+  case: (is_internal i s2) => //=.
+  by rewrite (has_left_child_order_iso Hszeq Hu1 Hu2 Hord).
+
+(* Rank-normalization lemmas needed for phi_w and S_w_seq invariance *)
+have Hsz_norm' : size w0_norm = size w0.
+  by rewrite /w0_norm size_map.
+have Hord_rev : forall p q, p < size w0_norm -> q < size w0_norm ->
+  (nth 0 w0_norm p < nth 0 w0_norm q) = (nth 0 w0 p < nth 0 w0 q).
+  move=> p q; rewrite Hsz_norm' => Hp Hq.
+  by rewrite (Horder_iso Hp Hq).
 
 (* Now use phi_w_order_iso *)
 have Hphi_w0 : phi_w w0_norm = phi_w w0.
-  apply: phi_w_order_iso => //.
-    by rewrite /w0_norm size_map.
-  move=> p q Hp Hq.
-  by rewrite -Horder_iso // -(size_map (fun x => index x w0_sorted) w0) /w0_norm.
+  apply: phi_w_order_iso; [exact: Hsz_norm' | exact: Huniq_norm
+    | exact: Hu0 | exact: Hord_rev].
 
 (* S_w_seq is also order-invariant (same argument) *)
 have HS_w0 : S_w_seq w0_norm = S_w_seq w0.
-  rewrite /S_w_seq /w0_norm size_map.
-  congr (map _ _); congr (filter _ _).
-  apply: eq_map => i.
+  rewrite /S_w_seq Hsz_norm'.
+  congr (map _ _).
+  apply: eq_in_filter => i _.
   rewrite /classify_vertex_cde.
-  have Hsz_norm' : size w0_norm = size w0.
-    by rewrite /w0_norm size_map.
-  have Hord' : forall p q, p < size w0 -> q < size w0 ->
-    (nth 0 w0 p < nth 0 w0 q) = (nth 0 w0_norm p < nth 0 w0_norm q).
-    by move=> p q Hp Hq; rewrite -Horder_iso.
-  have Hord_rev : forall p q, p < size w0_norm -> q < size w0_norm ->
-    (nth 0 w0_norm p < nth 0 w0_norm q) = (nth 0 w0 p < nth 0 w0 q).
-    move=> p q; rewrite Hsz_norm' => Hp Hq.
-    by symmetry; exact: Hord'.
   have Hint : is_internal i w0_norm = is_internal i w0.
     rewrite /is_internal Hsz_norm'.
     case Hisz: (i < size w0) => //=.
     by rewrite (window_size_order_iso Hsz_norm' Huniq_norm Hu0 Hord_rev).
   rewrite Hint.
-  case: (is_internal i w0) Hint => // _.
-  exact: has_left_child_order_iso Hsz_norm' Huniq_norm Hu0 Hord_rev.
+  case: (is_internal i w0) => //=.
+  by rewrite (has_left_child_order_iso Hsz_norm' Huniq_norm Hu0 Hord_rev).
 
 (* bvE ∈ expand_cde(phi_w(perm_to_seq sigma0)) *)
 have HbvE_sigma0 : bvE \in expand_cde (phi_w (perm_to_seq sigma0)).
@@ -970,7 +967,8 @@ have Hdesc_new : descent_set sigma_new = E.
   have Hcm : char_mono (perm_to_seq sigma_new) = bvE.
     by rewrite Hpts_new.
   have := char_mono_perm_to_seq sigma_new.
-  by rewrite Hcm => /descent_to_bvec_inj.
+  rewrite Hcm => /descent_to_bvec_inj.
+  by [].
 
 (* sigma_new is not in Im(f) *)
 have Hnotin : sigma_new \notin [set f tau | tau in [set s | descent_set s == D]].

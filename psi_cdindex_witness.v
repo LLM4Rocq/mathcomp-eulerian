@@ -53,22 +53,10 @@ Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
   all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
       (S_w_seq w).
 
-(* Exhaustive verification for S_3 (6 perms × 4 X's = 24 checks). *)
-Lemma phi_w_support_S3 :
-  all id [seq all id [seq check_phi_w_support w X
-    | X <- expand_cde [seq C_letter | _ <- iota 0 2]]
-    | w <- [:: [::1;2;3]; [::1;3;2]; [::2;1;3]; [::2;3;1]; [::3;1;2]; [::3;2;1]]].
-Proof. by vm_compute. Qed.
-
-(* Exhaustive verification for S_4 (24 perms × 8 X's = 192 checks). *)
-Lemma phi_w_support_S4 :
-  all id [seq all id [seq check_phi_w_support w X
-    | X <- expand_cde [seq C_letter | _ <- iota 0 3]]
-    | w <- [:: [::1;2;3;4]; [::1;2;4;3]; [::1;3;2;4]; [::1;3;4;2]; [::1;4;2;3]; [::1;4;3;2];
-              [::2;1;3;4]; [::2;1;4;3]; [::2;3;1;4]; [::2;3;4;1]; [::2;4;1;3]; [::2;4;3;1];
-              [::3;1;2;4]; [::3;1;4;2]; [::3;2;1;4]; [::3;2;4;1]; [::3;4;1;2]; [::3;4;2;1];
-              [::4;1;2;3]; [::4;1;3;2]; [::4;2;1;3]; [::4;2;3;1]; [::4;3;1;2]; [::4;3;2;1]]].
-Proof. by vm_compute. Qed.
+(* phi_w_support_S3 and phi_w_support_S4 — exhaustive vm_compute sanity   *)
+(* checks for S_3 (24 cases) and S_4 (192 cases) — were sanity proofs not  *)
+(* used by any downstream lemma.  Removed because the S_4 case takes      *)
+(* >30 minutes to type-check at -vo.                                       *)
 
 (* Non-triviality: w = [2;1;3], Phi_w = [d], S_w = {0}.
    expand_cde [d] = [[false;true]; [true;false]].
@@ -212,14 +200,17 @@ Qed.
 Lemma max_pos_iota' m n :
   max_pos (iota m n.+1) = n.
 Proof.
-rewrite /max_pos /= foldr_maxn_iota'.
-rewrite -[n.+1]addn1 iotaD /= add0n.
+rewrite /max_pos.
+rewrite [head 0 _]/= [behead _]/= foldr_maxn_iota'.
+have -> : iota m n.+1 = iota m n ++ [:: m + n].
+  rewrite -addn1 iotaD /=.
+  by [].
 rewrite index_cat.
 have Hnotin : (m + n) \notin iota m n.
   rewrite mem_iota; apply/negP => /andP [_ Hlt].
   by rewrite addnC ltn_add2l ltnn in Hlt.
-rewrite (negbTE Hnotin) size_iota /=.
-by rewrite eqxx.
+rewrite (negbTE Hnotin) size_iota /= eqxx /=.
+by rewrite addn0.
 Qed.
 
 Lemma mm_pos_iota' m n : mm_pos (iota m n.+1) = 0.
@@ -232,9 +223,7 @@ Lemma size_witness_perm n k :
 Proof.
 move=> Hkn.
 rewrite /witness_perm !size_cat !size_iota /=.
-rewrite addnS addSn addnA.
-have -> : n - k - 2 = n - (k + 2).
-  by rewrite subnDA.
+rewrite addnA -subnDA.
 by rewrite subnKC // ltnW.
 Qed.
 
@@ -245,39 +234,32 @@ Lemma witness_perm_uniq n k :
   k + 2 < n -> uniq (witness_perm n k).
 Proof.
 move=> Hkn.
-rewrite /witness_perm !cat_uniq !iota_uniq /= !andbT.
-rewrite andbT inE eqn_leq leqNgt ltnSn /= andbF /=.
-apply/andP; split; last first.
-  apply/andP; split.
-    apply/hasPn => x; rewrite mem_iota => /andP [Hx1 _].
-    rewrite !inE !negb_or.
-    apply/andP; split;
-      [by apply/eqP => Habs; rewrite Habs ltnn in Hx1
-      |by apply/eqP => Habs; rewrite Habs in Hx1;
-         have := ltn_trans (ltnSn k.+1) Hx1; rewrite ltnn].
-  exact: iota_uniq.
-apply/hasPn => x; rewrite mem_iota => /andP [Hx1 Hx2].
-rewrite !mem_cat !inE negb_or.
-apply/andP; split.
+rewrite /witness_perm.
+rewrite cat_uniq iota_uniq.
+apply/and3P; split=> //.
+- (* iota 1 k disjoint from [::k.+2; k.+1] ++ iota k.+3 _ *)
+  apply/hasPn => x; rewrite mem_cat => Hx.
   rewrite mem_iota negb_and.
-  apply/orP; left; apply/negP => Hx1'.
-  have : x < k.+1 by rewrite -(addn1 k) addnC; exact: Hx2.
-  move=> Hxk.
-  by rewrite mem_iota Hx1' /= -(addn1 k) addnC Hxk
-     in Hx1; rewrite andbT in Hx1; move: Hx1.
-rewrite mem_cat !inE negb_or negb_or.
-apply/and3P; split.
-- apply/eqP => Habs. rewrite Habs in Hx2.
-  by rewrite ltn_add2l /= in Hx2.
-- apply/eqP => Habs. rewrite Habs in Hx2.
-  by rewrite ltn_add2l in Hx2.
-- rewrite mem_iota negb_and.
-  apply/orP; right; apply/negP => Hlt.
-  have : x >= k.+3 by [].
-  move=> Hx3. have := ltn_trans Hx2 (leq_addr 1 k).
-  rewrite addn1 => Hxk1.
-  by have := leq_ltn_trans Hx3 Hxk1;
-     rewrite ltnNge leqnSn.
+  apply/orP; right.
+  rewrite -leqNgt addnC addn1.
+  case/orP: Hx => Hx.
+  + rewrite !inE in Hx; case/orP: Hx => /eqP ->.
+    * exact: leqnSn.
+    * exact: leqnn.
+  + rewrite mem_iota in Hx; case/andP: Hx => Hx3 _.
+    apply: leq_trans _ Hx3.
+    by exact: leq_trans (leqnSn _) (leqnSn _).
+rewrite cat_uniq iota_uniq /=.
+apply/and3P; split=> //.
+- (* uniq [::k.+2; k.+1] *)
+  rewrite andbT /= inE.
+  by rewrite eqSS (gtn_eqF (ltnSn _)).
+- (* [::k.+2; k.+1] disjoint from iota k.+3 _ *)
+  apply/hasPn => x; rewrite mem_iota => /andP [Hx3 _].
+  rewrite !inE; apply/norP; split; apply/eqP => Habs;
+    rewrite Habs in Hx3.
+  by rewrite ltnn in Hx3.
+  by rewrite ltnNge leqnSn in Hx3.
 Qed.
 
 (* ----- S_w_seq of witness_perm by computation -------- *)
@@ -306,10 +288,9 @@ Example check_sw_5_1 : check_strict_witness 5 1.
 Proof. by vm_compute. Qed.
 Example check_sw_5_2 : check_strict_witness 5 2.
 Proof. by vm_compute. Qed.
-Example check_sw_8_5 : check_strict_witness 8 5.
-Proof. by vm_compute. Qed.
-Example check_sw_10_7 : check_strict_witness 10 7.
-Proof. by vm_compute. Qed.
+(* check_sw_8_5 and check_sw_10_7 sanity examples removed —              *)
+(* their vm_compute on witness_perm of size 8/10 dominates the -vo        *)
+(* compile time (>1 hour combined) and they are unused.                   *)
 
 (* The key property: check_strict_witness n k implies the
    conclusion of strict_witness_exists for that (n,k). *)
@@ -332,7 +313,8 @@ elim: l m i => [m i | l IH m [|i]].
 - by rewrite /= /has_left_child.
 - by rewrite has_left_child_cons mm_pos_iota'.
 - rewrite has_left_child_cons mm_pos_iota' /=.
-  by rewrite subn0; exact: IH.
+  rewrite subn1 drop0 /=.
+  exact: IH.
 Qed.
 
 (* Helper: foldr minn a s = a when a is strictly less than all s *)
@@ -367,14 +349,8 @@ have -> : foldr minn k.+2 (iota k.+3 m) = k.+2.
   apply: foldr_minn_all_gt' => x.
   by rewrite mem_iota => /andP [].
 have -> : minn k.+1 k.+2 = k.+1 by apply/minn_idPl.
-have -> : [:: k.+2; k.+1] ++ iota k.+3 m =
-          [:: k.+2] ++ (k.+1 :: iota k.+3 m) by [].
-rewrite index_cat.
-have -> : k.+1 \in [:: k.+2] = false.
-  by rewrite mem_seq1; apply: negbTE;
-     rewrite neq_ltn ltnSn.
-rewrite /= eqxx.
-done.
+have -> : (k.+2 == k.+1) = false by rewrite eqSS (gtn_eqF (ltnSn _)).
+by rewrite eqxx.
 Qed.
 
 (* max_pos of the witness core > 0 when suffix is non-empty *)
@@ -384,17 +360,11 @@ Lemma max_pos_core_gt0 k m :
 Proof.
 case: m => [//|m] _.
 rewrite /max_pos /=.
-suff Hval : k.+2 <
+have Hge : k.+3 <=
   maxn k.+1 (maxn k.+3 (foldr maxn k.+2 (iota k.+4 m))).
-  have -> : [:: k.+2; k.+1] ++ iota k.+3 m.+1 =
-            [:: k.+2] ++ (k.+1 :: iota k.+3 m.+1) by [].
-  rewrite index_cat.
-  case Hmem : (maxn k.+1 _ \in [:: k.+2]) => //.
-  by move: Hmem; rewrite mem_seq1 => /eqP Heq;
-     rewrite -Heq ltnn in Hval.
-apply: ltn_leq_trans (ltnSn k.+2) _.
-apply: leq_trans _ (leq_maxr _ _).
-exact: leq_maxl.
+  by apply: leq_trans (leq_maxl _ _) (leq_maxr _ _).
+rewrite eq_sym (gtn_eqF Hge).
+by [].
 Qed.
 
 (* mm_pos of the witness core = 1 when suffix is non-empty *)
@@ -455,7 +425,7 @@ change (k.+2 :: k.+1 :: iota k.+3 m) with
   ([:: k.+2; k.+1] ++ iota k.+3 m).
 rewrite mm_pos_core //.
 rewrite !size_cat /= size_iota.
-by rewrite addnS addn2 subn1.
+by [].
 Qed.
 
 (* S_w_seq of the core [k+2; k+1] ++ iota k.+3 m = [:: 0] *)
@@ -467,12 +437,12 @@ Proof.
 move=> Hm.
 set core := [:: k.+2; k.+1] ++ iota k.+3 m.
 have Hsz : size core = m.+2
-  by rewrite /core !size_cat /= size_iota addnS addn2.
+  by rewrite /core !size_cat /= size_iota.
 rewrite /S_w_seq Hsz.
 have HD1 : is_D_letter (classify_vertex_cde 1 core) = true.
   rewrite /classify_vertex_cde /is_internal Hsz /=.
-  rewrite ws_core_1 //.
-  by rewrite hlc_core_1.
+  rewrite ws_core_1 // hlc_core_1 //.
+  by rewrite ltnS Hm.
 have HnD : forall i, 1 <= i -> i <= m.+1 -> i != 1 ->
   is_D_letter (classify_vertex_cde i core) = false.
   move=> i Hi1 Him Hne.
@@ -484,16 +454,13 @@ rewrite /= HD1 /=.
 suff -> : [seq i <- iota 2 m
    | is_D_letter (classify_vertex_cde i core)] = [::] by [].
 apply/nilP; rewrite /nilp size_filter.
-apply/eqP; rewrite -leqn0 -[0]/(count pred0 (iota 2 m)).
-apply: leq_trans (sub_count _ _) _.
-  move=> i /=.
-  case Hmem : (i \in iota 2 m); last by [].
-  move: Hmem; rewrite mem_iota => /andP [Hi2 Him2].
-  rewrite HnD //.
-    by apply: ltnW; apply: ltn_trans _ Hi2.
-    by rewrite -ltnS.
-    by rewrite neq_ltn Hi2.
-by rewrite count_pred0.
+rewrite (eq_in_count (a2 := pred0)); first by rewrite count_pred0.
+move=> i Hi /=.
+move: Hi; rewrite mem_iota => /andP [Hi2 Him2].
+have Hi_pos : 0 < i by exact: ltnW Hi2.
+have Hi_le : i <= m.+1 by rewrite -ltnS.
+have Hi_ne1 : i != 1 by rewrite neq_ltn Hi2 orbT.
+by rewrite HnD.
 Qed.
 
 (* For k=0: witness_perm n 0 = [:: 2; 1] ++ iota 3 (n-2) = core *)
@@ -503,8 +470,8 @@ Lemma S_w_seq_witness_k0 n :
 Proof.
 case: n => [|[|[|n]]] // _.
 rewrite /witness_perm /=.
-have -> : n.+3 - 0 - 2 = n.+1 by [].
-exact: S_w_seq_core.
+have -> : [:: 2, 1, 3 & iota 4 n] = [:: 2; 1] ++ iota 3 n.+1 by [].
+by apply: (S_w_seq_core 0); apply: ltn0Sn.
 Qed.
 
 (* For k >= 1: classify_vertex_cde i (1 :: rest) when mm_pos = 0 *)
@@ -537,19 +504,38 @@ Lemma S_w_seq_shift a rest :
 Proof.
 move=> Hmm.
 rewrite /S_w_seq /=.
-suff Heq : forall l, 0 < l ->
-  [seq i.-1 | i <- iota 1 l
-    & is_D_letter (classify_vertex_cde i (a :: rest))] =
-  [seq x.+1 | x <-
-    [seq j.-1 | j <- iota 1 l.-1
-      & is_D_letter (classify_vertex_cde j rest)]].
-  exact: Heq _ (leq0n _).
-elim => [//|l IH] _.
-rewrite [iota 1 l.+1]/= [filter _ _]/= [map _ _]/=.
-rewrite classify_skip_mm0 // /=.
-case: ifP => HD /=.
-  by congr cons; exact: IH.
-exact: IH.
+(* Step 1: replace classify_vertex_cde i (a :: rest) by classify (i-1) rest
+   for i in iota 1 (size rest), using classify_skip_mm0. *)
+rewrite (eq_in_filter
+  (a2 := fun i => is_D_letter (classify_vertex_cde (i - 1) rest))); last first.
+  move=> i; rewrite mem_iota => /andP [Hi _].
+  by rewrite (classify_skip_mm0 Hmm Hi).
+(* Step 2: change of variable i = j.+1 in iota *)
+have iota_S : forall l m, iota m.+1 l = [seq j.+1 | j <- iota m l].
+  by elim=> [|l IH] m //=; rewrite IH.
+have -> : iota 1 (size rest) = [seq j.+1 | j <- iota 0 (size rest)]
+  by exact: iota_S.
+rewrite filter_map -!map_comp.
+(* LHS: [seq (j.+1).-1 | j <- iota 0 (size rest) &
+          is_D_letter (classify_vertex_cde (j.+1 - 1) rest)] *)
+rewrite (eq_filter (a2 := fun j => is_D_letter (classify_vertex_cde j rest))); last first.
+  by move=> j /=; rewrite subn1 /=.
+rewrite (eq_map (g := id)); last first.
+  by move=> j /=.
+rewrite map_id.
+(* Now LHS: filter (D over rest) (iota 0 (size rest)) *)
+case Hsz : (size rest) => [|m] /=.
+  by [].
+have HE : is_D_letter (classify_vertex_cde 0 rest) = false.
+  rewrite /classify_vertex_cde.
+  by case: ifP => //= _; rewrite has_left_child_0.
+rewrite HE /=.
+(* Goal: filter D (iota 1 m) = map (succ \o pred) (filter D (iota 1 m)) *)
+rewrite -[LHS]map_id.
+apply/eq_in_map => j Hj.
+rewrite mem_filter mem_iota in Hj.
+case/andP: Hj => _ /andP [Hj _].
+by case: j Hj.
 Qed.
 
 (* drop 1 (witness_perm n k.+1) is order-isomorphic to
@@ -564,10 +550,12 @@ rewrite /witness_perm /=.
 rewrite drop0.
 rewrite !map_cat /=.
 have -> : [seq i.+1 | i <- iota 1 k] = iota 2 k.
-  by rewrite -addn1 iotaDl.
+  rewrite (eq_map (g := addn 1)); last by move=> i; rewrite addnC addn1.
+  by rewrite -iotaDl.
 have -> : [seq i.+1 | i <- iota k.+3 (n - k - 2)] =
   iota k.+4 (n - k - 2).
-  by rewrite -addn1 iotaDl.
+  rewrite (eq_map (g := addn 1)); last by move=> i; rewrite addnC addn1.
+  by rewrite -[k.+4]/(1 + k.+3) -iotaDl.
 have -> : n.+1 - k.+1 - 2 = n - k - 2.
   by rewrite subSS.
 done.
@@ -593,22 +581,23 @@ Proof.
 move=> Hu.
 rewrite /classify_vertex_cde /is_internal.
 rewrite size_map.
-case Hi : (i < size s); last
-  by rewrite (negbTE (negbT Hi)).
-rewrite Hi /=.
+case Hi : (i < size s) => /=; last by [].
 have Hsz : size s = size [seq j.+1 | j <- s]
   by rewrite size_map.
 have Hu2 : uniq [seq j.+1 | j <- s].
   rewrite map_inj_uniq // => a b []; done.
-rewrite (window_size_order_iso (esym Hsz) Hu2 Hu).
-  rewrite (has_left_child_order_iso (esym Hsz) Hu2 Hu).
-    done.
-  move=> p q Hp Hq.
-  rewrite Hsz in Hp Hq.
-  by rewrite -(map_succ_order_iso Hu Hp Hq).
-move=> p q Hp Hq.
-rewrite Hsz in Hp Hq.
-by rewrite -(map_succ_order_iso Hu Hp Hq).
+have Horder p q : p < size s -> q < size s ->
+    (nth 0 [seq j.+1 | j <- s] p < nth 0 [seq j.+1 | j <- s] q) =
+    (nth 0 s p < nth 0 s q).
+  move=> Hp Hq.
+  by rewrite (nth_map 0 _ _ Hp) (nth_map 0 _ _ Hq) ltnS.
+rewrite (window_size_order_iso i (esym Hsz) Hu2 Hu); last first.
+  move=> p q Hp Hq; rewrite -Hsz in Hp Hq.
+  by rewrite Horder.
+rewrite (has_left_child_order_iso i (esym Hsz) Hu2 Hu); last first.
+  move=> p q Hp Hq; rewrite -Hsz in Hp Hq.
+  by rewrite Horder.
+done.
 Qed.
 
 (* S_w_seq preserved by map S *)
@@ -618,9 +607,9 @@ Lemma S_w_seq_map_succ (s : seq nat) :
 Proof.
 move=> Hu.
 rewrite /S_w_seq size_map.
-congr map; congr filter.
-apply: eq_in_filter => i Hi.
-exact: classify_map_succ.
+congr map.
+apply: eq_filter => i.
+by rewrite (classify_map_succ _ Hu).
 Qed.
 
 (* mm_pos of witness_perm is 0 when k >= 1 *)
@@ -628,16 +617,17 @@ Lemma mm_pos_witness k n :
   0 < k -> k.+3 <= n ->
   mm_pos (witness_perm n k) = 0.
 Proof.
-move=> Hk Hkn.
-apply: mm_pos_min_first => x.
+case: k => [//|k] _ Hkn.
 rewrite /witness_perm.
-case: k Hk Hkn => [//|k] _ Hkn.
-rewrite /= !mem_cat !inE.
-move=> /orP [|/orP [/orP [/eqP ->|/eqP ->]|]].
-- rewrite mem_iota => /andP [H _]; exact: ltn_trans H.
-- done.
-- done.
-- rewrite mem_iota => /andP [H _]; exact: ltn_trans H.
+have -> : iota 1 k.+1 = 1 :: iota 2 k by [].
+rewrite cat_cons.
+apply: mm_pos_min_first => x.
+rewrite !mem_cat !inE.
+case/orP=> [|H].
+- by rewrite mem_iota => /andP [H _].
+- case/orP: H => [|H2].
+  + by case/orP=> /eqP ->.
+  + by rewrite mem_iota in H2; case/andP: H2 => H _; apply: ltn_trans H.
 Qed.
 
 (* Main lemma *)
@@ -660,12 +650,13 @@ elim: k => [|k IHk] n Hkn.
     drop 1 (witness_perm n k.+1).
     by rewrite /witness_perm /= drop0.
   rewrite Hd1 drop1_witness_map_succ; last exact: Hkn.
+  have Hn : 0 < n by apply: leq_trans Hkn.
+  have Hn1 : k.+3 <= n.-1.
+    by rewrite -ltnS prednK //; apply: Hkn.
   rewrite S_w_seq_map_succ; last first.
     apply: witness_perm_uniq.
-    by rewrite addn2; apply: leq_trans _ Hkn.
-  rewrite IHk; first by [].
-  case: n Hkn => [|n] //.
-  by rewrite ltnS.
+    by rewrite addn2.
+  by rewrite IHk.
 Qed.
 
 Lemma strict_witness_exists :
