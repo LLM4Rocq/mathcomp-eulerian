@@ -56,17 +56,12 @@ have Hle : forall i : 'I_n.+1, (val i <= val (s i))%N.
   have Hm1 : m < n.+1 by apply: ltnW.
   have Hmn : m < n by [].
   have := Hmono (Ordinal Hmn).
-  have -> : widen_ord (leqnSn n) (Ordinal Hmn) = Ordinal Hm1.
-    exact: val_inj.
+  have -> : widen_ord (leqnSn n) (Ordinal Hmn) = Ordinal Hm1 by exact: val_inj.
   have -> : lift ord0 (Ordinal Hmn) = Ordinal Hm.
     by apply: val_inj; rewrite /= /bump /= add1n.
   by move/(leq_ltn_trans (IHm Hm1)).
 have Hsum : \sum_(i : 'I_n.+1) (val (s i) - val i)%N = 0.
-  rewrite sumnB //.
-  have -> : \sum_(i : 'I_n.+1) val (s i)
-          = \sum_(i : 'I_n.+1) val i.
-    by rewrite [RHS](reindex_inj (@perm_inj _ s)).
-  by rewrite subnn.
+  rewrite sumnB // [X in _ - X = _](reindex_inj (@perm_inj _ s)) subnn //.
 apply/permP => i; rewrite perm1; apply/val_inj.
 move/eqP: Hsum; rewrite (bigD1 i) //= addn_eq0 subn_eq0 => /andP[/eqP Hi _].
 by apply/eqP; rewrite eqn_leq Hle /= -subn_eq0 Hi.
@@ -88,10 +83,7 @@ Lemma rev_perm_inj n : injective (@rev_perm n).
 Proof. by move=> s1 s2; rewrite /rev_perm; exact: mulgI. Qed.
 
 Lemma rev_perm_involutive n : involutive (@rev_perm n).
-Proof.
-move=> s; apply/permP => j.
-by rewrite !rev_permE rev_ordK.
-Qed.
+Proof. by move=> s; apply/permP => j; rewrite !rev_permE rev_ordK. Qed.
 
 Lemma eulerian_symm n k : k <= n -> eulerian n k = eulerian n (n - k).
 Proof.
@@ -471,25 +463,22 @@ rewrite (reindex _ (onW_bij _ (insert_max_perm_bij n))) /=.
 rewrite -(pair_big_dep xpredT
             (fun t p => des (insert_max_perm t p) == k.+1)
             (fun _ _ => 1)) /=.
-under eq_bigr => t _ do rewrite big_mkcond /=.
-under eq_bigr => t _ do rewrite big_ord_recl big_ord_recr /=.
 have lom : lift ord0 (ord_max : 'I_n.+1) = (ord_max : 'I_n.+2) by apply/val_inj.
-under eq_bigr => t _ do rewrite lom.
-under eq_bigr => t _ do rewrite des_insert_max_ord0 des_insert_max_ord_max.
+under eq_bigr => t _ do
+  rewrite big_mkcond big_ord_recl big_ord_recr /= lom
+          des_insert_max_ord0 des_insert_max_ord_max.
 under eq_bigr => t _ do under eq_bigr => i _ do rewrite des_insert_max_interior.
 under eq_bigr => t _.
   rewrite (bigID (fun i : 'I_n => is_descent t i)) /=.
   under eq_bigr => i Hi do rewrite Hi addn0.
   under [X in _ + X + _]eq_bigr => i Hi do rewrite (negbTE Hi) addn1.
   over.
-under eq_bigr => t _ do rewrite !eqSS.
-under eq_bigr => t _ do rewrite sum_nat_cond_const sum_nat_cond_const.
-under eq_bigr => t _ do rewrite -/(descent_set t) -/(des t).
 have asc_card (u : {perm 'I_n.+1}) : #|[set x | ~~ is_descent u x]| = n - des u.
   have -> : [set x | ~~ is_descent u x] = ~: [set x | is_descent u x].
     by apply/setP => i; rewrite !inE.
   by rewrite cardsCs setCK card_ord.
-under eq_bigr => t _ do rewrite asc_card.
+under eq_bigr => t _ do
+  rewrite !eqSS !sum_nat_cond_const -/(descent_set t) -/(des t) asc_card.
 rewrite -!sum1dep_card !big_distrr /=.
 rewrite [X in _ = _ + X]big_mkcond /= [X in _ = X + _]big_mkcond /= -big_split /=.
 apply: eq_bigr => t _; rewrite !muln1.

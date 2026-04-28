@@ -235,11 +235,7 @@ case: (ltngtP i m) =>
       by rewrite size_drop -Hws_m.
     have Hdm_ne : drop m s <> [::].
       by case: (drop m s) Hws_drop.
-    have Huniq_dm : uniq (drop m s).
-      have : uniq (take m s ++ drop m s)
-        by rewrite cat_take_drop.
-      by rewrite cat_uniq =>
-         /andP [_ /andP [_ ?]].
+    have Huniq_dm : uniq (drop m s) by exact: drop_uniq.
     have Hmm_drop : mm_pos (drop m s) = 0
       by exact: mm_pos_drop_mm.
     have Hpsi_m_eq : psi m s =
@@ -673,9 +669,7 @@ have Hrs : rank_shift_seq (map f wa) =
     - by move: Hsz_wa; rewrite Hwa0 /=.
   have Hu_wa : uniq wa.
     rewrite /wa /window_at.
-    move: Hu; rewrite -{1}(cat_take_drop k s) cat_uniq.
-    move=> /andP [_ /andP [_ Hud]].
-    exact: (subseq_uniq (take_subseq _ _)).
+    exact: take_uniq (drop_uniq _ Hu).
   have Hsz_wa : 1 < size wa.
     rewrite /wa /window_at size_take size_drop.
     rewrite ltn_min.
@@ -794,10 +788,7 @@ have [Htriv | Hnt] := leqP ws 1.
     rewrite /wa /window_at size_take size_drop.
     exact: leq_trans (geq_minl _ _) Htriv.
   by case: (wa) Hsz_wa => [|? [|??]] //=; rewrite /rank_shift_seq.
-have Hu_wa : uniq wa.
-  have : uniq (take k d ++ drop k d) by rewrite cat_take_drop.
-  rewrite cat_uniq => /andP [_ /andP [_ Hu_dk]].
-  exact: subseq_uniq (take_subseq _ _) Hu_dk.
+have Hu_wa : uniq wa by rewrite /wa /window_at; exact: take_uniq (drop_uniq _ Hu).
 have Hsz_wa : 1 < size wa.
   rewrite /wa /window_at size_take size_drop ltn_min.
   apply/andP; split => //.
@@ -911,10 +902,7 @@ case: (ltngtP i m) => [Him | Hmi | Hieqm].
         Hpi_ne Huniq_pi Hws_j_pi Hjm').
       by rewrite Hm_pi Htmi.
     rewrite Hlhs_k Hrhs_k.
-    have Huniq_tm : uniq (take m s).
-      have : uniq (take m s ++ drop m s)
-        by rewrite cat_take_drop.
-      by rewrite cat_uniq => /andP [].
+    have Huniq_tm : uniq (take m s) by exact: take_uniq.
     have Hsz_tm : size (take m s) <= n.
       rewrite (size_takel (ltnW Hm)).
       exact: leq_trans Hm Hsz.
@@ -1025,11 +1013,7 @@ case: (ltngtP i m) => [Him | Hmi | Hieqm].
     by rewrite nth_drop addnC subnK.
   rewrite Hlhs Hdpj Hdi_pj
     Hrhs Hdpi Hdi_pi.
-  have Huniq_dm : uniq (drop m.+1 s).
-    have : uniq (take m.+1 s ++ drop m.+1 s)
-      by rewrite cat_take_drop.
-    by rewrite cat_uniq =>
-       /andP [_ /andP [_ ?]].
+  have Huniq_dm : uniq (drop m.+1 s) by exact: drop_uniq.
   have Hsz_dm : size (drop m.+1 s) <= n.
     rewrite size_drop.
     apply: leq_trans (leq_sub2r _ Hsz) _.
@@ -1078,11 +1062,7 @@ case: (ltngtP i m) => [Him | Hmi | Hieqm].
     by rewrite size_drop -Hws_m.
   have Hdm_ne : drop m s <> [::]
     by case: (drop m s) Hws_drop.
-  have Huniq_dm : uniq (drop m s).
-    have : uniq (take m s ++ drop m s)
-      by rewrite cat_take_drop.
-    by rewrite cat_uniq =>
-       /andP [_ /andP [_ ?]].
+  have Huniq_dm : uniq (drop m s) by exact: drop_uniq.
   have Hmm_drop : mm_pos (drop m s) = 0
     by exact: mm_pos_drop_mm.
   have Hpsi_m_eq : psi m s =
