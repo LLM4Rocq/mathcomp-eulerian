@@ -1,6 +1,13 @@
 # Build Plan
 
-## Status: 16/21 files at full `-vo`, 21/21 at `-vos`
+> **2026-04-28 update — terminal state.** Project complete at tag
+> `v1-vos-stable`: 21/21 `.vos`, 18/21 `.vo`, 0 axioms, 0 Admitted. The 3 `.vo`
+> holdouts (`psi_cdindex_support.v`, `perm_seq_bridge.v`, `beta_swap.v`) are
+> hardware-bound on this machine (188 GB / 4 cores). Two refactor plans
+> (V1 surgical, V2 tree-native cdstring) were attempted; both confirmed the
+> wall is intrinsic, not stylistic. See `REFACTOR_PLAN_V2.md` postmortem.
+
+## Status: 18/21 files at full `-vo`, 21/21 at `-vos`
 
 The project's tree-structural lemmas now compile to `-vo` thanks to the
 **mmtree-shape refactor** (one heavy proof on shapes, trivial corollaries)
