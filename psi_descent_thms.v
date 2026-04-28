@@ -12,11 +12,7 @@ Unset Printing Implicit Defensive.
 
 Lemma window_at_uniq i w :
   uniq w -> uniq (window_at i w).
-Proof.
-move=> Hu.
-apply: (subseq_uniq (take_subseq _ _)).
-by apply: (subseq_uniq (drop_subseq _ _)).
-Qed.
+Proof. by move=> Hu; rewrite /window_at take_uniq // drop_uniq. Qed.
 
 Lemma size_window_at i w :
   i < size w -> size (window_at i w) = window_size i w.
@@ -84,8 +80,7 @@ Proof.
 move=> Hu Hws Hmin.
 have Hiw := ws_lt_size Hws.
 set L := window_at i w.
-have HszL : size L = window_size i w
-  by exact: size_window_at.
+have HszL : size L = window_size i w := size_window_at Hiw.
 have HszL1 : 1 < size L by rewrite HszL.
 rewrite /is_descent_seq -leqNgt.
 have -> : nth 0 w i = nth 0 L 0.
@@ -93,8 +88,7 @@ have -> : nth 0 w i = nth 0 L 0.
 have -> : nth 0 w i.+1 = nth 0 L 1.
   by rewrite (nth_window_at Hiw Hws) addn1.
 rewrite (nth0 0 L) Hmin.
-have [Hle _] := elem_in_range (j:=1) HszL1.
-by [].
+by have [] := elem_in_range (j:=1) HszL1.
 Qed.
 #[global] Opaque head_min_not_descent.
 
@@ -109,9 +103,8 @@ Proof.
 move=> Hu Hws Hmax.
 have Hiw := ws_lt_size Hws.
 set L := window_at i w.
-have HuL : uniq L by exact: window_at_uniq.
-have HszL : size L = window_size i w
-  by exact: size_window_at.
+have HuL : uniq L := window_at_uniq i Hu.
+have HszL : size L = window_size i w := size_window_at Hiw.
 have HszL1 : 1 < size L by rewrite HszL.
 rewrite /is_descent_seq.
 have -> : nth 0 w i = nth 0 L 0.
@@ -120,22 +113,17 @@ have -> : nth 0 w i.+1 = nth 0 L 1.
   by rewrite (nth_window_at Hiw Hws) addn1.
 rewrite (nth0 0 L) Hmax.
 have Hu_s : uniq (sort leq L) by rewrite sort_uniq.
-have Hs : sorted leq (sort leq L)
-  := sort_sorted leq_total L.
-have Hsz_s : size (sort leq L) = size L
-  by rewrite size_sort.
-have H1_mem : nth 0 L 1 \in sort leq L
-  by rewrite mem_sort mem_nth.
+have Hs : sorted leq (sort leq L) := sort_sorted leq_total L.
+have Hsz_s : size (sort leq L) = size L by rewrite size_sort.
+have H1_mem : nth 0 L 1 \in sort leq L by rewrite mem_sort mem_nth.
 set r1 := index (nth 0 L 1) (sort leq L).
-have Hr1 : r1 < size (sort leq L)
-  by rewrite index_mem.
+have Hr1 : r1 < size (sort leq L) by rewrite index_mem.
 have Hne : nth 0 L 1 != nth 0 L 0.
   by rewrite nth_uniq // HszL; exact: ltnW.
 have Hr1_ne : r1 != (size L).-1.
   apply/negP => /eqP Heq.
   move: Hne; rewrite nth0 Hmax.
-  by rewrite -(nth_index 0 H1_mem) -/r1 Heq HszL
-     eqxx.
+  by rewrite -(nth_index 0 H1_mem) -/r1 Heq HszL eqxx.
 have Hr1_lt : r1 < (size L).-1.
   rewrite ltn_neqAle Hr1_ne /=.
   by rewrite -ltnS (prednK (ltnW HszL1)) -Hsz_s.
@@ -154,10 +142,8 @@ Lemma elem_rs_in_range (L : seq nat) (j : nat) :
     nth 0 (sort leq L) (size L).-1.
 Proof.
 move=> Hj.
-have Hsz_rs : size (rank_shift_seq L) = size L
-  by exact: size_rank_shift_seq2.
-have Hj_rs : j < size (rank_shift_seq L)
-  by rewrite Hsz_rs.
+have Hsz_rs : size (rank_shift_seq L) = size L := size_rank_shift_seq2 L.
+have Hj_rs : j < size (rank_shift_seq L) by rewrite Hsz_rs.
 have Hmem : nth 0 (rank_shift_seq L) j \in L.
   by rewrite -(perm_mem (rank_shift_perm_eq L))
      mem_nth.
@@ -207,10 +193,8 @@ move=> Hu Hsz Hmin.
 have Hnew := rank_shift_head_min_to_max Hu Hsz Hmin.
 rewrite [nth 0 (rank_shift_seq L) 0](nth0 0) Hnew.
 have Hu_rs := uniq_rank_shift_seq Hu.
-have Hsz_rs : size (rank_shift_seq L) = size L
-  by exact: size_rank_shift_seq2.
-have H1_lt : 1 < size (rank_shift_seq L)
-  by rewrite Hsz_rs.
+have Hsz_rs : size (rank_shift_seq L) = size L := size_rank_shift_seq2 L.
+have H1_lt : 1 < size (rank_shift_seq L) by rewrite Hsz_rs.
 have Hne : nth 0 (rank_shift_seq L) 1 !=
            nth 0 (sort leq L) (size L).-1.
   apply/negP => /eqP Heq.
@@ -239,10 +223,8 @@ move=> Hu Hsz Hmax.
 have Hnew := rank_shift_head_max_to_min Hu Hsz Hmax.
 rewrite [nth 0 (rank_shift_seq L) 0](nth0 0) Hnew.
 have Hu_rs := uniq_rank_shift_seq Hu.
-have Hsz_rs : size (rank_shift_seq L) = size L
-  by exact: size_rank_shift_seq2.
-have H1_lt : 1 < size (rank_shift_seq L)
-  by rewrite Hsz_rs.
+have Hsz_rs : size (rank_shift_seq L) = size L := size_rank_shift_seq2 L.
+have H1_lt : 1 < size (rank_shift_seq L) by rewrite Hsz_rs.
 have Hne : nth 0 (rank_shift_seq L) 1 !=
            nth 0 (sort leq L) 0.
   apply/negP => /eqP Heq.
@@ -273,8 +255,8 @@ move=> Hj Hj' [Hlt | Hgt].
 - have [Hmin_j _] := elem_in_range Hj.
   have [Hmin_j' _] := elem_rs_in_range Hj'.
   apply/idP/idP => _.
-  + by exact: leq_trans Hlt Hmin_j'.
-  + by exact: leq_trans Hlt Hmin_j.
+  + exact: leq_trans Hlt Hmin_j'.
+  + exact: leq_trans Hlt Hmin_j.
 - have [_ Hmax_j] := elem_in_range Hj.
   have [_ Hmax_j'] := elem_rs_in_range Hj'.
   have F1 : ~~ (nth 0 L j > v)
@@ -303,8 +285,8 @@ move=> Hj Hj' [Hlt | Hgt].
 - have [_ Hmax_j] := elem_in_range Hj.
   have [_ Hmax_j'] := elem_rs_in_range Hj'.
   apply/idP/idP => _.
-  + by exact: leq_ltn_trans Hmax_j' Hgt.
-  + by exact: leq_ltn_trans Hmax_j Hgt.
+  + exact: leq_ltn_trans Hmax_j' Hgt.
+  + exact: leq_ltn_trans Hmax_j Hgt.
 Qed.
 #[global] Opaque cmp_out_of_range cmp_out_of_range_left.
 

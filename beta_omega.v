@@ -199,16 +199,14 @@ Lemma left_ok_self s i : is_descent s i -> left_ok s i i.
 Proof.
 move=> Hi; rewrite /left_ok leqnn /=.
 apply/forallP => k; apply/implyP; case/andP => H1 H2.
-have Eki : k = i by apply/val_inj; apply/eqP; rewrite eqn_leq H2 H1.
-by rewrite Eki.
+by have -> : k = i by apply/val_inj; apply/eqP; rewrite eqn_leq H2 H1.
 Qed.
 
 Lemma right_ok_self s i : is_descent s i -> right_ok s i i.
 Proof.
 move=> Hi; rewrite /right_ok leqnn /=.
 apply/forallP => k; apply/implyP; case/andP => H1 H2.
-have Eki : k = i by apply/val_inj; apply/eqP; rewrite eqn_leq H2 H1.
-by rewrite Eki.
+by have -> : k = i by apply/val_inj; apply/eqP; rewrite eqn_leq H2 H1.
 Qed.
 
 Definition block_left s i : 'I_n :=
@@ -248,17 +246,11 @@ Qed.
 
 Lemma block_left_le s i :
   is_descent s i -> val (block_left s i) <= val i.
-Proof.
-move=> Hi; have := block_left_left_ok Hi.
-by rewrite /left_ok; case/andP.
-Qed.
+Proof. by move=> /block_left_left_ok /andP[]. Qed.
 
 Lemma block_right_ge s i :
   is_descent s i -> val i <= val (block_right s i).
-Proof.
-move=> Hi; have := block_right_right_ok Hi.
-by rewrite /right_ok; case/andP.
-Qed.
+Proof. by move=> /block_right_right_ok /andP[]. Qed.
 
 Lemma block_left_descent s i (k : 'I_n) :
   is_descent s i ->
@@ -383,29 +375,17 @@ move=> d; elim: d => [|d IH] p q Hq Hp Hqr.
     by apply/val_inj; rewrite /= /bump /= add1n Hq.
   by rewrite Ep Eq.
 (* d.+1 case: insert intermediate position p+1. *)
-have Hp1_lt : (val p).+1 < n.+1.
-  rewrite ltnS.
+have Hp_le_br : val p <= val (block_right s i).
   have Hle : val p + d.+2 <= (val (block_right s i)).+1 by rewrite -Hq.
-  have Hle2 : (val p).+1 <= (val (block_right s i)).+1.
-    by apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
-  rewrite ltnS in Hle2.
-  by apply: (leq_ltn_trans Hle2); apply: ltn_ord.
+  by rewrite -ltnS; apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
+have Hp_lt_n : val p < n by apply: (leq_ltn_trans Hp_le_br); apply: ltn_ord.
+have Hp1_lt : (val p).+1 < n.+1 by rewrite ltnS.
 pose p' := Ordinal Hp1_lt.
 have Hp'_val : val p' = (val p).+1 by [].
 (* step1: s p > s p' via block_chain_step (single descent). *)
-have Hp_lt_n : val p < n.
-  have Hle : val p + d.+2 <= (val (block_right s i)).+1 by rewrite -Hq.
-  have Hle2 : (val p).+1 <= (val (block_right s i)).+1.
-    by apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
-  rewrite ltnS in Hle2.
-  exact: (leq_ltn_trans Hle2 (ltn_ord _)).
 pose k := Ordinal Hp_lt_n.
-have Hk_range : val (block_left s i) <= val k <= val (block_right s i).
-  rewrite /= Hp /=.
-  have Hle : val p + d.+2 <= (val (block_right s i)).+1 by rewrite -Hq.
-  have Hle2 : (val p).+1 <= (val (block_right s i)).+1.
-    by apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
-  by rewrite ltnS in Hle2.
+have Hk_range : val (block_left s i) <= val k <= val (block_right s i)
+  by rewrite /= Hp /= Hp_le_br.
 have Hstep := block_chain_step Hi Hk_range.
 have Ep : p = widen_ord (leqnSn n) k by apply/val_inj.
 have Ep' : p' = lift ord0 k by apply/val_inj; rewrite /= /bump /= add1n.

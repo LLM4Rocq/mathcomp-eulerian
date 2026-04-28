@@ -64,8 +64,7 @@ have Htake_sz : size (take j s) <= f1.
 have Hdrop_sz : size (drop j.+1 s) <= f1.
   rewrite size_drop /= subSS.
   by apply: (leq_trans (leq_subr _ _)); rewrite -ltnS.
-have Hle1 : f1 <= f2 by [].
-by rewrite (IH f2 _ Htake_sz Hle1) (IH f2 _ Hdrop_sz Hle1).
+by rewrite (IH f2 _ Htake_sz Hle) (IH f2 _ Hdrop_sz Hle).
 Qed.
 
 Lemma mmtree_shape_nil : mmtree_shape [::] = [::].
@@ -156,23 +155,15 @@ congr (_ :: (_ ++ _)).
   + rewrite (size_takel (ltnW Hm1)).
     exact: leq_trans Hm1 Hsz1.
   + by rewrite (size_takel (ltnW Hm1)) (size_takel (ltnW Hm2)).
-  + by move: Hu1; rewrite -{1}(cat_take_drop m (a1 :: t1))
-       cat_uniq => /andP [].
-  + by move: Hu2; rewrite -{1}(cat_take_drop m (a2 :: t2))
-       cat_uniq => /andP [].
+  + exact: take_uniq.
+  + exact: take_uniq.
   + exact: order_iso_take Hm1 Hszeq' Hord.
 - apply: (IH _ _ _ _ _ _).
-  + rewrite size_drop /=.
-    have := @leq_sub2r m.+1 _ _ Hsz1.
-    rewrite subSS; move=> H.
-    by apply: (leq_trans _ (leq_subr m n)); rewrite -subSS.
+  + rewrite size_drop /= subSS.
+    by apply: leq_trans (leq_subr _ _) _; rewrite -ltnS.
   + by rewrite !size_drop Hszeq'.
-  + by move: Hu1;
-       rewrite -{1}(cat_take_drop m.+1 (a1 :: t1))
-       cat_uniq => /andP [_ /andP [_ ?]].
-  + by move: Hu2;
-       rewrite -{1}(cat_take_drop m.+1 (a2 :: t2))
-       cat_uniq => /andP [_ /andP [_ ?]].
+  + exact: drop_uniq.
+  + exact: drop_uniq.
   + exact: order_iso_drop Hm1 Hszeq' Hord.
 Qed.
 
@@ -381,8 +372,7 @@ congr (_ :: (_ ++ _)).
     apply: IH.
     * rewrite (size_takel (ltnW Hm)).
       exact: leq_trans Hm Hsz.
-    * have : uniq (take m s ++ drop m s) by rewrite cat_take_drop.
-      by rewrite cat_uniq => /andP [? _].
+    * exact: take_uniq.
   + (* j > m: psi doesn't touch take m s *)
     by rewrite -Hpsi_eq (@take_psi m j s (ltnW Hmj)).
   + (* j = m: psi at root, take m s unchanged *)
@@ -401,8 +391,7 @@ congr (_ :: (_ ++ _)).
       * rewrite size_drop.
         apply: (leq_trans (leq_sub2r _ Hsz)).
         exact: leq_subr.
-      * have : uniq (take m.+1 s ++ drop m.+1 s) by rewrite cat_take_drop.
-        by rewrite cat_uniq => /andP [_ /andP [_ ?]].
+      * exact: drop_uniq.
     by rewrite -Hpsi_eq (drop_mm_psi Hs_ne Huniq Hws_gt1 Hmj).
   + (* j = m: heavy case via mmtree_shape_order_iso *)
     subst j.
@@ -412,9 +401,7 @@ congr (_ :: (_ ++ _)).
       by rewrite size_drop -Hws_m.
     have Hdm_ne : drop m s <> [::]
       by case: (drop m s) Hws_drop.
-    have Huniq_dm : uniq (drop m s).
-      have : uniq (take m s ++ drop m s) by rewrite cat_take_drop.
-      by rewrite cat_uniq => /andP [_ /andP [_ ?]].
+    have Huniq_dm : uniq (drop m s) by exact: drop_uniq.
     have Hmm_drop : mm_pos (drop m s) = 0 by exact: mm_pos_drop_mm.
     have Hpsi_m_eq : psi m s = take m s ++ rank_shift_seq (drop m s).
       rewrite /psi.
@@ -443,14 +430,13 @@ congr (_ :: (_ ++ _)).
       move=> p q Hp Hq.
       have Hws_gt1_dm : 1 < window_size 0 (dm_h :: dm_t)
         by rewrite (window_size_cons 0 dm_h dm_t) Hmm_drop ltnn eqxx.
+      have Hwat : window_at 0 (dm_h :: dm_t) = dm_h :: dm_t
+        by rewrite (window_at_cons 0 dm_h dm_t) Hmm_drop ltnn eqxx drop0.
       have Hhead_ext :
         (head 0 (dm_h :: dm_t) == nth 0 (sort leq (dm_h :: dm_t)) 0) ||
         (head 0 (dm_h :: dm_t) ==
           nth 0 (sort leq (dm_h :: dm_t)) (size (dm_h :: dm_t)).-1).
-        have H := window_head_extremum Huniq_dm Hws_gt1_dm.
-        have Hwat : window_at 0 (dm_h :: dm_t) = dm_h :: dm_t
-          by rewrite (window_at_cons 0 dm_h dm_t) Hmm_drop ltnn eqxx drop0.
-        move: H; rewrite Hwat => H; exact: H.
+        by have := window_head_extremum Huniq_dm Hws_gt1_dm; rewrite Hwat.
       have Hp1 : p.+1 < size (dm_h :: dm_t)
         by move: Hp; rewrite size_behead size_rank_shift_seq2 ltn_predRL.
       have Hq1 : q.+1 < size (dm_h :: dm_t)
