@@ -1,3 +1,5 @@
+(* Archived historical source; not part of the maintained Rocq build.        *)
+
 (* psi_base.v — Extended psi library: rank-shift helpers + M4.3/M5 content  *)
 (*                                                                           *)
 (* This file imports psi_core.v (Stanley operators, rank-shift, window lemmas *)
@@ -2719,4 +2721,3 @@ Example descent_psi_LR_swap1_ex :
   let w' := psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   [seq k <- iota 0 7 | is_descent_seq (psi 5 w') k] = [:: 0; 3; 5].
 Proof. by []. Qed.
-
