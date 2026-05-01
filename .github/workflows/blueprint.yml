@@ -103,6 +103,9 @@ jobs:
           name: coqdoc-html
           path: site/doc/
 
+      - name: Disable Jekyll on the deployed site
+        run: touch site/.nojekyll
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
