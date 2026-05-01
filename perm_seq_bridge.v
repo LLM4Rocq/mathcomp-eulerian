@@ -72,11 +72,8 @@ rewrite /is_descent /is_descent_seq.
 have Hi : val i < n.+1 := leq_trans (ltn_ord i) (leqnSn n).
 have Hi1 : (val i).+1 < n.+1.
   by rewrite ltnS; exact: ltn_ord.
-rewrite (nth_perm_to_seq s Hi).
-rewrite (nth_perm_to_seq s Hi1).
-congr (_ > _); congr (val (s _)); apply: val_inj => /=.
-  by [].
-by [].
+rewrite (nth_perm_to_seq s Hi) (nth_perm_to_seq s Hi1).
+by congr (_ > _); congr (val (s _)); apply: val_inj.
 Qed.
 
 (* ========================================================================= *)
@@ -150,9 +147,7 @@ Lemma apply_psis_rev ss w :
 Proof.
 move=> Hu.
 elim: ss w Hu => [|i ss IH] w Hu //=.
-rewrite rev_cons -cats1 apply_psis_cat /=.
-rewrite IH //.
-by rewrite psi_apply_psis_comm.
+by rewrite rev_cons -cats1 apply_psis_cat /= IH // psi_apply_psis_comm.
 Qed.
 
 Lemma apply_psis_revK ss w :
@@ -161,8 +156,7 @@ Lemma apply_psis_revK ss w :
 Proof.
 move=> Hu.
 elim: ss w Hu => [|i ss IH] w Hu //=.
-rewrite -/(apply_psis ss (psi i w)).
-rewrite rev_cons -cats1 apply_psis_cat /=.
+rewrite -/(apply_psis ss (psi i w)) rev_cons -cats1 apply_psis_cat /=.
 rewrite IH; last exact: uniq_psi.
 exact: psi_involutive.
 Qed.
