@@ -1,0 +1,167 @@
+\chapter{Cycles, inversions, and the major index}
+\label{ch:inversions}
+
+This chapter formalizes Stanley EC1 \S1.3 (cycles and inversions), the
+section that introduces the two foundational permutation statistics
+beyond descents: the \emph{cycle count} $c(w)$ and the two Mahonian
+statistics \emph{inv} and \emph{maj}.  The headline result of the
+section --- the classical \emph{inv-maj equidistribution} of MacMahon
+--- is part of an in-progress extension; the present chapter covers the
+definitions and the easy identities, with explicit pointers to what
+remains.
+
+\medskip
+This chapter uses the same indexing convention as
+Chapter~\ref{ch:descents}: Stanley's $w \in \mathfrak{S}_n$ becomes our
+$\sigma \in \Snp{n+1}$, and Stanley's descent positions $1, \dots, n-1$
+become our $\{0, \dots, n-1\}$ via the index shift.
+
+% ============================================================
+\section{Cycle representation of permutations}
+% ============================================================
+
+\begin{definition}[Cycle count]
+  \label{def:cycle_count}
+  \rocq{mathcomp_eulerian.cycles.cycle_count}
+  \rocqok
+  For a permutation $\sigma \in \Snp{n}$, the \emph{cycle count}
+  $c(\sigma)$ is the number of cycles in the disjoint-cycle
+  decomposition of $\sigma$.  In MathComp this is the cardinality of
+  $\mathrm{porbits}(\sigma)$, the set of orbits of $\sigma$ acting on
+  $\{0, \dots, n-1\}$ by iteration.
+\end{definition}
+
+\begin{lemma}[$c(\sigma) \leq n$]
+  \label{lem:cycle_count_le}
+  \uses{def:cycle_count}
+  \rocq{mathcomp_eulerian.cycles.cycle_count_le}
+  \rocqok
+  Every cycle is non-empty, so the cycle count is bounded by $n$.
+\end{lemma}
+
+\begin{lemma}[Identity has $n$ cycles]
+  \label{lem:cycle_count_id}
+  \uses{def:cycle_count}
+  \rocq{mathcomp_eulerian.cycles.cycle_count_id}
+  \rocqok
+  Each fixed point is a 1-cycle, so $c(\mathrm{id}) = n$.
+\end{lemma}
+
+% ============================================================
+\section{Stirling numbers of the first kind}
+% ============================================================
+
+\begin{definition}[Signless Stirling cycle numbers]
+  \label{def:stirling_c}
+  \uses{def:cycle_count}
+  \rocq{mathcomp_eulerian.cycles.stirling_c}
+  \rocqok
+  $c(n, k) = \#\{\sigma \in \Snp{n} : c(\sigma) = k\}$ counts
+  permutations of $\{0, \dots, n-1\}$ with exactly $k$ cycles in their
+  disjoint-cycle decomposition.  Stanley writes $c(n, k)$ throughout
+  \S1.3.2.
+\end{definition}
+
+\begin{lemma}[Row sum]
+  \label{lem:stirling_c_row_sum_fact}
+  \uses{def:stirling_c}
+  \rocq{mathcomp_eulerian.cycles.stirling_c_row_sum_fact}
+  \rocqok
+  $\sum_{k=0}^{n} c(n, k) = n!$.  Each permutation is counted by
+  exactly one $k$, so the row sum recovers the total.
+\end{lemma}
+
+\begin{remark}[Stirling recurrence — in progress]
+  \label{rem:stirling_c_rec}
+  The defining recurrence
+  \[
+    c(n+1, k) \;=\; n \cdot c(n, k) + c(n, k-1),
+  \]
+  expressing whether $n+1$ becomes a fixed point of a $(k-1)$-cycle
+  permutation or is inserted into one of $n$ positions of a $k$-cycle
+  permutation, is not yet formalized.  Its proof requires an
+  ``insert max into a cycle'' bijection analogous to the
+  \texttt{insert\_max\_perm} construction used for the Eulerian
+  recurrence.
+\end{remark}
+
+% ============================================================
+\section{Inversions}
+% ============================================================
+
+\begin{definition}[Inversion at a pair]
+  \label{def:is_inv}
+  \rocq{mathcomp_eulerian.inversions.is_inv}
+  \rocqok
+  Position pair $(i, j)$ is an \emph{inversion} of $\sigma$ when
+  $i < j$ but $\sigma(j) < \sigma(i)$ — i.e., the pair appears in the
+  ``wrong'' order.
+\end{definition}
+
+\begin{definition}[Inversion set and count]
+  \label{def:inv}
+  \uses{def:is_inv}
+  \rocq{mathcomp_eulerian.inversions.inv_set}
+  \rocq{mathcomp_eulerian.inversions.inv}
+  \rocqok
+  $\mathrm{inv\_set}(\sigma)$ is the set of inversion pairs;
+  $\mathrm{inv}(\sigma) = |\mathrm{inv\_set}(\sigma)|$ is their count.
+  Stanley writes $\mathrm{inv}(w)$.
+\end{definition}
+
+\begin{lemma}[Identity has no inversions]
+  \label{lem:inv_id}
+  \uses{def:inv}
+  \rocq{mathcomp_eulerian.inversions.inv_id}
+  \rocqok
+  $\mathrm{inv}(\mathrm{id}) = 0$.
+\end{lemma}
+
+% ============================================================
+\section{The major index}
+% ============================================================
+
+\begin{definition}[Major index]
+  \label{def:maj}
+  \uses{def:descent_set}
+  \rocq{mathcomp_eulerian.inversions.maj}
+  \rocqok
+  The \emph{major index} is the sum of (1-indexed) descent positions:
+  \[
+    \mathrm{maj}(\sigma) \;=\; \sum_{i \in \DescSet{\sigma}} (i + 1)
+    \;=\; \sum_{i \in D(w)} i \quad (\text{Stanley's notation, p.~22}).
+  \]
+\end{definition}
+
+\begin{lemma}[Identity has zero major index]
+  \label{lem:maj_id}
+  \uses{def:maj}
+  \rocq{mathcomp_eulerian.inversions.maj_id}
+  \rocqok
+  $\mathrm{maj}(\mathrm{id}) = 0$.
+\end{lemma}
+
+% ============================================================
+\section{The classical equidistribution — work in progress}
+% ============================================================
+
+\begin{remark}[Inv-maj equidistribution — not yet formalized]
+  \label{rem:inv_maj_equidistr}
+  The headline of Stanley \S1.3.3, MacMahon's equidistribution result,
+  is:
+  \[
+    \forall k,\quad
+    \#\{\sigma \in \Snp{n+1} : \mathrm{inv}(\sigma) = k\}
+    \;=\;
+    \#\{\sigma \in \Snp{n+1} : \mathrm{maj}(\sigma) = k\}.
+  \]
+  Foata's first fundamental bijection $\varphi : \Snp{n+1} \to
+  \Snp{n+1}$ satisfies $\mathrm{inv}(w) = \mathrm{maj}(\varphi(w))$
+  and witnesses the equidistribution constructively.  Both sides are
+  generated by the q-factorial
+  $[n+1]_q! = \prod_{k=1}^{n+1} (1 + q + \dots + q^{k-1})$.
+
+  This result will land in a new file \texttt{foata.v} once Phase 3 of
+  the §1.3 extension plan completes.  See
+  \texttt{docs/plans/INVERSIONS\_PLAN.md} for the planned scope.
+\end{remark}
