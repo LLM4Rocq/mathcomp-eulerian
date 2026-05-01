@@ -7,14 +7,14 @@
 (*   - a_j becomes the root, with M(a_1, …, a_{j-1}) as its left subtree and  *)
 (*     M(a_{j+1}, …, a_n) as its right subtree.                                *)
 (*                                                                             *)
-(* This file delivers Milestone 1 as specified in AXIOMS_TODO.md §4:           *)
+(* This file delivers Milestone 1 as specified in docs/internal/AXIOMS_TODO.md §4:           *)
 (*   - a `mmtree` inductive for labelled binary trees;                         *)
 (*   - `mmtree_of_seq` implementing the construction;                          *)
 (*   - `mmtree_to_seq` : in-order traversal;                                   *)
 (*   - `mmtree_of_seqK` : in-order traversal round-trips the construction      *)
 (*     (ordinary list equality, NO artificial leaf-marker interleaving).       *)
 (*                                                                             *)
-(* Design choice (per AXIOMS_TODO.md §4 row 1, column "Notes"):                *)
+(* Design choice (per docs/internal/AXIOMS_TODO.md §4 row 1, column "Notes"):                *)
 (*   For Milestone 1 we only need the *round-trip*, so we pick ONE consistent  *)
 (*   rule at every recursive step: split at the index of the *minimum* element *)
 (*   of the current sub-sequence.  The full alternating min/max rule needed    *)
@@ -130,7 +130,7 @@ move=> s; rewrite /mmtree_of_seq; apply: mmtree_of_seq_fuel_correct.
 exact: leqnn.
 Qed.
 
-(* --- Non-triviality example (AXIOMS_TODO.md §5, item 1 & §4 constraint) ---- *)
+(* --- Non-triviality example (docs/internal/AXIOMS_TODO.md §5, item 1 & §4 constraint) ---- *)
 (* Concrete sequence from the brief.                                           *)
 
 Definition ex_seq := [:: 3; 1; 4; 1; 5; 9; 2; 6].

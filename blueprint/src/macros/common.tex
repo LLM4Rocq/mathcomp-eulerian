@@ -1,0 +1,52 @@
+% Macros shared by web and PDF versions.
+
+% --- Theorem-like environments (used by the dependency graph). ---
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{fact}[theorem]{Fact}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% --- Number-system shortcuts. ---
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\ZZ}{\mathbb{Z}}
+
+% --- Permutation / descent notation (Stanley EC1 \S1.4). ---
+\newcommand{\Sn}{\mathfrak{S}_n}
+\newcommand{\Snp}[1]{\mathfrak{S}_{#1}}
+\newcommand{\DescSet}[1]{D(#1)}      % descent set D(w)
+\newcommand{\des}{\operatorname{des}}
+\newcommand{\asc}{\operatorname{asc}}
+\newcommand{\Eul}[2]{A_{#1,#2}}      % Eulerian number A(n,k)
+\newcommand{\EulPoly}[1]{A_{#1}}     % Eulerian polynomial A_n(x)
+\newcommand{\beti}{\beta}            % refined descent count beta_n(S)
+\newcommand{\Eulnum}{E}              % Euler number E_n (max of beta)
+
+% --- cd-index notation (Stanley EC1 \S1.6.3). ---
+\newcommand{\Mtree}[1]{M(#1)}
+\newcommand{\PsiOp}[1]{\psi_{#1}}
+\newcommand{\Mclass}[1]{[#1]}        % M-equivalence class [w]
+\newcommand{\PhiW}[1]{\Phi_{#1}}     % cd-monomial Phi_w
+\newcommand{\PhiprimeW}[1]{\Phi'_{#1}}
+\newcommand{\charmono}[1]{u_{#1}}    % characteristic monomial u_S
+\newcommand{\omegaSet}[1]{\omega(#1)}
+\newcommand{\toggleAt}[2]{#1\,\triangle\,\{#2\}}
+\newcommand{\altSet}{\mathrm{Alt}}   % alternating descent set
+
+% --- Window / tree notation. ---
+\newcommand{\windowSize}{\operatorname{win}}
+\newcommand{\hasLC}{\operatorname{hlc}}
+\newcommand{\internal}{\operatorname{int}}
+
+% --- Code-formatted Rocq names. ---
+\newcommand{\code}[1]{\texttt{#1}}
+
+% --- cleveref-style \cref shim (full cleveref needs LaTeX engine). ---
+\providecommand{\cref}[1]{\ref{#1}}
+\providecommand{\Cref}[1]{\ref{#1}}

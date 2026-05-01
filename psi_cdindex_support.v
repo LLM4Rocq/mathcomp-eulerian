@@ -1,13 +1,14 @@
 (* psi_cdindex_support.v — phi_w_support_general and structural helpers      *)
 (*                                                                           *)
 (* Split from psi_cdindex.v to reduce -vo compilation memory.                *)
-(* Contains: cde_width/D_offsets infrastructure, expand_cde membership       *)
-(* characterization, S_w_seq_bound, cde_total_width_phi_w,                   *)
-(* D_offsets_phi_w_eq_S_w_seq, and phi_w_support_general.                    *)
+(* The cd-width/D-offset and expand_cde membership infrastructure now lives  *)
+(* in psi_cdindex_support_defs.v. This file keeps the tree/phi_w support     *)
+(* lemmas, phi_w_support_general, and the Fact #3 wrapper layer.             *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
 Require Import psi_cdindex_core psi_cdindex_witness.
+Require Export psi_cdindex_support_defs.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -15,8 +16,7 @@ Unset Printing Implicit Defensive.
 
 (* Block /=-driven reduction through the fuel parameters of window_size and *)
 (* has_left_child.  These Fixpoints recurse over fuel = size s, and any /= *)
-(* that fires inside a deep proof unfolds them through every layer.  Heavy *)
-(* proofs (D_vertex_descent_transition, lines 1064+) burn 35+GB on this.   *)
+(* that fires inside a deep proof unfolds them through every layer.          *)
 Arguments window_size_fuel : simpl never.
 Arguments has_left_child_fuel : simpl never.
 
@@ -24,253 +24,6 @@ Arguments has_left_child_fuel : simpl never.
 (* ===== M6.8: phi_w_support_general ======================================= *)
 (* X ∈ expand_cde(Φ_w) ⟺ S_w ⊆ ω(desc(X))                               *)
 (* ========================================================================= *)
-
-(* -- D-offsets: cumulative bit-offset of each letter in a cd-word --------- *)
-(* C contributes 1 bit, D contributes 2 bits, E contributes 0 bits.         *)
-
-Definition cde_width (l : cde) : nat :=
-  match l with C_letter => 1 | D_letter => 2 | E_letter => 0 end.
-
-Definition cde_total_width (m : seq cde) : nat :=
-  sumn [seq cde_width l | l <- m].
-
-Definition cde_offset (m : seq cde) (i : nat) : nat :=
-  sumn [seq cde_width l | l <- take i m].
-
-Definition D_offsets (m : seq cde) : seq nat :=
-  [seq cde_offset m i | i <- iota 0 (size m)
-                       & is_D_letter (nth C_letter m i)].
-
-Definition has_transition (X : seq bool) (k : nat) : bool :=
-  nth false X k != nth false X k.+1.
-
-Definition all_D_transitions (m : seq cde) (X : seq bool) : bool :=
-  all (fun k => has_transition X k) (D_offsets m).
-
-(* -- Helper: size of elements in expand_cde ------------------------------- *)
-Lemma size_in_expand_cde m X :
-  X \in expand_cde m -> size X = cde_total_width m.
-Proof.
-elim: m X => [|[||] m IH] X /=.
-- by rewrite mem_seq1 => /eqP ->.
-- rewrite mem_cat => /orP [Hm|Hm];
-    case/mapP: Hm => t Ht -> /=; by rewrite (IH t Ht).
-- rewrite mem_cat => /orP [Hm|Hm];
-    case/mapP: Hm => t Ht -> /=; by rewrite (IH t Ht).
-- exact: IH.
-Qed.
-
-(* -- Core: expand_cde membership as D-transition condition ---------------- *)
-(* Forward: membership implies transitions at all D-offsets.                *)
-
-Lemma has_transition_cons b s k :
-  has_transition (b :: s) k.+1 = has_transition s k.
-Proof. by rewrite /has_transition. Qed.
-
-Lemma has_transition_cons2 b1 b2 s k :
-  has_transition (b1 :: b2 :: s) k.+2 = has_transition s k.
-Proof. by rewrite /has_transition. Qed.
-
-Lemma cde_offset_C_succ m j :
-  cde_offset (C_letter :: m) j.+1 = (cde_offset m j).+1.
-Proof. by rewrite /cde_offset /= /cde_width. Qed.
-
-Lemma cde_offset_D_succ m j :
-  cde_offset (D_letter :: m) j.+1 = (cde_offset m j).+2.
-Proof. by rewrite /cde_offset /= /cde_width. Qed.
-
-Lemma expand_cde_mem_transitions m X :
-  X \in expand_cde m -> all_D_transitions m X.
-Proof.
-elim: m X => [|[||] m IH] X //=.
-- (* C_letter: after /= the filter starts at iota 1 (size m) *)
-  rewrite mem_cat => /orP [Hm|Hm];
-    case/mapP: Hm => t Ht ->;
-    rewrite /all_D_transitions /D_offsets /=;
-    apply/allP => k;
-    case/mapP => j; rewrite mem_filter mem_iota =>
-      /andP [Hd /andP [Hj1 Hjsz]] ->;
-    (case: j Hj1 Hd Hjsz => [//|j0] _ Hd Hjsz;
-     rewrite cde_offset_C_succ has_transition_cons;
-     have Hall := allP (IH t Ht) (cde_offset m j0);
-     rewrite /all_D_transitions /D_offsets in Hall;
-     apply: Hall;
-     apply/mapP; exists j0; last done;
-     by rewrite mem_filter mem_iota; apply/andP; split; first done;
-        apply/andP; split; first by []).
-- (* D_letter: after /= the 0 case is solved, rest uses iota 1 (size m) *)
-  rewrite mem_cat => /orP [Hm|Hm];
-    case/mapP: Hm => t Ht ->;
-    rewrite /all_D_transitions /D_offsets /=;
-    apply/allP => k;
-    case/mapP => j; rewrite mem_filter mem_iota =>
-      /andP [Hd /andP [Hj1 Hjsz]] ->;
-    (case: j Hj1 Hd Hjsz => [//|j0] _ Hd Hjsz;
-     rewrite cde_offset_D_succ has_transition_cons2;
-     have Hall := allP (IH t Ht) (cde_offset m j0);
-     rewrite /all_D_transitions /D_offsets in Hall;
-     apply: Hall;
-     apply/mapP; exists j0; last done;
-     by rewrite mem_filter mem_iota; apply/andP; split;
-        first (by move: Hd => /=); apply/andP; split; first by []).
-- (* E_letter: cde_width E = 0, offsets shift by 0 *)
-  rewrite /all_D_transitions /D_offsets /=.
-  move=> HX; apply/allP => k.
-  case/mapP => j; rewrite mem_filter mem_iota =>
-    /andP [Hd /andP [Hj1 Hjsz]] ->.
-  case: j Hj1 Hd Hjsz => [//|j0] _ Hd Hjsz.
-  rewrite /cde_offset /= /cde_width add0n.
-  have Hall := allP (IH X HX) (cde_offset m j0).
-  rewrite /all_D_transitions /D_offsets in Hall.
-  apply: Hall; apply/mapP; exists j0; last done.
-  by rewrite mem_filter mem_iota; apply/andP; split;
-     first (by move: Hd => /=); apply/andP; split; first by [].
-Qed.
-
-(* Backward: correct size + transitions at D-offsets implies membership.    *)
-
-Lemma transitions_expand_cde_mem m X :
-  size X = cde_total_width m ->
-  all_D_transitions m X ->
-  X \in expand_cde m.
-Proof.
-elim: m X => [|[||] m IH] X /=.
-- by move=> /size0nil ->.
-- (* C_letter *)
-  case: X => [// | b X] /= [HszX] Hall.
-  rewrite mem_cat; apply/orP.
-  have HallT : all_D_transitions m X.
-    rewrite /all_D_transitions /D_offsets.
-    apply/allP => k /mapP [j Hj ->].
-    move: Hall; rewrite /all_D_transitions /D_offsets /=.
-    move/allP => Hall2.
-    have Hin : cde_offset (C_letter :: m) j.+1 \in
-      [seq cde_offset (C_letter :: m) i
-      | i <- iota 0 (size m).+1
-      & is_D_letter (nth C_letter (C_letter :: m) i)].
-      apply/mapP; exists j.+1 => //.
-      move: Hj; rewrite !mem_filter => /andP [Hd Hj2].
-      rewrite /= Hd /=.
-      rewrite inE mem_iota; apply/orP; right.
-      move: Hj2; rewrite mem_iota /= !add0n add1n => Hj2.
-      by rewrite ltnS Hj2.
-    move: (Hall2 _ Hin).
-    by rewrite /has_transition /cde_offset /=.
-  clear Hall; case: b; [right|left]; apply/mapP; exists X => //; exact: IH.
-- (* D_letter *)
-  case: X => [// | b1 [// | b2 X]] /= [HszX] Hall.
-  rewrite mem_cat; apply/orP.
-  have Htrans : b1 != b2.
-    move: Hall; rewrite /all_D_transitions /D_offsets /=.
-    case/andP => Htrans0 _; move: Htrans0.
-    by rewrite /has_transition /=.
-  have HallT : all_D_transitions m X.
-    rewrite /all_D_transitions /D_offsets.
-    apply/allP => k /mapP [j Hj ->].
-    move: Hall; rewrite /all_D_transitions /D_offsets /=.
-    case/andP => _ /allP Hall2.
-    have Hin : cde_offset (D_letter :: m) j.+1 \in
-      [seq cde_offset (D_letter :: m) i
-            | i <- iota 1 (size m)
-            & is_D_letter (nth C_letter (D_letter :: m) i)].
-      apply/mapP; exists j.+1 => //.
-      move: Hj; rewrite !mem_filter => /andP [Hd Hj2].
-      rewrite /= Hd /=.
-      rewrite mem_iota; move: Hj2.
-      rewrite mem_iota /= !add0n add1n => Hj2.
-      by rewrite ltnS.
-    move: (Hall2 _ Hin).
-    by rewrite /has_transition /cde_offset /=.
-  clear Hall; case: b1 Htrans => /=; case: b2 => //= _.
-  + right; apply/mapP; exists X => //; exact: IH.
-  + left; apply/mapP; exists X => //; exact: IH.
-- (* E_letter *)
-  move=> HszX Hall; apply: IH => //.
-  move: Hall; rewrite /all_D_transitions /D_offsets /=.
-  move=> Hall2.
-  rewrite /all_D_transitions /D_offsets.
-  apply/allP => k /mapP [j Hj ->].
-  move/allP: Hall2 => Hall2.
-  have Hin : cde_offset (E_letter :: m) j.+1 \in
-    [seq cde_offset (E_letter :: m) i
-    | i <- iota 1 (size m)
-    & is_D_letter (nth C_letter (E_letter :: m) i)].
-    apply/mapP; exists j.+1 => //.
-    move: Hj; rewrite !mem_filter => /andP [Hd Hj2].
-    rewrite /= Hd /=.
-    rewrite mem_iota; move: Hj2.
-    rewrite mem_iota /= !add0n add1n => Hj2.
-    by rewrite ltnS.
-  move: (Hall2 _ Hin).
-  by rewrite /has_transition /cde_offset /=.
-Qed.
-
-(* Combined: X ∈ expand_cde(m) iff all D-offset transitions hold. *)
-Lemma expand_cde_mem_iff m X :
-  size X = cde_total_width m ->
-  (X \in expand_cde m) = all_D_transitions m X.
-Proof.
-move=> Hsz; apply/idP/idP.
-- exact: expand_cde_mem_transitions.
-- exact: transitions_expand_cde_mem Hsz.
-Qed.
-
-(* -- has_transition = omega_seq membership -------------------------------- *)
-(* k ∈ omega_seq(desc(X)) iff nth false X k ≠ nth false X (k+1),           *)
-(* where desc(X) = {i < m : X[i] = true}.                                  *)
-
-Lemma mem_filter_iota_nth (X : seq bool) m i :
-  i < m ->
-  (i \in [seq j <- iota 0 m | nth false X j]) = nth false X i.
-Proof.
-move=> Hi.
-rewrite mem_filter mem_iota add0n Hi andbT /=.
-by case: (nth false X i).
-Qed.
-
-Lemma foldr_maxn_ge (s : seq nat) x : x \in s -> x <= foldr maxn 0 s.
-Proof.
-elim: s => [//|a s IH].
-rewrite inE => /orP [/eqP -> | Hin].
-- by rewrite /= leq_maxl.
-- by rewrite /=; apply: leq_trans (IH Hin) _; exact: leq_maxr.
-Qed.
-
-Lemma mem_omega_seq (s : seq nat) k :
-  k \in omega_seq s =
-  ((k \in s) != (k.+1 \in s)) && (k < (foldr maxn 0 s).+1).
-Proof. by rewrite /omega_seq mem_filter mem_iota add0n. Qed.
-
-Lemma has_transition_omega_seq X m k :
-  k < m.-1 ->
-  has_transition X k =
-  (k \in omega_seq [seq i <- iota 0 m | nth false X i]).
-Proof.
-move=> Hk.
-have Hk2 : k.+1 < m.
-  by rewrite -[m](@prednK m) ?ltnS //; case: m Hk.
-have Hk1 : k < m by exact: ltnW.
-set desc := [seq i <- iota 0 m | nth false X i].
-rewrite /has_transition mem_omega_seq.
-have -> : (k \in desc) = nth false X k.
-  by rewrite /desc mem_filter_iota_nth.
-have -> : (k.+1 \in desc) = nth false X k.+1.
-  by rewrite /desc mem_filter_iota_nth.
-suff Hbound : (nth false X k != nth false X k.+1) ->
-  k < (foldr maxn 0 desc).+1.
-  case: (nth false X k != nth false X k.+1) (Hbound) => //= Hb.
-  by rewrite Hb.
-move=> Hneq.
-move: Hneq.
-case Hxk : (nth false X k); case Hxk1 : (nth false X k.+1) => //= _.
-- have Hkin : k \in desc
-    by rewrite /desc mem_filter mem_iota add0n Hk1 Hxk.
-  by apply: (leq_ltn_trans (foldr_maxn_ge Hkin)); exact: ltnSn.
-- have Hkin : k.+1 \in desc
-    by rewrite /desc mem_filter mem_iota add0n Hk2 Hxk1.
-  apply: (leq_ltn_trans _ (ltnSn _)).
-  by apply: (leq_trans (leqnSn k)); exact: foldr_maxn_ge.
-Qed.
 
 (* -- S_w_seq elements are bounded: k ∈ S_w_seq w → k < (size w).-2 ------- *)
 (* S_w_seq w = [seq i.-1 | i <- iota 1 (size w).-1                         *)
@@ -334,11 +87,6 @@ Qed.
 (* These provide explicit decomposition lemmas for phi_w, D_offsets, and  *)
 (* S_w_seq at mm_pos, producing small proof terms that avoid heavy        *)
 (* simpl/vm_compute during -vo compilation.                               *)
-
-Lemma cde_total_width_cat s1 s2 :
-  cde_total_width (s1 ++ s2) =
-  cde_total_width s1 + cde_total_width s2.
-Proof. by rewrite /cde_total_width map_cat sumn_cat. Qed.
 
 (* mm_pos < (size s).-1 for uniq sequences of size >= 2. *)
 (* This ensures the root of the min-max tree is internal. *)
@@ -955,237 +703,18 @@ move=> Hp; rewrite /check_fact3.
 by rewrite (sort_perm_eq_leq_seqb Hp) eqxx.
 Qed.
 
-(* -- Root descent transition ---------------------------------------------- *)
-
-Lemma foldr_minn_le_init s a : foldr minn a s <= a.
-Proof.
-by elim: s a => [//|b s IH] a /=;
-  rewrite geq_min; apply/orP; right; exact: IH.
-Qed.
-
-Lemma foldr_minn_le_mem s a x : x \in s -> foldr minn a s <= x.
-Proof.
-elim: s a => [//|b s IH] a /=.
-rewrite inE => /orP [/eqP -> | Hx].
-  exact: geq_minl.
-exact: leq_trans (geq_minr _ _) (IH _ Hx).
-Qed.
-
-Lemma foldr_minn_le_nth s k :
-  k < size s -> foldr minn (head 0 s) (behead s) <= nth 0 s k.
-Proof.
-case: s => [//|a s0] /= Hk.
-case: k Hk => [|k] Hk.
-  exact: foldr_minn_le_init.
-exact: foldr_minn_le_mem (mem_nth _ Hk).
-Qed.
-
-Lemma foldr_maxn_ge_init' s a : a <= foldr maxn a s.
-Proof.
-by elim: s a => [//|b s IH] a /=;
-  rewrite leq_max; apply/orP; right; exact: IH.
-Qed.
-
-Lemma foldr_maxn_ge_mem' s a x : x \in s -> x <= foldr maxn a s.
-Proof.
-elim: s a => [//|b s IH] a /=.
-rewrite inE => /orP [/eqP -> | Hx].
-  exact: leq_maxl.
-exact: leq_trans (IH _ Hx) (leq_maxr _ _).
-Qed.
-
-Lemma foldr_maxn_ge_nth' s k :
-  k < size s -> nth 0 s k <= foldr maxn (head 0 s) (behead s).
-Proof.
-case: s => [//|a s0] /= Hk.
-case: k Hk => [|k] Hk.
-  exact: foldr_maxn_ge_init'.
-exact: foldr_maxn_ge_mem' (mem_nth _ Hk).
-Qed.
-
-Lemma mm_pos_descent_neq (a : nat) (s0 : seq nat) :
-  let s := a :: s0 in
-  uniq s -> 1 < size s ->
-  let j := mm_pos s in
-  0 < j -> j < (size s).-1 ->
-  is_descent_seq s j.-1 != is_descent_seq s j.
-Proof.
-move=> /= Hu Hsz.
-set s := a :: s0; set j := mm_pos s.
-move=> Hj0 Hjn.
-have Hne : s <> [::] by [].
-have Hj : j < size s := mm_pos_lt Hne.
-have Hjpred : j.-1 < size s := leq_ltn_trans (leq_pred j) Hj.
-have Hj1 : j.+1 < size s by rewrite ltnS; exact: Hjn.
-have := nth_w_mm_pos Hne.
-rewrite /is_descent_seq.
-case.
-- move=> Hmin.
-  have Hlt1 : nth 0 s j < nth 0 s j.-1.
-    rewrite ltn_neqAle; apply/andP; split; last first.
-      by rewrite Hmin; exact: foldr_minn_le_nth.
-    apply/eqP => Heq.
-    by move: (nth_uniq 0 Hj Hjpred Hu); rewrite Heq eqxx /= gtn_eqF // prednK.
-  have Hlt2 : nth 0 s j < nth 0 s j.+1.
-    rewrite ltn_neqAle; apply/andP; split; last first.
-      by rewrite Hmin; exact: foldr_minn_le_nth.
-    apply/eqP => Heq.
-    by move: (nth_uniq 0 Hj Hj1 Hu); rewrite Heq eqxx eqn_leq ltnn andbF.
-  rewrite /is_descent_seq (prednK Hj0).
-  by rewrite Hlt1 /= -leqNgt ltnW.
-- move=> Hmax.
-  have Hlt1 : nth 0 s j.-1 < nth 0 s j.
-    rewrite ltn_neqAle; apply/andP; split; last first.
-      by rewrite Hmax; exact: foldr_maxn_ge_nth'.
-    apply/eqP => Heq.
-    move: (nth_uniq 0 Hjpred Hj Hu); rewrite Heq eqxx /=.
-    move/esym => Habs; suff : j.-1 <> j by rewrite (eqP Habs).
-    by case: (j) Hj0.
-  have Hlt2 : nth 0 s j.+1 < nth 0 s j.
-    rewrite ltn_neqAle; apply/andP; split; last first.
-      by rewrite Hmax; exact: foldr_maxn_ge_nth'.
-    apply/eqP => Heq.
-    by move: (nth_uniq 0 Hj1 Hj Hu); rewrite Heq eqxx eq_sym eqn_leq ltnn andbF.
-  rewrite /is_descent_seq (prednK Hj0).
-  by rewrite ltnNge (ltnW Hlt1) /= Hlt2.
-Qed.
-
-(* -- D-type vertex descent transition (recursive) ------------------------ *)
-
-Lemma is_descent_seq_take w k j :
-  k.+1 < j -> is_descent_seq (take j w) k = is_descent_seq w k.
-Proof.
-move=> Hk. rewrite /is_descent_seq.
-by rewrite !nth_take // ltnW.
-Qed.
-
-Lemma is_descent_seq_drop w k j :
-  j <= k -> k.+1 < size w ->
-  is_descent_seq (drop j w) (k - j) = is_descent_seq w k.
-Proof.
-move=> Hjk Hk. rewrite /is_descent_seq !nth_drop.
-congr (_ < _); congr (nth 0 w _);
-  by rewrite ?addnS addnC subnK.
-Qed.
-
-(* -- Hoisted opaque helpers: contain the kernel cost of                    *)
-(* D_vertex_descent_transition's case branches.  Each helper's proof        *)
-(* term is checked once at Qed; the main lemma references it by name.      *)
-
-Lemma D_vertex_descent_take_step a s0 i :
-  let s := a :: s0 in let j := mm_pos s in
-  i < j ->
-  is_internal i s -> has_left_child i (take j s) ->
-  is_internal i (take j s) /\ i < j.-1.
-Proof.
-move=> /=.
-set s := a :: s0; set j := mm_pos s.
-have Hne : s <> [::] by [].
-have Hj : j < size s := mm_pos_lt Hne.
-move=> Hij Hint Hlc.
-have His : i < size s by move: Hint; rewrite /is_internal => /andP [].
-have Hws : 1 < window_size i s by move: Hint; rewrite /is_internal => /andP [_ ->].
-have Hj0 : 0 < j := leq_ltn_trans (leq0n i) Hij.
-have Hint_L : is_internal i (take j s).
-  rewrite /is_internal size_takel ?ltnW //.
-  rewrite (ltn_trans Hij Hj) /=.
-  by rewrite (window_size_cons i a s0) -/s -/j Hij in Hws.
-have Hi_lt_jpred : i < j.-1.
-  rewrite -ltnS (prednK Hj0).
-  rewrite ltn_neqAle Hij andbT.
-  apply/negP => /eqP Heq_ij.
-  have : has_left_child j.-1 (take j s) = false.
-    apply: has_left_child_last.
-    by rewrite size_takel ?ltnW // -Heq_ij.
-  by rewrite -Heq_ij Hlc.
-exact: conj Hint_L Hi_lt_jpred.
-Qed.
-
-Lemma D_vertex_descent_drop_step a s0 i :
-  let s := a :: s0 in let j := mm_pos s in
-  j < i ->
-  is_internal i s -> has_left_child (i - j - 1) (drop j.+1 s) ->
-  [/\ is_internal (i - j - 1) (drop j.+1 s),
-      j.+1 < i &
-      0 < i - j - 1].
-Proof.
-move=> /=.
-set s := a :: s0; set j := mm_pos s.
-have Hne : s <> [::] by [].
-have Hj : j < size s := mm_pos_lt Hne.
-move=> Hji Hint Hlc.
-have His : i < size s by move: Hint; rewrite /is_internal => /andP [].
-have Hws : 1 < window_size i s by move: Hint; rewrite /is_internal => /andP [_ ->].
-have Hint_R : is_internal (i - j - 1) (drop j.+1 s).
-  rewrite /is_internal size_drop.
-  have -> : (i - j - 1 < size s - j.+1) = (i < size s)
-    by rewrite ltn_sub2r // ltn_sub2r // ltnS ltnW.
-  rewrite His /=.
-  by rewrite (window_size_cons i a s0) -/s -/j (ltnNge i j) (ltnW Hji) /=
-            (negbTE (ltn_eqF Hji)) in Hws.
-have Hi_ge_j2 : j.+1 < i.
-  rewrite ltnNge; apply/negP => Hle.
-  have : i - j - 1 = 0 by
-    rewrite -subn1 subnA //; apply/eqP;
-    rewrite subn_eq0; exact: Hle.
-  move=> Heq0.
-  have : has_left_child 0 (drop j.+1 s) = false := has_left_child_0 _.
-  by rewrite -Heq0 Hlc.
-have Hi0R : 0 < i - j - 1 by rewrite subn_gt0 ltn_sub2r.
-by [].
-Qed.
+(* -- D-type vertex descent transition ------------------------------------ *)
 
 Lemma D_vertex_descent_transition w i :
   uniq w -> 0 < i -> is_internal i w -> has_left_child i w ->
   is_descent_seq w i.-1 != is_descent_seq w i.
 Proof.
-move: w i.
-suff Hgen : forall n w i, size w <= n ->
-  uniq w -> 0 < i -> is_internal i w -> has_left_child i w ->
-  is_descent_seq w i.-1 != is_descent_seq w i.
-  by move=> w i; exact: Hgen (leqnn _).
-elim => [|n IH] w i Hsz Hu Hi0 Hint Hlc.
-  move: Hint; rewrite leqn0 in Hsz; move: (eqP Hsz) => /size0nil ->.
-  by rewrite /is_internal.
-case: w Hsz Hu Hi0 Hint Hlc => [//|a s0] Hsz Hu Hi0 Hint Hlc.
-set s := a :: s0; set j := mm_pos s.
-have Hne : s <> [::] by [].
-have Hj : j < size s := mm_pos_lt Hne.
-have His : i < size s
-  by move: Hint; rewrite /is_internal => /andP [].
-have Hws : 1 < window_size i s
+move=> Hu Hi0 Hint Hlc.
+have Hws : 1 < window_size i w
   by move: Hint; rewrite /is_internal => /andP [_ ->].
-rewrite (has_left_child_cons i a s0) -/s -/j in Hlc.
-case: (ltngtP i j) => [Hij | Hji | Heq].
-- have [Hint_L Hi_lt_jpred] := D_vertex_descent_take_step Hij Hint Hlc.
-  have Hi1_lt_j : i.+1 < j := Hi_lt_jpred.
-  rewrite -(is_descent_seq_take w i.-1 (leq_ltn_trans (leq_pred i) Hi1_lt_j)).
-  rewrite -(is_descent_seq_take w i Hi1_lt_j).
-  apply: IH => //.
-  + rewrite size_takel; last exact: ltnW.
-    exact: leq_trans (ltnW Hj) Hsz.
-  + exact: take_uniq j Hu.
-- have [Hint_R Hi_ge_j2 Hi0R] := D_vertex_descent_drop_step Hji Hint Hlc.
-  rewrite -(is_descent_seq_drop s i.-1 (n:=j.+1) _ _); last first.
-      by rewrite -[i.-1.+1](prednK Hi0).
-    by rewrite -ltnS (prednK Hi0).
-  rewrite -(is_descent_seq_drop s i (n:=j.+1) _ _); last first.
-      rewrite ltnS; apply: ltn_trans His.
-      by case: (size s) => [//|k]; rewrite ltnS leqnn.
-    exact: ltnW.
-  have -> : i.-1 - j.+1 = (i - j - 1).-1
-    by rewrite subn1 -subnS prednK.
-  have -> : i - j.+1 = i - j - 1
-    by rewrite subnS subn1.
-  apply: IH => //.
-  + rewrite size_drop. exact: leq_trans (leq_subr _ _) Hsz.
-  + exact: drop_uniq j.+1 Hu.
-- subst i.
-  have Hj0 : 0 < j := Hi0.
-  have Hjn : j < (size s).-1.
-    apply: mm_pos_lt_pred => //.
-    by case: (size s) Hj => [//|[//|k]] _.
-  exact: mm_pos_descent_neq Hu _ Hj0 Hjn.
+have Hxor := exactly_one_descent_LR Hu Hi0 Hlc Hws.
+move: Hxor; case: (is_descent_seq w i.-1);
+  by case: (is_descent_seq w i).
 Qed.
 
 (* -- Self-support: char_mono w is in expand_cde (phi_w w) ----------------- *)
@@ -1220,8 +749,9 @@ have Hk_lt : k < (size w).-1.
   rewrite Hkeq -ltnS (prednK Hi_pos).
   by case: (size w) Hsz2 Hi_lt => [//|[//|m]].
 have Hk1_lt : k.+1 < (size w).-1.
-  rewrite Hkeq prednK // -ltnS.
-  by case: (size w) Hsz2 Hi_lt => [//|[//|m]] _ /= Hi; exact: Hi.
+  have Hpred_pos : 0 < (size w).-1
+    by case: (size w) Hsz2 => [|[|m]].
+  by rewrite -[in X in _ < X](prednK Hpred_pos) ltnS.
 rewrite (nth_char_mono Hk_lt) (nth_char_mono Hk1_lt).
 by rewrite Hkeq prednK.
 Qed.
@@ -1241,29 +771,93 @@ Qed.
 
 (* -- Injectivity: distinct subsets give distinct char_monos --------------- *)
 
+(* Membership in internal_vertices is exactly is_internal.                    *)
+Lemma in_internal_vertices i w :
+  (i \in internal_vertices w) = is_internal i w.
+Proof.
+rewrite /internal_vertices mem_filter.
+case Hi: (is_internal i w) => /=; last by [].
+rewrite mem_iota /=.
+by move: Hi => /andP [-> _].
+Qed.
+
+(* Recover the membership ss-bit from the char_mono bits at v (and v.-1).     *)
+(* Uses C-bit / D-bit recovery + D_vertex_descent_transition for D-vertices.  *)
+Lemma char_mono_apply_psis_inj w ss1 ss2 :
+  uniq w ->
+  ss1 \in powerset_internal w ->
+  ss2 \in powerset_internal w ->
+  char_mono (apply_psis ss1 w) = char_mono (apply_psis ss2 w) ->
+  ss1 = ss2.
+Proof.
+move=> Hu Hss1 Hss2 Heq.
+have Hivs_uniq : uniq (internal_vertices w).
+  by rewrite /internal_vertices filter_uniq // iota_uniq.
+have Hsub1 : subseq ss1 (internal_vertices w) := subseq_powerset_internal Hss1.
+have Hsub2 : subseq ss2 (internal_vertices w) := subseq_powerset_internal Hss2.
+have Hu1 : uniq ss1 := subseq_uniq Hsub1 Hivs_uniq.
+have Hu2 : uniq ss2 := subseq_uniq Hsub2 Hivs_uniq.
+have Hint1 : forall i, i \in ss1 -> is_internal i w.
+  by move=> i Hi; rewrite -in_internal_vertices; exact: (mem_subseq Hsub1).
+have Hint2 : forall i, i \in ss2 -> is_internal i w.
+  by move=> i Hi; rewrite -in_internal_vertices; exact: (mem_subseq Hsub2).
+(* Step 1: equal char_monos ⟹ same membership for every internal vertex.    *)
+have Hmem : ss1 =i ss2.
+  move=> x.
+  case Hin: (x \in internal_vertices w); last first.
+    have HF1 : (x \in ss1) = false.
+      apply/negP => Hx.
+      by have := mem_subseq Hsub1 Hx; rewrite Hin.
+    have HF2 : (x \in ss2) = false.
+      apply/negP => Hx.
+      by have := mem_subseq Hsub2 Hx; rewrite Hin.
+    by rewrite HF1 HF2.
+  rewrite in_internal_vertices in Hin.
+  have Hbit : forall k, k < (size w).-1 ->
+    nth false (char_mono (apply_psis ss1 w)) k =
+    nth false (char_mono (apply_psis ss2 w)) k by move=> k Hk; rewrite Heq.
+  case Hlc: (has_left_child x w).
+  - (* D-vertex: use self bit + transition to recover (x \in ss). *)
+    have Hxlt := is_internal_lt Hin.
+    have Hxpos : 0 < x.
+      case Hx0: x Hlc => [|n] //=.
+      by rewrite has_left_child_0.
+    have H1 := char_mono_apply_psis_D_bit_self Hu Hu1 Hint1 Hin Hlc.
+    have H2 := char_mono_apply_psis_D_bit_self Hu Hu2 Hint2 Hin Hlc.
+    have Hxx := Hbit _ Hxlt.
+    rewrite H1 H2 in Hxx.
+    have Hdiff := D_vertex_descent_transition Hu Hxpos Hin Hlc.
+    case E1: (x \in ss1); case E2: (x \in ss2) => //.
+    + rewrite E1 E2 /= in Hxx.
+      by rewrite Hxx eqxx in Hdiff.
+    + rewrite E1 E2 /= in Hxx.
+      by rewrite -Hxx eqxx in Hdiff.
+  - (* C-vertex: use C-bit lemma; xor-cancel. *)
+    have Hcv : ~~ has_left_child x w by rewrite Hlc.
+    have Hxlt := is_internal_lt Hin.
+    have H1 := char_mono_apply_psis_C_bit Hu Hu1 Hint1 Hin Hcv.
+    have H2 := char_mono_apply_psis_C_bit Hu Hu2 Hint2 Hin Hcv.
+    have Hxx := Hbit _ Hxlt.
+    rewrite H1 H2 in Hxx.
+    by move: Hxx; case: (is_descent_seq w x);
+      case: (x \in ss1); case: (x \in ss2).
+(* Step 2: same membership + both subseqs of uniq base ⟹ equal sequences.   *)
+have Eq1 : ss1 = [seq x <- internal_vertices w | x \in ss1].
+  exact: (elimT (subseq_uniqP Hivs_uniq) Hsub1).
+have Eq2 : ss2 = [seq x <- internal_vertices w | x \in ss2].
+  exact: (elimT (subseq_uniqP Hivs_uniq) Hsub2).
+rewrite Eq1 Eq2.
+by apply: eq_in_filter => x _; exact: Hmem.
+Qed.
+
 Lemma uniq_map_char_mono_powerset w :
   uniq w -> 2 <= size w ->
   uniq [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
 Proof.
-move=> Hu Hsz2.
-set lhs := [seq _ | _ <- _].
-set rhs := expand_cde (phi_w w).
-have Hmem : {subset lhs <= rhs}.
-  move=> x /mapP [ss _ ->]. exact: char_mono_apply_psis_mem.
-have Hsz_lhs : size lhs = size rhs.
-  rewrite /lhs /rhs size_map size_powerset_internal.
-  by rewrite -size_expand_cde_phi_w.
-have Huniq_rhs : uniq rhs := uniq_expand_cde _.
-apply/negPn/negP => Hnuniq.
-have : size lhs > size (undup lhs).
-  by rewrite ltn_size_undup.
-move=> Hdup.
-have Hsub : size (undup lhs) <= size rhs.
-  apply: uniq_leq_size; first exact: undup_uniq.
-  move=> x; rewrite mem_undup; exact: Hmem.
-have : size lhs <= size rhs by rewrite Hsz_lhs.
-move=> Hle.
-by have := leq_ltn_trans Hsub Hdup; rewrite Hsz_lhs ltnn.
+move=> Hu _.
+rewrite map_inj_in_uniq; first exact: uniq_powerset_internal.
+move=> ss1 ss2 Hss1 Hss2 Heq.
+exact: char_mono_apply_psis_inj Hu Hss1 Hss2 Heq.
 Qed.
 
 (* -- check_fact3_true: structural proof ----------------------------------- *)

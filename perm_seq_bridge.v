@@ -47,7 +47,7 @@ Lemma nth_perm_to_seq n (s : {perm 'I_n}) k (Hk : k < n) :
 Proof.
 rewrite /perm_to_seq (nth_map (Ordinal Hk)); last by rewrite size_enum_ord.
 congr (val (s _)).
-by rewrite nth_enum_ord.
+by apply: val_inj => /=; rewrite nth_enum_ord.
 Qed.
 
 Lemma perm_to_seq_inj n : injective (@perm_to_seq n).
@@ -55,9 +55,10 @@ Proof.
 move=> s1 s2 Heq.
 apply/permP => i.
 have Hi := ltn_ord i.
-have := congr1 (fun w => nth 0 w (val i)) Heq.
-rewrite !nth_perm_to_seq //.
-by move/val_inj.
+have H := congr1 (fun w => nth 0 w (val i)) Heq.
+rewrite !(nth_perm_to_seq _ Hi) in H.
+have Hord : Ordinal Hi = i by apply: val_inj.
+by rewrite Hord in H; apply: val_inj.
 Qed.
 
 (* ========================================================================= *)
@@ -68,14 +69,14 @@ Lemma is_descent_perm_seq n (s : {perm 'I_n.+1}) (i : 'I_n) :
   is_descent s i = is_descent_seq (perm_to_seq s) (val i).
 Proof.
 rewrite /is_descent /is_descent_seq.
-have Hi : val i < n.+1 := ltn_ord i.
+have Hi : val i < n.+1 := leq_trans (ltn_ord i) (leqnSn n).
 have Hi1 : (val i).+1 < n.+1.
   by rewrite ltnS; exact: ltn_ord.
 rewrite (nth_perm_to_seq s Hi).
 rewrite (nth_perm_to_seq s Hi1).
 congr (_ > _); congr (val (s _)); apply: val_inj => /=.
   by [].
-by rewrite /bump /= add1n.
+by [].
 Qed.
 
 (* ========================================================================= *)
@@ -94,7 +95,7 @@ Lemma nth_descent_to_bvec n (D : {set 'I_n}) k (Hk : k < n) :
 Proof.
 rewrite /descent_to_bvec (nth_map (Ordinal Hk)); last by rewrite size_enum_ord.
 congr (_ \in D).
-by rewrite nth_enum_ord.
+by apply: val_inj => /=; rewrite nth_enum_ord.
 Qed.
 
 (* char_mono of perm_to_seq equals the descent boolean vector *)
@@ -108,9 +109,10 @@ rewrite /char_mono size_map size_iota perm_to_seq_size => k Hk.
 rewrite (nth_map 0); last by rewrite size_iota.
 rewrite nth_iota // add0n.
 rewrite /descent_to_bvec (nth_map (Ordinal Hk)); last by rewrite size_enum_ord.
-rewrite nth_enum_ord //.
+have -> : nth (Ordinal Hk) (enum 'I_n) k = Ordinal Hk.
+  by apply: val_inj => /=; rewrite nth_enum_ord.
 rewrite inE.
-exact: is_descent_perm_seq.
+by symmetry; exact: is_descent_perm_seq.
 Qed.
 
 Lemma descent_to_bvec_inj n : injective (@descent_to_bvec n).
@@ -118,9 +120,10 @@ Proof.
 move=> D1 D2 Heq.
 apply/setP => i.
 have Hi := ltn_ord i.
+have Hord : Ordinal Hi = i by apply: val_inj.
 have := congr1 (fun v => nth false v (val i)) Heq.
-rewrite !nth_descent_to_bvec //.
-by move=> ->; congr (_ \in _); exact: val_inj.
+rewrite !nth_descent_to_bvec // Hord.
+by move=> ->.
 Qed.
 
 (* ========================================================================= *)
@@ -137,7 +140,7 @@ Lemma psi_apply_psis_comm i ss w :
 Proof.
 move=> Hu.
 elim: ss w Hu => [|j ss IH] w Hu //=.
-rewrite (psi_comm Hu).
+rewrite (psi_comm j i Hu).
 exact: IH (uniq_psi _ Hu).
 Qed.
 
@@ -159,9 +162,9 @@ Proof.
 move=> Hu.
 elim: ss w Hu => [|i ss IH] w Hu //=.
 rewrite -/(apply_psis ss (psi i w)).
-rewrite rev_cons -cats1 apply_psis_cat /= psi_involutive //.
-  exact: IH (uniq_psi i Hu).
-exact: uniq_apply_psis (uniq_psi i Hu).
+rewrite rev_cons -cats1 apply_psis_cat /=.
+rewrite IH; last exact: uniq_psi.
+exact: psi_involutive.
 Qed.
 
 Lemma apply_psis_cancel ss w :
@@ -169,9 +172,8 @@ Lemma apply_psis_cancel ss w :
   apply_psis ss (apply_psis ss w) = w.
 Proof.
 move=> Hu.
-rewrite -(apply_psis_revK ss Hu).
-rewrite apply_psis_rev //.
-exact: uniq_apply_psis.
+rewrite -{1}(apply_psis_rev ss (uniq_apply_psis ss Hu)).
+exact: apply_psis_revK.
 Qed.
 
 Lemma powerset_internal_apply_psis ops w :
@@ -219,13 +221,13 @@ have Hn2 :
 have Hgn1 : g ss1 =
   nth (g [::]) [seq g s | s <- psi_w]
     (index ss1 psi_w).
-  rewrite (nth_map [::]) //.
-  by rewrite index_mem.
+  rewrite (nth_map [::]); last by rewrite index_mem.
+  by rewrite -Hn1.
 have Hgn2 : g ss2 =
   nth (g [::]) [seq g s | s <- psi_w]
     (index ss2 psi_w).
-  rewrite (nth_map [::]) //.
-  by rewrite index_mem.
+  rewrite (nth_map [::]); last by rewrite index_mem.
+  by rewrite -Hn2.
 have Hidxs : index ss1 psi_w <
   size [seq g s | s <- psi_w].
   by rewrite size_map index_mem.
@@ -240,7 +242,7 @@ have Hcm_idx :
   by rewrite -Hgn1 -Hgn2 /g Hcm.
 have := nth_uniq (g [::]) Hidxs Hidxs2
   Huniq_cm.
-rewrite Hcm_idx eqxx => /eqP Heq_idx.
+rewrite Hcm_idx eqxx => /esym/eqP Heq_idx.
 have Hss_eq : ss1 = ss2
   by rewrite Hn1 Hn2 Heq_idx.
 by rewrite Hss_eq.
@@ -254,26 +256,23 @@ Lemma desc_positions_bvec n (D : {set 'I_n}) :
   [seq i <- iota 0 n | nth false (descent_to_bvec D) i] =
   set_to_seq D.
 Proof.
-apply: (sorted_eq leq_trans leq_anti).
-- apply: sorted_filter; exact: iota_sorted.
-- exact: sort_sorted leq_total.
-- move=> x.
-  rewrite mem_filter mem_iota add0n.
-  rewrite mem_sort.
+apply: (sorted_eq leq_trans anti_leq).
+- by apply: (sorted_filter leq_trans); exact: iota_sorted.
+- by rewrite /set_to_seq; apply: sort_sorted; exact: leq_total.
+- apply: uniq_perm.
+  + by apply: filter_uniq; apply: iota_uniq.
+  + exact: uniq_set_to_seq.
+  move=> x.
+  rewrite mem_filter mem_iota add0n mem_set_to_seq.
   apply/andP/mapP.
   + case=> Hnth Hx.
-    have Hxn : x < n := Hx.
-    exists (Ordinal Hxn); first by rewrite mem_enum.
-    rewrite /=.
-    move: Hnth.
-    rewrite (nth_map (Ordinal Hxn)); last by rewrite size_enum_ord.
-    by rewrite nth_enum_ord.
+    exists (Ordinal Hx); last by [].
+    by rewrite mem_enum -(nth_descent_to_bvec D Hx).
   + case=> i Hi ->.
     rewrite mem_enum in Hi.
-    split.
-      rewrite (nth_map i); last by rewrite size_enum_ord; exact: ltn_ord.
-      by rewrite nth_enum_ord // Hi.
-    exact: ltn_ord.
+    split; last exact: ltn_ord.
+    rewrite (nth_descent_to_bvec D (ltn_ord i)).
+    by have -> : Ordinal (ltn_ord i) = i by apply: val_inj.
 Qed.
 
 (* ========================================================================= *)
@@ -331,7 +330,9 @@ apply: (@eq_from_nth _ 0).
   by rewrite perm_to_seq_size Hsz.
 move=> k Hk; rewrite perm_to_seq_size in Hk.
 rewrite /perm_to_seq (nth_map (Ordinal Hk)); last by rewrite size_enum_ord.
-by rewrite nth_enum_ord // /= permE /seq_to_fun.
+have Hord : nth (Ordinal Hk) (enum 'I_n) k = Ordinal Hk
+  by apply: val_inj => /=; rewrite nth_enum_ord.
+by rewrite Hord /= permE /seq_to_fun.
 Qed.
 
 Lemma seq_to_perm_perm_to_seq n (s : {perm 'I_n}) :
@@ -346,7 +347,7 @@ Lemma all_bnd_apply_psis n ss w :
   all (fun x => x < n) (apply_psis ss w).
 Proof.
 move=> Hbnd Hu; apply/allP => x Hx.
-by apply: (allP Hbnd); rewrite (perm_mem (perm_eq_apply_psis ss w)).
+by apply: (allP Hbnd); rewrite -(perm_mem (perm_eq_apply_psis ss w)).
 Qed.
 
 Lemma apply_psis_size_eq n ss (w : seq nat) :
@@ -360,10 +361,12 @@ Proof. move=> <-; exact: size_apply_psis. Qed.
 Lemma uniq_expand_cde letters : uniq (expand_cde letters).
 Proof.
 elim: letters => [|[||] l IH] //=.
-- rewrite cat_uniq !map_inj_uniq // ?andbT; try by move=> x y [].
+- rewrite cat_uniq !map_inj_uniq //; try by move=> x y [].
+  rewrite IH andbT.
   apply/hasPn => x /mapP [t Ht ->].
   by apply/negP => /mapP [t' Ht' []].
-- rewrite cat_uniq !map_inj_uniq // ?andbT; try by move=> x y [] //.
+- rewrite cat_uniq !map_inj_uniq //; try by move=> x y [] //.
+  rewrite IH andbT.
   apply/hasPn => x /mapP [t Ht ->].
   by apply/negP => /mapP [t' Ht' []].
 Qed.
@@ -376,7 +379,7 @@ Lemma nil_in_powerset_internal w : [::] \in powerset_internal w.
 Proof.
 rewrite /powerset_internal.
 set ivs := internal_vertices w.
-have : [::] \in [:: [::]] by rewrite mem_seq1.
+have : [::] \in [:: [::] : seq nat] by rewrite mem_seq1.
 elim: ivs [:: [::]] => [|i ivs IH] acc Hin //=.
 apply: IH.
 rewrite mem_cat; apply/orP; left; exact: Hin.
@@ -390,8 +393,7 @@ move=> Hu.
 have Hfact := fact3 Hu.
 have : char_mono w \in
   [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
-  apply/mapP; exists [::] => //.
-    exact: nil_in_powerset_internal.
+  apply/mapP; exists [::]; first exact: nil_in_powerset_internal.
   by rewrite apply_psis_nil.
 by rewrite -(mem_sort leq_seqb) Hfact mem_sort.
 Qed.
@@ -417,9 +419,9 @@ have [ss Hss Heq] := mapP Hmem.
 have Hfilter : ss \in [seq s <- powerset_internal w | char_mono (apply_psis s w) == bv].
   by rewrite mem_filter Hss andbT; apply/eqP.
 set flt := [seq s <- _ | _].
-have Hne : flt != [::].
-  by apply/negP => /eqP Habs; move: Hfilter; rewrite Habs.
-have Hhead := mem_head [::] Hne.
+have Hfilter' : ss \in flt by rewrite /flt.
+have Hhead : head [::] flt \in flt.
+  by case: (flt) Hfilter' => [//|x s] _; exact: mem_head.
 rewrite mem_filter in Hhead.
 by case/andP: Hhead => /eqP.
 Qed.
@@ -452,7 +454,7 @@ Lemma omega_set_seq_bridge_bounded m (D : {set 'I_m.+1}) (k : nat) (Hkm : k < m)
   (k \in omega_seq (set_to_seq D)) = ((Ordinal Hkm) \in omega_set D).
 Proof.
 rewrite omega_seq_mem_eq.
-exact: (omega_set_seq_local_bridge D (Ordinal Hkm)).
+by rewrite (omega_set_seq_local_bridge D (Ordinal Hkm)).
 Qed.
 
 Lemma omega_seq_subset_bounded m (D E : {set 'I_m.+1}) (ks : seq nat) :
@@ -523,9 +525,12 @@ have Hbd := window_size_bound i w.
 suff Hi_le : i <= (size w).-2.
   by rewrite -ltnS prednK //; rewrite -[X in _ < X]prednK // -subn1 subn_gt0.
 have Hsw : (size w).-2 = size w - 2
-  by case: (size w) Hsz2 => [|[|n']] //.
+  by case: (size w) => [|[|n']] //=; rewrite !subSS subn0.
 rewrite Hsw.
-by rewrite -leq_subRL //; exact: leq_trans Hws Hbd.
+have H2si : 2 <= size w - i by exact: leq_trans Hws Hbd.
+have Hisz' : i <= size w
+  by apply: ltnW; rewrite -subn_gt0 (leq_trans _ H2si).
+by rewrite leq_subRL // addnC -leq_subRL.
 Qed.
 
 (* ========================================================================= *)
@@ -567,9 +572,10 @@ have bvE_in_class : forall sigma : {perm 'I_m.+2}, descent_set sigma = D ->
     by rewrite /bvD size_descent_to_bvec Hsize.
   have Hsupport_D := phi_w_support_general Huniq Hsz2 HszBvD.
   rewrite -/bvD in Hsupport_D.
+  have Hrew : (size (perm_to_seq sigma)).-1 = m.+1 by rewrite Hsize.
   have HD_all : all (fun j => j \in omega_seq [seq i <- iota 0 m.+1 | nth false bvD i])
                     (S_w_seq (perm_to_seq sigma)).
-    by rewrite -Hsupport_D.
+    by rewrite -[X in iota 0 X]Hrew -Hsupport_D.
   (* desc_positions(bvD) = set_to_seq D *)
   have Hdesc_D : [seq i <- iota 0 m.+1 | nth false bvD i] = set_to_seq D.
     by rewrite /bvD desc_positions_bvec.
@@ -589,7 +595,7 @@ have bvE_in_class : forall sigma : {perm 'I_m.+2}, descent_set sigma = D ->
   rewrite -Hdesc_E in HE_all.
   have HszBvE : size bvE = (size (perm_to_seq sigma)).-1.
     by rewrite /bvE size_descent_to_bvec Hsize.
-  by rewrite phi_w_support_general.
+  by rewrite (phi_w_support_general Huniq Hsz2 HszBvE) [X in iota 0 X]Hrew.
 (* Step 2: f maps {descent D} into {descent E} *)
 have f_descent_E : forall sigma : {perm 'I_m.+2}, descent_set sigma = D ->
   descent_set (f sigma) = E.
@@ -632,21 +638,20 @@ have f_inj : {in [set sigma | descent_set sigma == D] &, injective f}.
     by rewrite -Hw' apply_psis_cancel.
   (* ss1, ss2 in powerset_internal w' *)
   have Hss1_pw : ss1 \in powerset_internal w'.
-    rewrite powerset_internal_apply_psis //.
+    rewrite /ss1 powerset_internal_apply_psis //.
     exact: (find_ss_spec Hu1
       (bvE_in_class sigma1 Hd1)).1.
   have Hss2_pw : ss2 \in powerset_internal w'.
-    rewrite powerset_internal_apply_psis //.
+    rewrite /ss2 -Hw' powerset_internal_apply_psis //.
     exact: (find_ss_spec Hu2
       (bvE_in_class sigma2 Hd2)).1.
   (* By char_mono_class_inj: w1 = w2 *)
   have Hw12 : w1 = w2.
     rewrite Hw1_class Hw2_class.
-    apply: char_mono_class_inj Hss1_pw Hss2_pw _.
+    apply: (char_mono_class_inj Hu' Hss1_pw Hss2_pw).
     by rewrite -Hw1_class -Hw2_class Hcm1 Hcm2.
   (* By perm_to_seq_inj: sigma1 = sigma2 *)
-  by apply: perm_to_seq_inj;
-     rewrite /w1 /w2 Hw12.
+  by apply: perm_to_seq_inj; exact: Hw12.
 (* Step 4: image is proper subset of {descent E} *)
 (* Use strict_witness_exists: exists w0 with S_w = {val k}, contributing to E but not D *)
 have Hkm : val k < m := ltn_ord k.
@@ -658,24 +663,28 @@ have bvE_in_w0 : bvE \in expand_cde (phi_w w0).
   have Hsz2 : 2 <= size w0 by rewrite Hsz0.
   have HszBvE : size bvE = (size w0).-1.
     by rewrite /bvE size_descent_to_bvec Hsz0.
+  have Hrew0 : (size w0).-1 = m.+1 by rewrite Hsz0.
   rewrite phi_w_support_general // HS0 /=.
   rewrite andbT.
   (* Need: val k in omega_seq(desc_positions(bvE)) *)
   have Hdesc_E : [seq i <- iota 0 m.+1 | nth false bvE i] = set_to_seq E.
     by rewrite /bvE desc_positions_bvec.
-  rewrite Hdesc_E.
-  by rewrite (omega_set_seq_bridge_bounded E Hkm).
+  rewrite [X in iota 0 X]Hrew0 Hdesc_E.
+  rewrite (omega_set_seq_bridge_bounded E Hkm).
+  by have -> : Ordinal Hkm = k by apply: val_inj.
 (* bvD is NOT in expand_cde(phi_w w0) because k not in omega(D) *)
 have bvD_notin_w0 : bvD \notin expand_cde (phi_w w0).
   have Hsz2 : 2 <= size w0 by rewrite Hsz0.
   have HszBvD : size bvD = (size w0).-1.
     by rewrite /bvD size_descent_to_bvec Hsz0.
+  have Hrew0 : (size w0).-1 = m.+1 by rewrite Hsz0.
   rewrite phi_w_support_general // HS0 /=.
   rewrite andbT.
   have Hdesc_D : [seq i <- iota 0 m.+1 | nth false bvD i] = set_to_seq D.
     by rewrite /bvD desc_positions_bvec.
-  rewrite Hdesc_D.
+  rewrite [X in iota 0 X]Hrew0 Hdesc_D.
   rewrite (omega_set_seq_bridge_bounded D Hkm).
+  have -> : Ordinal Hkm = k by apply: val_inj.
   by rewrite (negbTE Hknot).
 (* w0 has values that might not be iota 0 (m+2), so we need to transfer *)
 (* The strict_witness gives a raw seq, not necessarily in iota 0 n *)
@@ -749,7 +758,7 @@ have img_has_bvD : forall sigma : {perm 'I_m.+2},
     by rewrite char_mono_perm_to_seq Hdtau.
   rewrite perm_to_seq_class_map.
   rewrite phi_w_apply_psis //.
-    by rewrite -Hcm; exact: char_mono_in_expand_cde.
+    by rewrite -Hcm; exact: (char_mono_in_expand_cde (perm_to_seq_uniq tau)).
   exact: perm_to_seq_uniq.
 (* Now we need a sigma with descent E but bvD ∉ expand_cde(phi_w(perm_to_seq sigma)). *)
 (* Use w0 from strict_witness_exists. We need it as a perm of iota 0 (m+2). *)
@@ -792,10 +801,11 @@ set w0_norm := [seq index x w0_sorted | x <- w0].
 have Hsz_norm : size w0_norm = m.+2.
   by rewrite /w0_norm size_map Hsz0.
 have Huniq_norm : uniq w0_norm.
-  rewrite /w0_norm map_inj_uniq //.
-  move=> x y Hxy.
-  have Huniq_sorted : uniq w0_sorted by rewrite sort_uniq.
-  exact: index_inj Huniq_sorted Hxy.
+  rewrite /w0_norm map_inj_in_uniq //.
+  move=> x y Hx Hy Hxy.
+  have Hx' : x \in w0_sorted by rewrite mem_sort.
+  have Hy' : y \in w0_sorted by rewrite mem_sort.
+  by apply: (index_inj 0 (s:=w0_sorted)).
 have Hbnd_norm : all (fun x => x < m.+2) w0_norm.
   apply/allP => x /mapP [y Hy ->].
   rewrite -Hsz0 -(size_sort leq) index_mem.
@@ -806,15 +816,35 @@ have Hbnd_norm : all (fun x => x < m.+2) w0_norm.
 have Horder_iso : forall p q : nat, p < size w0 -> q < size w0 ->
   (nth 0 w0 p < nth 0 w0 q) = (nth 0 w0_norm p < nth 0 w0_norm q).
   move=> p q Hp Hq.
-  rewrite /w0_norm !(nth_map 0) ?Hsz0 //.
+  rewrite /w0_norm !(nth_map 0) //;
+    try by rewrite -Hsz0; first [exact: Hp | exact: Hq].
   set sp := nth 0 w0 p; set sq := nth 0 w0 q.
   have Hsp : sp \in w0 by apply: mem_nth.
   have Hsq : sq \in w0 by apply: mem_nth.
   have Hsp_s : sp \in w0_sorted by rewrite mem_sort.
   have Hsq_s : sq \in w0_sorted by rewrite mem_sort.
   have Huniq_sorted : uniq w0_sorted by rewrite sort_uniq.
-  have Hsorted : sorted leq w0_sorted by exact: sort_sorted leq_total.
-  exact: index_lt_sorted Hsorted Huniq_sorted Hsp_s Hsq_s.
+  have Hsorted : sorted leq w0_sorted
+    by apply: sort_sorted; exact: leq_total.
+  have Hle_imp : forall a b, a \in w0_sorted -> b \in w0_sorted ->
+                 index a w0_sorted <= index b w0_sorted -> a <= b.
+    move=> a b Ha Hb Hab.
+    exact: (sorted_leq_index leq_trans leqnn Hsorted a b Ha Hb Hab).
+  apply/idP/idP.
+  - move=> Hsplt.
+    rewrite ltn_neqAle.
+    apply/andP; split.
+      apply/eqP => Hidx_eq.
+      move: Hsplt.
+      by rewrite -(nth_index 0 Hsp_s) -(nth_index 0 Hsq_s) Hidx_eq ltnn.
+    rewrite leqNgt; apply/negP => Hlt.
+    have Hle : sq <= sp := Hle_imp _ _ Hsq_s Hsp_s (ltnW Hlt).
+    by move: Hsplt; rewrite ltnNge Hle.
+  - move=> Hidxlt.
+    have Hle : sp <= sq := Hle_imp _ _ Hsp_s Hsq_s (ltnW Hidxlt).
+    rewrite ltn_neqAle Hle andbT.
+    apply/eqP => Heq.
+    by rewrite Heq ltnn in Hidxlt.
 (* Convert w0_norm to a perm *)
 set sigma0 := seq_to_perm Hsz_norm Huniq_norm Hbnd_norm.
 have Hpts0 : perm_to_seq sigma0 = w0_norm.
@@ -909,18 +939,18 @@ have phi_w_order_iso : forall (s1 s2 : seq nat),
   have Hint : is_internal i s1 = is_internal i s2.
     rewrite /is_internal Hszeq.
     case Hisz: (i < size s2) => //=.
-    by rewrite (window_size_order_iso Hszeq Hu1 Hu2 Hord).
+    by rewrite (window_size_order_iso i Hszeq Hu1 Hu2 Hord).
   rewrite Hint.
   case: (is_internal i s2) => //=.
-  by rewrite (has_left_child_order_iso Hszeq Hu1 Hu2 Hord).
+  by rewrite (has_left_child_order_iso i Hszeq Hu1 Hu2 Hord).
 
 (* Rank-normalization lemmas needed for phi_w and S_w_seq invariance *)
 have Hsz_norm' : size w0_norm = size w0.
   by rewrite /w0_norm size_map.
-have Hord_rev : forall p q, p < size w0_norm -> q < size w0_norm ->
-  (nth 0 w0_norm p < nth 0 w0_norm q) = (nth 0 w0 p < nth 0 w0 q).
-  move=> p q; rewrite Hsz_norm' => Hp Hq.
-  by rewrite (Horder_iso Hp Hq).
+have Hord_rev : forall p' q', p' < size w0_norm -> q' < size w0_norm ->
+  (nth 0 w0_norm p' < nth 0 w0_norm q') = (nth 0 w0 p' < nth 0 w0 q').
+  move=> p' q'; rewrite Hsz_norm' => Hp' Hq'.
+  by rewrite (Horder_iso p' q' Hp' Hq').
 
 (* Now use phi_w_order_iso *)
 have Hphi_w0 : phi_w w0_norm = phi_w w0.
@@ -936,10 +966,10 @@ have HS_w0 : S_w_seq w0_norm = S_w_seq w0.
   have Hint : is_internal i w0_norm = is_internal i w0.
     rewrite /is_internal Hsz_norm'.
     case Hisz: (i < size w0) => //=.
-    by rewrite (window_size_order_iso Hsz_norm' Huniq_norm Hu0 Hord_rev).
+    by rewrite (window_size_order_iso i Hsz_norm' Huniq_norm Hu0 Hord_rev).
   rewrite Hint.
   case: (is_internal i w0) => //=.
-  by rewrite (has_left_child_order_iso Hsz_norm' Huniq_norm Hu0 Hord_rev).
+  by rewrite (has_left_child_order_iso i Hsz_norm' Huniq_norm Hu0 Hord_rev).
 
 (* bvE ∈ expand_cde(phi_w(perm_to_seq sigma0)) *)
 have HbvE_sigma0 : bvE \in expand_cde (phi_w (perm_to_seq sigma0)).
@@ -950,7 +980,8 @@ have HbvD_not_sigma0 : bvD \notin expand_cde (phi_w (perm_to_seq sigma0)).
   by rewrite Hpts0 Hphi_w0.
 
 (* Find sigma_new with descent E from the M-class of sigma0 *)
-have [ss_new Hss_new Hcm_new] := find_ss_spec (perm_to_seq_uniq sigma0) HbvE_sigma0.
+set ss_new := find_ss (perm_to_seq sigma0) bvE.
+have [Hss_new Hcm_new] := find_ss_spec (perm_to_seq_uniq sigma0) HbvE_sigma0.
 set w_new := apply_psis ss_new (perm_to_seq sigma0).
 have Hsz_new : size w_new = m.+2.
   by rewrite /w_new size_apply_psis perm_to_seq_size.
@@ -974,13 +1005,14 @@ have Hdesc_new : descent_set sigma_new = E.
 have Hnotin : sigma_new \notin [set f tau | tau in [set s | descent_set s == D]].
   apply/negP => /imsetP [tau].
   rewrite inE => /eqP Hdtau Heq.
-  have := img_has_bvD sigma_new.
-  rewrite Heq => Habs.
-  have : bvD \in expand_cde (phi_w (perm_to_seq sigma_new)).
-    apply: Habs.
-    apply/imsetP; exists tau => //.
-    by rewrite inE Hdtau.
-  by rewrite Hpts_new phi_w_apply_psis // Hpts0 Hphi_w0 (negbTE bvD_notin_w0).
+  have Hsigma_in : sigma_new \in [set f tau' | tau' in [set s | descent_set s == D]].
+    by apply/imsetP; exists tau => //; rewrite inE Hdtau.
+  have Habs : bvD \in expand_cde (phi_w (perm_to_seq sigma_new))
+    by exact: img_has_bvD Hsigma_in.
+  move: Habs.
+  rewrite Hpts_new /w_new phi_w_apply_psis;
+    last by exact: perm_to_seq_uniq.
+  by rewrite Hpts0 Hphi_w0 (negbTE bvD_notin_w0).
 
 (* sigma_new ∈ betaE_set *)
 have Hin_E : sigma_new \in [set s | descent_set s == E].
@@ -997,11 +1029,11 @@ have Hproper : [set f tau | tau in [set s | descent_set s == D]]
     apply/andP; split.
       apply/negP => /eqP Heq; subst x.
       by move: Hnotin; rewrite Hx.
-    by move: Hx; rewrite (subsetP img_sub).
-  by rewrite (cardsD1 sigma_new) Hin_E.
+    exact: (subsetP img_sub _ Hx).
+  by rewrite [X in _ < X](cardsD1 sigma_new) Hin_E ltnS leqnn.
 
 (* Conclude *)
-rewrite /beta -card_img.
+rewrite -card_img.
 exact: proper_card Hproper.
 Qed.
 

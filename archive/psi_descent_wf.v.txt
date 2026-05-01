@@ -1,3 +1,5 @@
+(* Archived prototype source; not part of the maintained Rocq build.         *)
+
 (* psi_descent_wf.v — Well-founded recursion version of has_left_child       *)
 (* Replaces the fuel pattern from psi_descent.v with Function + measure.     *)
 (*                                                                           *)

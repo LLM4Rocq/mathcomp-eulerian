@@ -1,0 +1,24 @@
+% Printable (PDF) version of the blueprint.
+% Uses xeLaTeX / luaLaTeX (unicode-math + Latin Modern Math).
+
+\documentclass[a4paper]{report}
+
+\usepackage{geometry}
+\usepackage{expl3}
+
+\usepackage{amssymb, amsthm, mathtools}
+\usepackage[unicode,colorlinks=true,linkcolor=blue,urlcolor=magenta,citecolor=blue]{hyperref}
+
+\usepackage[warnings-off={mathtools-colon,mathtools-overbracket}]{unicode-math}
+
+\input{macros/common}
+\input{macros/print}
+
+\title{Permutation descents, Eulerian numbers, and the cd-index\\
+       \large A Rocq / MathComp formalization of Stanley EC1 \S1.4 + \S1.6}
+\author{Marc Lelarge}
+
+\begin{document}
+\maketitle
+\input{content}
+\end{document}

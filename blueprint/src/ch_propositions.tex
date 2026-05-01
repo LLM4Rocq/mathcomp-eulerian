@@ -1,0 +1,157 @@
+\chapter{Proposition 1.6.4 and Corollary 1.6.5}
+\label{ch:propositions}
+
+This chapter assembles the headline theorems of the project: Stanley's
+\emph{Proposition 1.6.4} (EC1 p.~60) — proper containment of omega-sets
+forces strict inequality of $\beti$ — and the immediate corollary
+\emph{Corollary 1.6.5} (EC1 p.~61) — the alternating descent set
+strictly maximizes $\beti$.  Both are kernel-checked, axiom-free,
+and closed under the global context.
+
+% ============================================================
+\section{The witness construction}
+% ============================================================
+
+\begin{definition}[Stanley's witness $\PhiW{w} = c^{i-1}\,d\,c^{n-2-i}$]
+  \label{def:witness_perm}
+  \uses{def:phi_w}
+  \rocq{mathcomp_eulerian.psi_cdindex_witness.witness_perm}
+  \rocqok
+  For $n, k \in \NN$, $\code{witness\_perm}(n, k)$ is an explicit
+  sequence whose cd-monomial is $c^{k-1}\,d\,c^{n-2-k}$ and whose
+  $S_w$-set equals $\{k\}$.
+
+  This is exactly Stanley's witness from the proof of Proposition
+  1.6.4 (EC1 p.~61):
+  \begin{quote}
+    \emph{``If $i \in \omegaSet{T} \setminus \omegaSet{S}$ then let
+    $\PhiW{w} = c^{i-1}\,d\,c^{n-2-i}$, so $S_w = \{i\}$.''}
+  \end{quote}
+\end{definition}
+
+\begin{lemma}[The witness is a permutation]
+  \label{lem:witness_perm_uniq}
+  \uses{def:witness_perm}
+  \rocq{mathcomp_eulerian.psi_cdindex_witness.witness_perm_uniq}
+  \rocqok
+  $\code{witness\_perm}(n, k)$ is a uniq sequence of length $n$ whose
+  multiset of values is $\{0, \dots, n-1\}$.  Combined with
+  \cref{def:witness_perm}, this gives a permutation
+  $\sigma_{n, k} \in \Snp{n}$ with the prescribed cd-monomial.
+\end{lemma}
+
+% ============================================================
+\section{Stanley Proposition 1.6.4}
+% ============================================================
+
+\begin{proposition}[Stanley Prop 1.6.4: omega-monotonicity of $\beti$]
+  \label{prop:omega_proper_beta_lt}
+  \uses{def:omega_set, def:beta, thm:phi_w_support_general, thm:fact3, lem:witness_perm_uniq, lem:omega_set_seq_local_bridge}
+  \rocq{mathcomp_eulerian.perm_seq_bridge.omega_proper_beta_lt}
+  \rocqok
+  Stanley's statement (verbatim, EC1 p.~60):
+  \begin{quote}
+    \emph{Let $S, T \subseteq [n-1]$.  If $\omegaSet{S} \subsetneq
+    \omegaSet{T}$, then $\beti_n(S) < \beti_n(T)$.}
+  \end{quote}
+  Our formalization, for $D, E \subseteq \{0, \dots, m\}$:
+  \[
+    \omegaSet{D} \subsetneq \omegaSet{E}
+    \;\Longrightarrow\;
+    \beti(D) < \beti(E).
+  \]
+
+  \begin{proof}[Proof outline (faithful to Stanley)]
+    Pick $k \in \omegaSet{E} \setminus \omegaSet{D}$.  By
+    \cref{thm:phi_w_support_general} —
+    Stanley's identity $\PhiW{w} = \sum_{\omegaSet{X} \supseteq S_w}
+    \charmono{X}$ — for every permutation $\sigma$ with descent set
+    $D$, the bit-vector $\code{descent\_to\_bvec}(D)$ lies in
+    $\code{expand\_cde}(\PhiW{\code{perm\_to\_seq}(\sigma)})$.  The
+    same holds for $\code{descent\_to\_bvec}(E)$ whenever
+    $\omegaSet{E} \supseteq S_w$.
+
+    The witness $\code{witness\_perm}$ from
+    \cref{def:witness_perm}, instantiated at $i = k$, gives a sequence
+    with cd-monomial $c^{k-1}\,d\,c^{n-2-k}$ and $S_w = \{k\}$.  Hence
+    $\omegaSet{E} \supseteq \{k\} = S_w$ but $\omegaSet{D} \not\supseteq
+    \{k\}$ (since $k \notin \omegaSet{D}$).  This produces a
+    permutation $\sigma$ with $\DescSet{\sigma} = E$ that is not in
+    the image of any class map starting from a permutation with descent
+    set $D$.  Counting, via \cref{thm:fact3} and the $M$-equivalence
+    class enumeration, then yields $\beti(D) < \beti(E)$.
+  \end{proof}
+\end{proposition}
+
+% ============================================================
+\section{Stanley Corollary 1.6.5 — the headline}
+% ============================================================
+
+\begin{corollary}[Stanley Cor 1.6.5: alternating maximizes $\beti$]
+  \label{cor:beta_alt_max}
+  \uses{prop:omega_proper_beta_lt, lem:omega_set_alt_full, lem:not_set_is_alt_omega_not_full}
+  \rocq{mathcomp_eulerian.beta_swap.beta_alt_max}
+  \rocqok
+  Stanley's statement (EC1 p.~61):
+  \begin{quote}
+    \emph{Let $S \subseteq [n-1]$.  Then $\beti_n(S) \leq \Eulnum_n$,
+    with equality if and only if $S = \{1, 3, 5, \dots\} \cap [n-1]$
+    or $S = \{2, 4, 6, \dots\} \cap [n-1]$.}
+  \end{quote}
+  Here $\Eulnum_n$ is the $n$-th Euler number, realized as
+  $\beti(\altSet_n)$.
+
+  Our formalization, in contrapositive form:  for $n \geq 2$ and
+  $D \subseteq \{0, \dots, n-1\}$,
+  \[
+    \neg\,(D \text{ set-alternating})
+    \;\Longrightarrow\;
+    \beti(D) < \beti(\altSet_n).
+  \]
+
+  \begin{proof}[Proof]
+    Reduce to $n = m + 2$.  By
+    \cref{lem:not_set_is_alt_omega_not_full},
+    $\omegaSet{D} \subsetneq \mathrm{set\_T} = \omegaSet{\altSet_n}$
+    (the second equality by \cref{lem:omega_set_alt_full}).  Apply
+    \cref{prop:omega_proper_beta_lt}: the strict inequality follows.
+
+    This exactly mirrors Stanley's
+    ``\emph{Proof: Immediate from Proposition 1.6.4 and equation
+    (1.65)}'' (p.~61).
+  \end{proof}
+
+  \medskip
+  The ``$S = \{2, 4, 6, \dots\}$'' alternative in Stanley's statement
+  reduces to the complementation symmetry already proved at the
+  $\beti$-level (\rocq{mathcomp_eulerian.beta_swap.beta_compl}, see
+  also \cref{lem:beta_rev}): the two alternating descent sets have
+  equal $\beti$.
+\end{corollary}
+
+% ============================================================
+\section{What this gives a Stanley reader}
+% ============================================================
+
+\begin{remark}[End-to-end verification]
+  \label{rem:end_to_end}
+  Every result in this blueprint is kernel-checked and axiom-free.
+  The two headline theorems above (\cref{cor:beta_alt_max} and
+  \cref{prop:omega_proper_beta_lt}) report
+  \emph{``Closed under the global context''} via Rocq's
+  \texttt{Print Assumptions}; \texttt{coqchk} on the maintained
+  library reports \emph{``Modules were successfully checked''}.
+
+  In particular, the path
+  \[
+    \cref{def:descent_set} \;\to\;
+    \cref{def:beta} \;\to\;
+    \cref{thm:phi_w_apply_psis} \;\to\;
+    \cref{thm:phi_w_support_general} \;\to\;
+    \cref{thm:fact3} \;\to\;
+    \cref{prop:omega_proper_beta_lt} \;\to\;
+    \cref{cor:beta_alt_max}
+  \]
+  is fully formalized with no \texttt{Admitted} and no postulated
+  axioms beyond Rocq's standard core.
+\end{remark}

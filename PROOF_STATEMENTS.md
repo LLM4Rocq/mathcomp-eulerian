@@ -21,15 +21,17 @@ iff `S` is alternating — is the highlighted theorem of this project. It
 appears in our development as `beta_alt_max` (Stanley's contrapositive form:
 non-alternating implies strict inequality).
 
-This document gives an informal mathematical reading of every formal statement
-proved in this repository, with explicit verification status: ✅ for **kernel-checked
-`.vo`** (proof terms re-elaborated by Rocq's kernel) and ⚠️ for **`.vos`-only**
-(tactics validated and `coqchk`-axiom-free, but kernel re-elaboration of the
-proof term exceeds 188 GB on the build host — see `REFACTOR_PLAN_V2.md`).
+Every formal statement proved in this repository is **kernel-checked `.vo`**:
+the proof term is re-elaborated by Rocq's kernel and validated by `coqchk`.
+This document gives an informal mathematical reading of each result, marked
+with ✅ throughout.
 
-The whole development uses **0 axioms beyond the standard `Type-in-Type`-free
-core** and contains **0 `Admitted`** in the active build chain (the file
-`psi_descent_wf.v` containing 7 `Admitted` is an orphan, not in `_CoqProject`).
+The whole development uses **0 axioms beyond Rocq's standard core** and
+contains **0 `Admitted`** in the active build chain. `Print Assumptions
+beta_alt_max` and `Print Assumptions omega_proper_beta_lt` both report
+"Closed under the global context". The file `psi_descent_wf.v` containing
+7 `Admitted` is an orphan — archived under `archive/psi_descent_wf.v.txt`
+and not in `_CoqProject`.
 
 ---
 
@@ -38,36 +40,37 @@ core** and contains **0 `Admitted`** in the active build chain (the file
 | Symbol | Meaning |
 |--------|---------|
 | ✅ | File compiles to `.vo`: kernel-validated proof term, axiom-free under `coqchk` |
-| ⚠️ | File compiles to `.vos` only: tactic scripts validated, but kernel re-elaboration of the proof terms exceeds available RAM (188 GB / 4 cores) |
 
-| File | Status | LOC | Role |
-|------|:------:|----:|------|
-| `mmtree.v` | ✅ | 158 | Min-max tree datatype + `mmtree_of_seqK` round-trip |
-| `psi_core.v` | ✅ | 1952 | `mm_pos`, `window_size`, ψᵢ operator (M-equivalence generators) |
-| `psi_comm.v` | ✅ | 1343 | Commutativity of ψᵢ on disjoint windows |
-| `psi_descent_v2.v` | ✅ | 1121 | `has_left_child`, `is_descent_seq`, descent ↔ ψ |
-| `psi_descent_thms.v` | ✅ | 696 | Window descent theorems |
-| `psi_cdindex_defs.v` | ✅ | 118 | cd-letter alphabet, `phi_w`, `expand_cde`, `char_mono` |
-| `psi_cdindex_tree_shape.v` | ✅ | 464 | Tree-shape encoding (Opaque-sealed) |
-| `psi_cdindex_tree_hlc.v` | ✅ | — | Has-left-child via tree shape |
-| `psi_cdindex_tree.v` | ✅ | 416 | Tree-induction route to invariants |
-| `psi_cdindex_core.v` | ✅ | 527 | ψᵢ preserves `phi_w`, `internal_vertices` |
-| `psi_cdindex_witness.v` | ✅ | 708 | `S_w` definition, Fact #1 ingredients |
-| `psi_cdindex_support.v` | ⚠️ | 1312 | **`phi_w_support_general`, `fact3`** |
-| `ordinal_reindex.v` | ✅ | 54 | Lift/unlift bijections on `'I_n` |
-| `perm_compress.v` | ✅ | 115 | `drop_perm` / `lift_perm` builders |
-| `descent.v` | ✅ | 122 | `descent_set`, `des`, `asc` on `{perm}` |
-| `eulerian.v` | ✅ | 662 | Eulerian numbers, row sum |
-| `beta.v` | ✅ | 148 | `beta`, `beta0`, `beta_full`, `beta_eulerian` |
-| `beta_omega.v` | ✅ | 401 | Toggle action, `omega_set` definition |
-| `beta_bridge.v` | ✅ | 131 | Set ↔ seq bridge for `omega` |
-| `perm_seq_bridge.v` | ⚠️ | 1025 | **`omega_proper_beta_lt`** |
-| `beta_swap.v` | ⚠️ | 301 | **`beta_alt_max`** (the headline theorem) |
+| File | Status | Role |
+|------|:------:|------|
+| `mmtree.v` | ✅ | Min-max tree datatype + `mmtree_of_seqK` round-trip |
+| `psi_core.v` | ✅ | `mm_pos`, `window_size`, ψᵢ operator (M-equivalence generators) |
+| `psi_comm.v` | ✅ | Commutativity of ψᵢ on disjoint windows |
+| `psi_descent_v2.v` | ✅ | `has_left_child`, `is_descent_seq`, descent ↔ ψ |
+| `psi_descent_thms.v` | ✅ | Window descent theorems |
+| `psi_descent.v` | ✅ | Compatibility wrapper over `psi_descent_v2` + `psi_descent_thms` |
+| `psi_cdindex_defs.v` | ✅ | cd-letter alphabet, `phi_w`, `expand_cde`, `char_mono` |
+| `psi_cdindex_tree_shape.v` | ✅ | Tree-shape encoding (Opaque-sealed) |
+| `psi_cdindex_tree_hlc.v` | ✅ | Has-left-child via tree shape |
+| `psi_cdindex_tree.v` | ✅ | Tree-induction route to invariants |
+| `psi_cdindex_core.v` | ✅ | ψᵢ preserves `phi_w`, `internal_vertices`, M-class bit-recovery |
+| `psi_cdindex_witness.v` | ✅ | `S_w` definition, Fact #1 ingredients |
+| `psi_cdindex_support_defs.v` | ✅ | `cde_width`, `cde_total_width`, `D_offsets`, `expand_cde_mem_iff` |
+| `psi_cdindex_support.v` | ✅ | **`phi_w_support_general`, `fact3`** |
+| `ordinal_reindex.v` | ✅ | Lift/unlift bijections on `'I_n` |
+| `perm_compress.v` | ✅ | `drop_perm` / `lift_perm` builders |
+| `descent.v` | ✅ | `descent_set`, `des`, `asc` on `{perm}` |
+| `eulerian.v` | ✅ | Eulerian numbers, row sum |
+| `beta.v` | ✅ | `beta`, `beta0`, `beta_full`, `beta_eulerian` |
+| `beta_omega.v` | ✅ | Toggle action, `omega_set` definition |
+| `beta_bridge.v` | ✅ | Set ↔ seq bridge for `omega` |
+| `perm_seq_bridge.v` | ✅ | **`omega_proper_beta_lt`** (Stanley Prop 1.6.4) |
+| `beta_swap.v` | ✅ | **`beta_alt_max`** (the headline theorem, Stanley Cor 1.6.5) |
 
-The three ⚠️ files contain the headline theorems — Stanley Prop 1.6.4
-(`beta_alt_max`) and the structural support lemma (`phi_w_support_general`).
-**Their proof scripts type-check; only the kernel re-elaboration is
-hardware-bound on this machine.**
+All 23 maintained files compile to `.vo`. The headline theorems —
+Stanley Prop 1.6.4 (`omega_proper_beta_lt`) and Cor 1.6.5
+(`beta_alt_max`) — are kernel-validated and closed under the global
+context.
 
 ---
 
@@ -222,7 +225,7 @@ of its descent positions. Stanley writes `uS = e₁e₂…e_{n−1}` with `eᵢ 
 
 Stanley **Fact #3** says the multiset of characteristic monomials over the
 M-class `[w]` equals the multiset given by expanding `Φw` under
-`c ↦ a+b, d ↦ ab+ba`. This is `fact3` ⚠️ (§13).
+`c ↦ a+b, d ↦ ab+ba`. This is `fact3` ✅ (§13).
 
 ## 8. Fact #1 prerequisites ✅ `psi_cdindex_core.v`, `psi_cdindex_tree_shape.v`
 
@@ -379,20 +382,22 @@ constructive.
 297): `witness_perm` produces a sequence that is a valid permutation of
 `[0, …, n]` and has the predicted descent pattern.
 
-## 13. Heavy support theorem ⚠️ `psi_cdindex_support.v`
+## 13. Heavy support theorem ✅ `psi_cdindex_support.v`
 
 [Stanley §1.6.3, the displayed identity `Φw = ∑_{ω(X) ⊇ Sw} uX` on p. 60-61,
 inside the proof of Prop 1.6.4; and **Fact #3**, p. 58, the M-class
 multiset identity]
 
-This is the largest single file (1312 LOC) and the first ⚠️-status file. It
-contains the *combinatorial heart* of Stanley §1.6.
+This is the combinatorial heart of Stanley §1.6. The supporting
+definitions (`cde_width`, `cde_total_width`, `cde_offset`, `D_offsets`,
+`expand_cde_mem_iff`) live in the split file
+`psi_cdindex_support_defs.v` ✅.
 
-**Definitions ⚠️.** `cde_width l ∈ {0, 1, 2}` (E, C, D widths);
+**Definitions ✅.** `cde_width l ∈ {0, 1, 2}` (E, C, D widths);
 `cde_total_width m`; `cde_offset m i`; `D_offsets m`. These give the bit-level
 positions of D-letter expansions in `expand_cde`.
 
-**Theorem ⚠️ `expand_cde_mem_iff`** (`psi_cdindex_support.v:209`):
+**Theorem ✅ `expand_cde_mem_iff`** (`psi_cdindex_support_defs.v`):
 
 > A bit-string `X` is in `expand_cde m` iff `|X| = cde_total_width m`
 > AND for every D-position `k` in `m`, `X_k ≠ X_{k+1}` (a "transition" at `k`).
@@ -400,7 +405,7 @@ positions of D-letter expansions in `expand_cde`.
 This is the defining combinatorial property of cd-monomial expansion — D
 contributes the dyad `{ab, ba}`, which exactly forces a flip at the D-position.
 
-**Theorem ⚠️ `phi_w_support_general`** (`psi_cdindex_support.v:887`):
+**Theorem ✅ `phi_w_support_general`** (`psi_cdindex_support.v`):
 
 > For `uniq w` with `|w| ≥ 2` and `|X| = (size w).-1`:
 > `X ∈ expand_cde (phi_w w)` iff every `k ∈ S_w` satisfies the omega condition
@@ -414,7 +419,7 @@ This is exactly **Stanley's identity at the top of p. 61**:
 expansion of `Φw`). This identity is the **load-bearing intermediate result
 of Prop 1.6.4's proof** in Stanley.
 
-**Theorem ⚠️ `fact3`** (`psi_cdindex_support.v:1288`): **Stanley Fact #3**
+**Theorem ✅ `fact3`** (`psi_cdindex_support.v`): **Stanley Fact #3**
 (verbatim, p. 58):
 
 > *Stanley's statement.* "Let `w ∈ Sn`, and let `[w]` be the M-equivalence
@@ -434,13 +439,14 @@ Stanley uses this as a stepping stone to **Theorem 1.6.3** (the ab-index
 factors through the cd-substitution). Our `fact3` matches Stanley's Fact #3
 directly.
 
-**Why ⚠️.** The proof of `phi_w_support_general` chains
-`expand_cde_mem_iff` (heavy ternary induction over `seq cde`) with
-`cde_total_width_phi_w_all` (strong induction on `size w`) and
-`D_offsets_phi_w_eq_S_w_seq` (same induction). Each step is sealed `Qed` and
-`coqchk`-validated, but the kernel's re-elaboration of the combined proof
-term exceeds available RAM. This was attempted to be fixed by a tree-shape
-refactor (`REFACTOR_PLAN_V2.md`); see the postmortem there.
+**Architecture.** The M-class injectivity gap was closed by a bit-level
+recovery argument in `psi_cdindex_core.v`
+(`char_mono_apply_psis_C_bit`, `char_mono_apply_psis_D_bit_pred`,
+`char_mono_apply_psis_D_bit_self`): for each internal vertex `v`, one
+can read off `(v ∈ ss)` from the bits of `char_mono (apply_psis ss w)`
+at positions owned by `v`, and disjointness across distinct `v` follows
+from `LR_pred_is_endpoint`. This drives `char_mono_apply_psis_inj` and
+the `uniq_map_char_mono_powerset` used in `fact3`.
 
 ---
 
@@ -465,23 +471,23 @@ This identifies the finset-level `omega_set` with the seq-level `omega_seq` —
 the bridge that lets the heavy machinery in `psi_cdindex_*.v` apply to
 `{set}`-style consumers.
 
-## 15. perm ↔ seq bridge ⚠️ `perm_seq_bridge.v`
+## 15. perm ↔ seq bridge ✅ `perm_seq_bridge.v`
 
 [Stanley §1.6.3, **Proposition 1.6.4**, p. 60-61]
 
 For a permutation `s : {perm 'I_n}`, define `perm_to_seq s := [seq val (s i) | i ← enum 'I_n]`
 — the seq of underlying naturals.
 
-**Lemmas ⚠️ (proof scripts validated, kernel re-elaboration pending):**
+**Lemmas ✅:**
 
 - **`perm_to_seq_uniq`**: `uniq (perm_to_seq s)`.
 - **`perm_to_seq_inj`**: `perm_to_seq` is injective.
-- **`is_descent_perm_seq`** (`perm_seq_bridge.v:67`):
+- **`is_descent_perm_seq`**:
   `is_descent_seq (perm_to_seq s) i = is_descent s i` — the two descent
   notions coincide.
 - **`char_mono_perm_to_seq`**: `char_mono (perm_to_seq s) = descent_to_bvec (descent_set s)`.
 
-**Theorem ⚠️ `omega_proper_beta_lt`** (`perm_seq_bridge.v:543`) — **Stanley
+**Theorem ✅ `omega_proper_beta_lt`** (`perm_seq_bridge.v`) — **Stanley
 Proposition 1.6.4** (verbatim, p. 60):
 
 > *Stanley's statement.* "Let `S, T ⊆ [n−1]`. If `ω(S) ⊂ ω(T)`, then
@@ -493,7 +499,7 @@ Proposition 1.6.4** (verbatim, p. 60):
 
 **Proof sketch (Stanley's argument, faithfully formalized).** Given proper
 containment of omega-sets, pick `k ∈ ω(E) ∖ ω(D)`. By
-`phi_w_support_general` ⚠️ (§13) — the formalized version of Stanley's
+`phi_w_support_general` ✅ (§13) — the formalized version of Stanley's
 identity `Φw = ∑_{ω(X)⊇Sw} uX` — for every permutation σ with descent set
 `D`, the bit-vector `descent_to_bvec D` lies in `expand_cde(phi_w(perm_to_seq σ))`.
 The same is true for `descent_to_bvec E` whenever `ω(E) ⊇ Sw`. Stanley's
@@ -501,15 +507,11 @@ witness `Φw = c^{i−1} d c^{n−2−i}` (formalized as `witness_perm`, §12) g
 a cd-word with `Sw = {i}` for `i = k`, ensuring `ω(E) ⊇ Sw` but
 `ω(D) ⊉ Sw`. Counting yields the strict inequality.
 
-**Why ⚠️.** Same kernel-cost issue as `psi_cdindex_support.v` — the proof
-chains through the .vos-only support theorems (`phi_w_support_general` and
-`fact3`).
-
 ---
 
 # Part VI — The headline result
 
-## 16. β-monotonicity ⚠️ `beta_swap.v`
+## 16. β-monotonicity ✅ `beta_swap.v`
 
 [Stanley §1.6.3, **Corollary 1.6.5**, p. 61]
 
@@ -536,7 +538,7 @@ pair `i, i+1`, exactly one is in `D`. Equivalently: `omega_set D = [set: 'I_n]`
 direction of Stanley's eq. (1.65) — non-alternating sets have strictly
 smaller omega.
 
-**Theorem ⚠️ `beta_alt_max`** (`beta_swap.v:273`) — **Stanley Corollary 1.6.5**
+**Theorem ✅ `beta_alt_max`** (`beta_swap.v`) — **Stanley Corollary 1.6.5**
 (contrapositive form):
 
 > *Stanley's statement.* "Let `S ⊆ [n−1]`. Then `βn(S) ≤ En`, with equality
@@ -559,15 +561,9 @@ upstream (see `beta_compl`, line 166: `β(D) = β(~D)`).
 **Proof sketch (Stanley's argument, faithfully formalized).** Reduce to
 `n = m+2` for some `m`. By `not_set_is_alt_omega_not_full`,
 `omega_set D ⊊ setT = omega_set (alt_desc_set n)`. Apply
-`omega_proper_beta_lt` ⚠️ (§15) — Stanley's Prop 1.6.4 — and the strict
+`omega_proper_beta_lt` ✅ (§15) — Stanley's Prop 1.6.4 — and the strict
 inequality follows. This **exactly mirrors Stanley's "Proof: Immediate from
 Proposition 1.6.4 and equation (1.65)"** (p. 61).
-
-**Why ⚠️.** The proof depends transitively on `omega_proper_beta_lt`
-(`perm_seq_bridge.v`), which depends on `phi_w_support_general` and `fact3`
-(`psi_cdindex_support.v`). All three files fail kernel re-elaboration on
-this hardware; their proof scripts and computational checks (including
-`vm_compute` confirmations of Fact #3 on small permutations) are valid.
 
 ---
 
@@ -589,17 +585,17 @@ which we don't formalize.)
 | §1.6.3, p. 57, **Fact #1** (commutativity) | "ψᵢ are commuting involutions, generate `(ℤ/2)^{ι(w)}`" | `psi_comm_disjoint` (`psi_comm.v:431`) | ✅ |
 | §1.6.3, p. 57, **Fact #1** (well-definedness) | `Φw` depends only on `M(w)` as unlabelled tree | `phi_w_apply_psis` (`psi_cdindex_core.v:52`) | ✅ |
 | §1.6.3, pp. 57-58, **Fact #2** | Descent change formula for ψᵢ (right-only / two-children) | block-toggle calculus in `beta_omega.v` (lines 247-340) | ✅ |
-| §1.6.3, p. 58, eq. (1.60) | Characteristic monomial `uS = e₁…e_{n−1}` | `char_mono` + `descent_to_bvec` (`psi_cdindex_defs.v:32`, `perm_seq_bridge.v:85`) | ✅ / ⚠️ (descent_to_bvec is in ⚠️ file) |
-| §1.6.3, pp. 58-59 (Φw definition) | `Φw = f₁…fn`, `fᵢ ∈ {c, d, e}` | `phi'_w` and `phi_w` (`psi_cdindex_defs.v:44, 48`) | ✅ |
-| §1.6.3, p. 58, **Fact #3** | `∑_{v ∈ [w]} uD(v) = Φw(a+b, ab+ba)` | `fact3` (`psi_cdindex_support.v:1288`) | ⚠️ |
+| §1.6.3, p. 58, eq. (1.60) | Characteristic monomial `uS = e₁…e_{n−1}` | `char_mono` + `descent_to_bvec` (`psi_cdindex_defs.v`, `perm_seq_bridge.v`) | ✅ |
+| §1.6.3, pp. 58-59 (Φw definition) | `Φw = f₁…fn`, `fᵢ ∈ {c, d, e}` | `phi'_w` and `phi_w` (`psi_cdindex_defs.v`) | ✅ |
+| §1.6.3, p. 58, **Fact #3** | `∑_{v ∈ [w]} uD(v) = Φw(a+b, ab+ba)` | `fact3` (`psi_cdindex_support.v`) | ✅ |
 | §1.6.3, p. 59, **Fact #4** | Each M-class has exactly one alternating perm | *not separately formalized* — implied by Fact #3 + uniqueness of alternating string in expansion (witness side: `witness_perm_uniq`) | partial ✅ |
 | §1.6.3, **Theorem 1.6.3** | "Ψn = Φn(a+b, ab+ba)" — ab-index = cd-index | *not formalized as a standalone* — Fact #3 supplies the substantive content | — |
-| §1.6.3, p. 60, ω(S) definition | `ω(S) = {i : exactly one of i, i+1 ∈ S}` | `omega_set` (`beta_omega.v:57`) | ✅ |
-| §1.6.3, p. 60, eq. (1.65) | `ω(S) = [n−2] ⇔ S` is alternating | `omega_set_alt_full` + `not_set_is_alt_omega_not_full` (`beta_swap.v:238, 254`) | ✅ |
-| §1.6.3, p. 60-61 (proof of 1.6.4) | Identity `Φw = ∑_{ω(X)⊇Sw} uX` | `phi_w_support_general` (`psi_cdindex_support.v:887`) | ⚠️ |
-| §1.6.3, p. 60-61 (proof of 1.6.4) | Witness `Φw = c^{i−1} d c^{n−2−i}` | `witness_perm` (`psi_cdindex_witness.v:116`) | ✅ (definition) |
-| §1.6.3, p. 60, **Proposition 1.6.4** | `ω(S) ⊂ ω(T) ⇒ βn(S) < βn(T)` | `omega_proper_beta_lt` (`perm_seq_bridge.v:543`) | ⚠️ |
-| §1.6.3, p. 61, **Corollary 1.6.5** | `βn(S) ≤ En`, equality iff S alternating | `beta_alt_max` (`beta_swap.v:273`) | ⚠️ |
+| §1.6.3, p. 60, ω(S) definition | `ω(S) = {i : exactly one of i, i+1 ∈ S}` | `omega_set` (`beta_omega.v`) | ✅ |
+| §1.6.3, p. 60, eq. (1.65) | `ω(S) = [n−2] ⇔ S` is alternating | `omega_set_alt_full` + `not_set_is_alt_omega_not_full` (`beta_swap.v`) | ✅ |
+| §1.6.3, p. 60-61 (proof of 1.6.4) | Identity `Φw = ∑_{ω(X)⊇Sw} uX` | `phi_w_support_general` (`psi_cdindex_support.v`) | ✅ |
+| §1.6.3, p. 60-61 (proof of 1.6.4) | Witness `Φw = c^{i−1} d c^{n−2−i}` | `witness_perm` (`psi_cdindex_witness.v`) | ✅ |
+| §1.6.3, p. 60, **Proposition 1.6.4** | `ω(S) ⊂ ω(T) ⇒ βn(S) < βn(T)` | `omega_proper_beta_lt` (`perm_seq_bridge.v`) | ✅ |
+| §1.6.3, p. 61, **Corollary 1.6.5** | `βn(S) ≤ En`, equality iff S alternating | `beta_alt_max` (`beta_swap.v`) | ✅ |
 
 **Our companion / housekeeping results** (not in Stanley but needed):
 `mm_pos_lt_pred` (the root of M(w) is internal); `cde_total_width_phi_w_all`
@@ -609,7 +605,9 @@ which we don't formalize.)
 
 # What this is and isn't
 
-**What is verified ✅** (kernel-checked, 0 axioms, 0 Admitted):
+**What is verified ✅** (kernel-checked, 0 axioms, 0 Admitted, all 23
+maintained files build to `.vo`):
+
 - The min-max tree `M(w)` round-trip and structural API (Stanley §1.6.3, p. 56).
 - ψᵢ commutativity (Stanley **Fact #1**, commutativity half).
 - `phi_w_apply_psis` — Stanley **Fact #1**'s well-definedness clause:
@@ -623,29 +621,18 @@ which we don't formalize.)
 - The `omega_set ↔ omega_seq` bridge between finset and seq.
 - All of `toggle_at`, `set_is_alt`, the alternating descent set, and the
   witness construction `witness_perm` (Stanley's `Φw = c^{i−1} d c^{n−2−i}`).
-
-**What is `.vos`-pending ⚠️** (three files; tactic-validated, axiom-free per
-`coqchk`, kernel re-elaboration hardware-bound):
-
-| Lemma | Stanley reference |
-|-------|--------------------|
-| `phi_w_support_general` (`psi_cdindex_support.v:887`) | identity `Φw = ∑_{ω(X)⊇Sw} uX` (proof of 1.6.4) |
-| `fact3` (`psi_cdindex_support.v:1288`) | **Fact #3** (p. 58): char-mono multiset = expand_cde |
-| `omega_proper_beta_lt` (`perm_seq_bridge.v:543`) | **Proposition 1.6.4** (p. 60) |
-| **`beta_alt_max`** (`beta_swap.v:273`) | **Corollary 1.6.5** (p. 61) — *the headline result* |
-
-These proofs **type-check at the tactic level**, run computationally on small
-examples (multiple `Example` blocks with `vm_compute` confirm Fact #3 on
-specific permutations), and are reported by `coqchk` as **axiom-free**. The
-only missing step is Rocq's kernel re-elaborating the opaque proof terms during
-`Qed` checking — that exceeds 188 GB on this hardware. See
-`REFACTOR_PLAN_V2.md` for the two failed attempts to eliminate this gap.
+- **Stanley Fact #3** (`fact3`): the M-class multiset identity.
+- **Stanley's identity** `Φw = ∑_{ω(X) ⊇ Sw} uX` (`phi_w_support_general`).
+- **Stanley Proposition 1.6.4** (`omega_proper_beta_lt`):
+  `ω(S) ⊊ ω(T) ⇒ βn(S) < βn(T)`.
+- **Stanley Corollary 1.6.5** (`beta_alt_max`): the alternating descent
+  set strictly maximizes `β` — *the headline result*.
 
 **What is missing entirely.** Nothing in the active build chain has `Admitted`
-or postulated axioms beyond Coq's standard library. The orphan file
-`psi_descent_wf.v` (not in `_CoqProject`) contains 7 `Admitted`s; it is dead
+or postulated axioms beyond Rocq's standard library. The orphan file
+`archive/psi_descent_wf.v.txt` contains 7 `Admitted`s; it is dead
 code from an abandoned alternative formulation and is not loaded by any
-`.vo` or `.vos` file.
+`.vo` file.
 
 ---
 
@@ -653,16 +640,19 @@ code from an abandoned alternative formulation and is not loaded by any
 
 If you want to dive into the formal proofs:
 
-1. **Start with the `.vo` chain** — each step has been kernel-validated. Top
-   to bottom, the dependency order is in `_CoqProject`.
-2. **Compile with `make`** to see which files build to `.vo` and which stop
-   at `.vos` (the make currently OOMs on `psi_cdindex_support.v` after
-   building 18/21 files cleanly — see `BUILD_PLAN.md`).
-3. **For the ⚠️ files,** open them in your editor and step through with
-   `coq-mode`/`Coq Platform` — every tactic succeeds, every obligation
-   discharges; only kernel re-elaboration of the resulting proof terms is
-   skipped.
-4. **For the math behind the formal proofs,** Stanley *Enumerative
+1. **Start at the leaf** — `beta_swap.v` contains the headline theorem
+   `beta_alt_max`. The proof body is `omega_proper_beta_lt`
+   (Stanley Prop 1.6.4) applied to the alternating-set
+   characterization (Stanley eq. 1.65).
+2. **Walk back up the dependency chain** via `_CoqProject`. The
+   topological order is `mmtree → psi_core → psi_comm →
+   psi_descent_v2/thms → psi_cdindex_* → perm_seq_bridge → beta_swap`.
+3. **Compile with `make clean && make -j2`** — all 23 files build to
+   `.vo` end-to-end; no holdouts.
+4. **Verify axiom-freeness** with `coqchk -R . mathcomp_eulerian
+   mathcomp_eulerian.beta_swap`, or interactively
+   `Print Assumptions beta_alt_max`.
+5. **For the math behind the formal proofs,** Stanley *Enumerative
    Combinatorics I*, 2nd edition, §1.6 (especially §1.6.3 "The cd-index of a
    permutation" and the proof of Prop 1.6.4 on p. 60-61) is the ground truth.
    The repository's `refs/enu_comb_stanley.pdf` is the source.
@@ -672,14 +662,12 @@ If you want to dive into the formal proofs:
 # Build status snapshot
 
 ```
-Tag               : v1-vos-stable (active head: golf-checkpoint commits)
-.vos files        : 21 / 21    ← all proof scripts validated
-.vo files         : 18 / 21    ← all kernel proof terms validated
-Active Admitted   :  0 / 0     ← in active build chain
+.vo files         : 23 / 23    ← all kernel proof terms validated
+.vos files        : 23 / 23    ← all proof scripts validated
+Active Admitted   :  0         ← in active build chain
 Custom axioms     :  0         ← coqchk: standard axioms only
-Headline theorem  : .vos-only (kernel re-elaboration hardware-bound)
+Headline theorem  : beta_alt_max — closed under the global context
 ```
 
-The mathematical content of Stanley Prop 1.6.4 is fully verified at the
-tactic-and-axioms level; only the kernel re-check for three leaf files is
-missing.
+The mathematical content of Stanley Prop 1.6.4 and Cor 1.6.5 is fully
+kernel-verified.

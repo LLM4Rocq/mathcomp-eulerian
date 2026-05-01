@@ -1,0 +1,207 @@
+\chapter{Descents, Eulerian numbers, and refined descent counts}
+\label{ch:descents}
+
+This chapter formalizes Stanley EC1 \S1.4 (\emph{descents and the
+Eulerian polynomials}, pp.~30--51).  The basic objects are: the
+\emph{descent set} of a permutation, the \emph{Eulerian number}
+$\Eul{n+1}{k+1}$ counting permutations of $[n+1]$ with exactly $k$
+descents, and the \emph{set-refined} count $\beti_n(S)$ giving the
+number of permutations whose descent set is \emph{exactly}~$S$.
+
+\medskip
+Throughout this chapter, indices shift by one between Stanley's
+convention and ours: Stanley writes $w \in \Sn$ and
+$D(w) \subseteq [n-1]$, while our formalization uses
+$\sigma \in \Snp{n+1}$ and $\DescSet{\sigma} \subseteq \{0, \dots, n-1\}$
+(modelled in MathComp by $\code{\{set 'I\_n\}}$).  The mathematical
+content is identical.
+
+% ============================================================
+\section{Descents of a permutation}
+% ============================================================
+
+\begin{definition}[Descent and descent set]
+  \label{def:descent_set}
+  \rocq{mathcomp_eulerian.descent.is_descent}
+  \rocq{mathcomp_eulerian.descent.descent_set}
+  \rocqok
+  Let $\sigma \in \Snp{n+1}$.  Position $i \in \{0, \dots, n-1\}$ is a
+  \emph{descent} of $\sigma$ when $\sigma(i+1) < \sigma(i)$.  The
+  \emph{descent set} is
+  \[
+    \DescSet{\sigma} = \{ i : \sigma(i+1) < \sigma(i) \}
+                     \subseteq \{0, \dots, n-1\}.
+  \]
+\end{definition}
+
+\begin{definition}[Descent and ascent counts]
+  \label{def:des_asc}
+  \uses{def:descent_set}
+  \rocq{mathcomp_eulerian.descent.des}
+  \rocq{mathcomp_eulerian.descent.asc}
+  \rocqok
+  Set $\des(\sigma) = |\DescSet{\sigma}|$ and
+  $\asc(\sigma) = n - \des(\sigma)$.
+\end{definition}
+
+\begin{lemma}[Identity has no descents]
+  \label{lem:des_id}
+  \uses{def:des_asc}
+  \rocq{mathcomp_eulerian.descent.des_id}
+  \rocqok
+  $\des(\mathrm{id}_{\Snp{n+1}}) = 0$.
+\end{lemma}
+
+\begin{lemma}[Reversal flips descents]
+  \label{lem:des_rev_perm}
+  \uses{def:des_asc}
+  \rocq{mathcomp_eulerian.descent.is_descent_rev}
+  \rocq{mathcomp_eulerian.descent.des_rev_perm}
+  \rocqok
+  Let $\rev_n \in \Snp{n+1}$ be the order-reversing permutation
+  $i \mapsto n - i$.  Position $i$ is a descent of $\sigma$ if and only
+  if $i$ is \emph{not} a descent of $\rev_n \cdot \sigma$, hence
+  $\des(\rev_n \cdot \sigma) = n - \des(\sigma)$.  In particular
+  $\des(\rev_n) = n$.
+\end{lemma}
+
+% ============================================================
+\section{Eulerian numbers}
+% ============================================================
+
+\begin{definition}[Eulerian number]
+  \label{def:eulerian}
+  \uses{def:des_asc}
+  \rocq{mathcomp_eulerian.eulerian.eulerian}
+  \rocqok
+  For $n, k \in \NN$, the \emph{Eulerian number} is the count
+  \[
+    \Eul{n+1}{k+1}
+    \;=\;
+    \#\{\sigma \in \Snp{n+1} : \des(\sigma) = k\}.
+  \]
+  We write \code{eulerian n k} in the formalization, indexed so that
+  $n$ is ``permutation size minus one'' and $k$ ranges over $0, \dots, n$.
+\end{definition}
+
+\begin{lemma}[Row sum]
+  \label{lem:eulerian_row_sum_fact}
+  \uses{def:eulerian}
+  \rocq{mathcomp_eulerian.eulerian.eulerian_row_sum_fact}
+  \rocqok
+  $\sum_{k=0}^{n} \Eul{n+1}{k+1} = (n+1)!$.
+\end{lemma}
+
+\begin{lemma}[Boundary values and symmetry]
+  \label{lem:eulerian_boundary}
+  \uses{def:eulerian, lem:des_rev_perm}
+  \rocq{mathcomp_eulerian.eulerian.eulerian_n_0}
+  \rocq{mathcomp_eulerian.eulerian.eulerian_n_n}
+  \rocq{mathcomp_eulerian.eulerian.eulerian_symm}
+  \rocqok
+  $\Eul{n+1}{1} = \Eul{n+1}{n+1} = 1$, and for $0 \leq k \leq n$,
+  $\Eul{n+1}{k+1} = \Eul{n+1}{(n-k)+1}$.
+\end{lemma}
+
+\begin{theorem}[Eulerian recurrence]
+  \label{thm:eulerian_rec}
+  \uses{def:eulerian}
+  \rocq{mathcomp_eulerian.eulerian.eulerian_rec}
+  \rocqok
+  For all $n, k \in \NN$,
+  \[
+    \Eul{n+2}{k+2}
+    \;=\;
+    (k+2) \cdot \Eul{n+1}{k+2}
+    \,+\,
+    (n+1-k) \cdot \Eul{n+1}{k+1}.
+  \]
+  Proof is by the value-based ``insert max'' bijection
+  $\Snp{n+2} \simeq \Snp{n+1} \times \{0, \dots, n+1\}$.
+\end{theorem}
+
+\begin{theorem}[Worpitzky's identity]
+  \label{thm:worpitzky}
+  \uses{thm:eulerian_rec}
+  \rocq{mathcomp_eulerian.eulerian.worpitzky}
+  \rocqok
+  For all $n, x \in \NN$,
+  \[
+    x^{\,n+1}
+    \;=\;
+    \sum_{k=0}^{n} \Eul{n+1}{k+1} \cdot \binom{x+k}{n+1}.
+  \]
+\end{theorem}
+
+\begin{theorem}[Closed form]
+  \label{thm:eulerian_explicit}
+  \uses{thm:worpitzky, lem:eulerian_boundary}
+  \rocq{mathcomp_eulerian.eulerian.eulerian_explicit}
+  \rocqok
+  In $\ZZ$,
+  \[
+    \Eul{n+1}{k+1}
+    \;=\;
+    \sum_{j=0}^{k} (-1)^{j} \binom{n+2}{j} (k+1-j)^{\,n+1}.
+  \]
+  Proved by Worpitzky inversion using an alternating-binomial
+  Kronecker identity.
+\end{theorem}
+
+% ============================================================
+\section{The refined count $\beti_n(S)$}
+% ============================================================
+
+\begin{definition}[Set-refined descent count]
+  \label{def:beta}
+  \uses{def:descent_set}
+  \rocq{mathcomp_eulerian.beta.beta}
+  \rocqok
+  For $D \subseteq \{0, \dots, n-1\}$,
+  \[
+    \beti(D) = \#\{\sigma \in \Snp{n+1} : \DescSet{\sigma} = D\}.
+  \]
+  This is Stanley's $\beti_n(S)$ from EC1 eq.~(1.32), p.~30.
+\end{definition}
+
+\begin{lemma}[Boundary cases]
+  \label{lem:beta_boundary}
+  \uses{def:beta}
+  \rocq{mathcomp_eulerian.beta.beta0}
+  \rocq{mathcomp_eulerian.beta.beta_full}
+  \rocqok
+  $\beti(\emptyset) = 1$ (only the identity has empty descent set) and
+  $\beti(\{0, \dots, n-1\}) = 1$ (only the order-reversing permutation
+  has full descent set).
+\end{lemma}
+
+\begin{theorem}[Total partition by descent set]
+  \label{thm:sum_beta_eq_fact}
+  \uses{def:beta}
+  \rocq{mathcomp_eulerian.beta.sum_beta_eq_fact}
+  \rocqok
+  $\sum_{D \subseteq \{0, \dots, n-1\}} \beti(D) = (n+1)!$.
+\end{theorem}
+
+\begin{theorem}[Refining the Eulerian count]
+  \label{thm:beta_eulerian}
+  \uses{def:beta, def:eulerian}
+  \rocq{mathcomp_eulerian.beta.beta_eulerian}
+  \rocqok
+  For each $0 \leq k \leq n$,
+  \[
+    \sum_{|D| = k} \beti(D) = \Eul{n+1}{k+1}.
+  \]
+  Aggregating $\beti$ over descent sets of fixed size recovers the
+  Eulerian number.
+\end{theorem}
+
+\begin{lemma}[Reversal symmetry of $\beti$]
+  \label{lem:beta_rev}
+  \uses{def:beta, lem:des_rev_perm}
+  \rocq{mathcomp_eulerian.beta.beta_rev}
+  \rocqok
+  $\beti(D) = \beti(\,\rev_n \cdot D^{c}\,)$, where $D^{c}$ denotes the
+  set complement and $\rev_n$ acts pointwise.  In particular the two
+  alternating descent sets have equal $\beti$-value.
+\end{lemma}

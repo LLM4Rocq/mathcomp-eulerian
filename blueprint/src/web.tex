@@ -1,0 +1,24 @@
+% Web (HTML) version of the blueprint.
+% See blueprint/src/print.tex for the PDF version.
+
+\documentclass{report}
+
+\usepackage{amssymb, amsthm, amsmath}
+\usepackage{hyperref}
+\usepackage[dep_graph]{blueprint}
+
+\input{macros/common}
+\input{macros/web}
+
+\home{https://llm4rocq.github.io/mathcomp-eulerian/}
+\github{https://github.com/LLM4Rocq/mathcomp-eulerian}
+\dochome{https://llm4rocq.github.io/mathcomp-eulerian/doc}
+
+\title{Permutation descents, Eulerian numbers, and the cd-index\\
+       \large A Rocq / MathComp formalization of Stanley EC1 \S1.4 + \S1.6}
+\author{Marc Lelarge}
+
+\begin{document}
+\maketitle
+\input{content}
+\end{document}

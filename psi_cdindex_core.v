@@ -170,6 +170,45 @@ Lemma size_char_mono w :
   size (char_mono w) = (size w).-1.
 Proof. by rewrite /char_mono size_map size_iota. Qed.
 
+(* Internal vertices live strictly inside the descent index range. *)
+Lemma is_internal_lt v w : is_internal v w -> v < (size w).-1.
+Proof.
+move=> /andP [Hvlt Hws].
+have Hwbd := window_size_bound v w.
+have Hsub : 1 < size w - v by exact: leq_trans Hws Hwbd.
+rewrite ltn_subRL in Hsub.
+case: (size w) Hvlt Hsub => [//|n] Hvlt /=.
+by rewrite addnC.
+Qed.
+
+(* Bit-level effect of psi on char_mono.                                     *)
+(* C-vertex (no left child): toggles bit at position v.                      *)
+(* D-vertex (has left child): swaps bits at positions v.-1 and v.            *)
+Lemma char_mono_psi_effect v w k :
+  uniq w -> is_internal v w -> k < (size w).-1 ->
+  nth false (char_mono (psi v w)) k =
+    if ~~ has_left_child v w then
+      if k == v then ~~ nth false (char_mono w) v
+      else nth false (char_mono w) k
+    else
+      if k == v then nth false (char_mono w) v.-1
+      else if k == v.-1 then nth false (char_mono w) v
+      else nth false (char_mono w) k.
+Proof.
+move=> Hu Hint Hk.
+have Hvlt := is_internal_lt Hint.
+have Hvm1 : v.-1 < (size w).-1 := leq_ltn_trans (leq_pred v) Hvlt.
+have HkP : k < (size (psi v w)).-1 by rewrite size_psi.
+rewrite (nth_char_mono HkP) (descent_psi_effect Hu Hint Hk).
+case: (~~ has_left_child v w); case Hkv: (k == v).
+- by rewrite (nth_char_mono Hvlt).
+- by rewrite (nth_char_mono Hk).
+- by rewrite (nth_char_mono Hvm1).
+case Hkv1: (k == v.-1).
+  by rewrite (nth_char_mono Hvlt).
+by rewrite (nth_char_mono Hk).
+Qed.
+
 (* -- The last vertex has no left child ------------------------------------ *)
 
 (* Helper: index of x in rcons s y at position size s implies x not in s. *)
@@ -450,6 +489,293 @@ Qed.
 Lemma size_powerset_internal w :
   size (powerset_internal w) = 2 ^ size (internal_vertices w).
 Proof. exact: size_powerset_of. Qed.
+
+Lemma uniq_powerset_of (ivs : seq nat) :
+  uniq ivs ->
+  uniq (foldl (fun acc i =>
+    acc ++ [seq s ++ [:: i] | s <- acc]) [:: [::]] ivs).
+Proof.
+have Hgen : forall (ivs0 : seq nat) (acc : seq (seq nat)),
+  uniq ivs0 -> uniq acc ->
+  (forall s, s \in acc -> all (fun x : nat => x \notin ivs0) s) ->
+  uniq (foldl (fun (acc' : seq (seq nat)) (i : nat) =>
+    acc' ++ [seq s ++ [:: i] | s <- acc']) acc ivs0).
+  elim=> [|j ivs0 IH] acc //=.
+  move=> /andP[Hj Hivs] Huacc Hdisj.
+  apply: IH => //.
+    rewrite cat_uniq Huacc /=.
+    apply/andP; split.
+      apply/hasPn => x /mapP [s Hs ->{x}].
+      apply/negP => Hxa.
+      have := Hdisj _ Hxa => /allP /(_ j).
+      have Hjmem : j \in s ++ [:: j] by rewrite mem_cat inE eqxx orbT.
+      by move/(_ Hjmem); rewrite inE eqxx.
+    have -> : [seq s ++ [:: j] | s <- acc] = [seq rcons s j | s <- acc].
+      by apply: eq_map => s; rewrite cats1.
+    by rewrite map_inj_uniq //; exact: rcons_injl.
+  move=> s' /[!mem_cat] /orP [Hs'a | /mapP [s Hs ->{s'}]].
+    have := Hdisj _ Hs'a => /allP Hall.
+    apply/allP => x Hx; have := Hall _ Hx.
+    by rewrite inE negb_or => /andP [_ ->].
+  apply/allP => x; rewrite mem_cat => /orP [Hxs | Hxj].
+    have := Hdisj _ Hs => /allP /(_ x Hxs).
+    by rewrite inE negb_or => /andP [_ ->].
+  by rewrite mem_seq1 in Hxj; move/eqP: Hxj => -> .
+move=> Huniq; apply: Hgen => // s.
+by rewrite mem_seq1 => /eqP -> .
+Qed.
+
+Lemma uniq_powerset_internal w : uniq (powerset_internal w).
+Proof. by apply: uniq_powerset_of; apply: filter_uniq; apply: iota_uniq. Qed.
+
+(* Every element of powerset_internal is a subset of internal_vertices.       *)
+Lemma subset_powerset_of (ivs : seq nat) :
+  forall ss, ss \in foldl (fun acc i =>
+    acc ++ [seq s ++ [:: i] | s <- acc]) [:: [::]] ivs ->
+  {subset ss <= ivs}.
+Proof.
+have Hgen : forall (ivs0 : seq nat) (acc : seq (seq nat)) (used : seq nat),
+  (forall s, s \in acc -> {subset s <= used}) ->
+  forall ss, ss \in foldl (fun (acc' : seq (seq nat)) (i : nat) =>
+    acc' ++ [seq s ++ [:: i] | s <- acc']) acc ivs0 ->
+  {subset ss <= used ++ ivs0}.
+  elim=> [|j ivs0 IH] acc used Hacc ss /=.
+    by rewrite cats0; exact: Hacc.
+  move=> Hss.
+  have HIH : {subset ss <= (used ++ [:: j]) ++ ivs0}.
+    apply: IH Hss => s.
+    rewrite mem_cat => /orP [Hsa | /mapP [s' Hs' Hseq]].
+      move=> x Hxs; rewrite mem_cat (Hacc _ Hsa _ Hxs) //.
+    move=> x; rewrite Hseq mem_cat => /orP [Hxs' | Hxj].
+      by rewrite mem_cat (Hacc _ Hs' _ Hxs').
+    rewrite mem_seq1 in Hxj; move/eqP: Hxj => ->.
+    by rewrite !mem_cat mem_seq1 eqxx /= orbT.
+  by move=> x /HIH; rewrite -catA.
+move=> ss Hss.
+have := Hgen ivs [:: [::]] [::] _ ss Hss.
+rewrite cat0s; apply.
+by move=> s; rewrite mem_seq1 => /eqP -> x //.
+Qed.
+
+Lemma subset_powerset_internal w ss :
+  ss \in powerset_internal w -> {subset ss <= internal_vertices w}.
+Proof. exact: subset_powerset_of. Qed.
+
+(* Every element of powerset_internal is a subseq of internal_vertices.       *)
+Lemma subseq_powerset_of (ivs : seq nat) :
+  forall ss, ss \in foldl (fun acc i =>
+    acc ++ [seq s ++ [:: i] | s <- acc]) [:: [::]] ivs ->
+  subseq ss ivs.
+Proof.
+have Hgen : forall (ivs0 : seq nat) (acc : seq (seq nat)) (used : seq nat),
+  (forall s, s \in acc -> subseq s used) ->
+  forall ss, ss \in foldl (fun (acc' : seq (seq nat)) (i : nat) =>
+    acc' ++ [seq s ++ [:: i] | s <- acc']) acc ivs0 ->
+  subseq ss (used ++ ivs0).
+  elim=> [|j ivs0 IH] acc used Hacc ss /=.
+    by rewrite cats0; exact: Hacc.
+  move=> Hss.
+  have HIH : subseq ss ((used ++ [:: j]) ++ ivs0).
+    apply: IH Hss => s.
+    rewrite mem_cat => /orP [Hsa | /mapP [s' Hs' Hseq]].
+      apply: subseq_trans (Hacc _ Hsa) _.
+      exact: prefix_subseq.
+    rewrite Hseq.
+    by apply: cat_subseq; [exact: Hacc | exact: subseq_refl].
+  by rewrite -catA /= in HIH.
+move=> ss Hss.
+have := Hgen ivs [:: [::]] [::] _ ss Hss.
+rewrite cat0s; apply.
+by move=> s; rewrite mem_seq1 => /eqP ->.
+Qed.
+
+Lemma subseq_powerset_internal w ss :
+  ss \in powerset_internal w -> subseq ss (internal_vertices w).
+Proof. exact: subseq_powerset_of. Qed.
+
+(* Bit-level recovery for a C-vertex: bit v of char_mono(apply_psis ss w)     *)
+(* equals the original descent bit XOR the indicator of v in ss.              *)
+Lemma char_mono_apply_psis_C_bit ss w v :
+  uniq w -> uniq ss ->
+  (forall i, i \in ss -> is_internal i w) ->
+  is_internal v w ->
+  ~~ has_left_child v w ->
+  nth false (char_mono (apply_psis ss w)) v =
+    is_descent_seq w v (+) (v \in ss).
+Proof.
+elim: ss w => [|u ss IH] w Hu Huss Hint Hintv Hcv.
+  rewrite /= addbF.
+  by rewrite (nth_char_mono (is_internal_lt Hintv)).
+move: Huss => /= /andP [Hunin Husss].
+have Hintu : is_internal u w by apply: Hint; rewrite mem_head.
+have Hupsi : uniq (psi u w) := uniq_psi u Hu.
+have Hint_psi : forall i, i \in ss -> is_internal i (psi u w).
+  move=> i Hi.
+  rewrite -[psi u w]/(apply_psis [::u] w) is_internal_apply_psis //.
+  by apply: Hint; rewrite in_cons Hi orbT.
+have Hintv_psi : is_internal v (psi u w).
+  by rewrite -[psi u w]/(apply_psis [::u] w) is_internal_apply_psis.
+have Hcv_psi : ~~ has_left_child v (psi u w).
+  by rewrite -[psi u w]/(apply_psis [::u] w) has_left_child_apply_psis.
+rewrite /= -/(apply_psis _ _).
+rewrite (IH (psi u w) Hupsi Husss Hint_psi Hintv_psi Hcv_psi).
+rewrite (descent_psi_effect Hu Hintu (is_internal_lt Hintv)).
+rewrite in_cons.
+case Hlcu: (has_left_child u w) => /=.
+- have Hvu_neq : (v == u) = false.
+    apply: negbTE; apply: contraTneq Hcv => ->.
+    by rewrite Hlcu.
+  have Hvum1_neq : (v == u.-1) = false.
+    apply: negbTE; apply: contraTneq Hintv => ->.
+    have Hu_pos : 0 < u.
+      case Hu0: u Hlcu => [|n] //=.
+      by rewrite has_left_child_0.
+    by have := LR_pred_is_endpoint Hu Hu_pos Hintu Hlcu.
+  by rewrite Hvu_neq Hvum1_neq.
+case Hvu: (v == u) => /=.
+- move/eqP: Hvu => Hvu.
+  by rewrite Hvu (negbTE Hunin) /= addbT addbF.
+by [].
+Qed.
+
+(* Bit-level recovery for a D-vertex at position v.-1: predecessor bit        *)
+(* depends on whether v is in ss (swap behaviour).                            *)
+Lemma char_mono_apply_psis_D_bit_pred ss w v :
+  uniq w -> uniq ss ->
+  (forall i, i \in ss -> is_internal i w) ->
+  is_internal v w ->
+  has_left_child v w ->
+  nth false (char_mono (apply_psis ss w)) v.-1 =
+    is_descent_seq w (if v \in ss then v else v.-1).
+Proof.
+elim: ss w => [|u ss IH] w Hu Huss Hint Hintv Hdv.
+  rewrite /=.
+  by rewrite (nth_char_mono (leq_ltn_trans (leq_pred v) (is_internal_lt Hintv))).
+move: Huss => /= /andP [Hunin Husss].
+have Hintu : is_internal u w by apply: Hint; rewrite mem_head.
+have Hupsi : uniq (psi u w) := uniq_psi u Hu.
+have Hint_psi : forall i, i \in ss -> is_internal i (psi u w).
+  move=> i Hi.
+  rewrite -[psi u w]/(apply_psis [::u] w) is_internal_apply_psis //.
+  by apply: Hint; rewrite in_cons Hi orbT.
+have Hintv_psi : is_internal v (psi u w).
+  by rewrite -[psi u w]/(apply_psis [::u] w) is_internal_apply_psis.
+have Hdv_psi : has_left_child v (psi u w).
+  by rewrite -[psi u w]/(apply_psis [::u] w) has_left_child_apply_psis.
+rewrite /= -/(apply_psis _ _).
+rewrite (IH (psi u w) Hupsi Husss Hint_psi Hintv_psi Hdv_psi).
+have Hv_pos : 0 < v.
+  case Hv0: v Hdv => [|n] //=.
+  by rewrite has_left_child_0.
+have Hv_lt := is_internal_lt Hintv.
+have Hvm1_lt : v.-1 < (size w).-1 := leq_ltn_trans (leq_pred v) Hv_lt.
+have Hvm1u_neq : u != v.-1.
+  apply: contraTneq Hintu => ->.
+  by have := LR_pred_is_endpoint Hu Hv_pos Hintv Hdv.
+rewrite in_cons.
+case Hvss: (v \in ss) => /=.
+- rewrite orbT.
+  rewrite (descent_psi_effect Hu Hintu Hv_lt).
+  case Hvu: (v == u).
+    by move/eqP: Hvu => Hvu; move: Hunin; rewrite -Hvu Hvss.
+  case Hlcu: (has_left_child u w) => //.
+  have Hu_pos : 0 < u.
+    case Hu0: u Hlcu => [|n] //=.
+    by rewrite has_left_child_0.
+  have Hvum1 : (v == u.-1) = false.
+    apply: negbTE; apply: contraTneq Hintv => ->.
+    by have := LR_pred_is_endpoint Hu Hu_pos Hintu Hlcu.
+  by rewrite Hvum1.
+- rewrite orbF.
+  rewrite (descent_psi_effect Hu Hintu Hvm1_lt).
+  case Hvu: (v == u) => /=.
+  + move/eqP: Hvu => Heq.
+    have Hlcu : has_left_child u w by rewrite -Heq.
+    rewrite Hlcu.
+    have Hvm1_neq_v : (v.-1 == v) = false.
+      by apply: negbTE; rewrite neq_ltn ltn_predL Hv_pos.
+    by rewrite -Heq Hvm1_neq_v eqxx.
+  + have Hvm1u : (v.-1 == u) = false.
+      by apply: negbTE; rewrite eq_sym; exact: Hvm1u_neq.
+    rewrite Hvm1u.
+    case Hlcu: (has_left_child u w) => //.
+    have Hu_pos : 0 < u.
+      case Hu0: u Hlcu => [|n] //=.
+      by rewrite has_left_child_0.
+    have Hvm1um1 : (v.-1 == u.-1) = false.
+      apply: negbTE; apply/eqP => H.
+      move: Hvu; suff -> : v = u by rewrite eqxx.
+      by rewrite -(prednK Hv_pos) -(prednK Hu_pos) H.
+    by rewrite Hvm1um1.
+Qed.
+
+(* Bit-level recovery for a D-vertex at position v: self bit depends on       *)
+(* whether v is in ss (swap behaviour).                                       *)
+Lemma char_mono_apply_psis_D_bit_self ss w v :
+  uniq w -> uniq ss ->
+  (forall i, i \in ss -> is_internal i w) ->
+  is_internal v w ->
+  has_left_child v w ->
+  nth false (char_mono (apply_psis ss w)) v =
+    is_descent_seq w (if v \in ss then v.-1 else v).
+Proof.
+elim: ss w => [|u ss IH] w Hu Huss Hint Hintv Hdv.
+  rewrite /=.
+  by rewrite (nth_char_mono (is_internal_lt Hintv)).
+move: Huss => /= /andP [Hunin Husss].
+have Hintu : is_internal u w by apply: Hint; rewrite mem_head.
+have Hupsi : uniq (psi u w) := uniq_psi u Hu.
+have Hint_psi : forall i, i \in ss -> is_internal i (psi u w).
+  move=> i Hi.
+  rewrite -[psi u w]/(apply_psis [::u] w) is_internal_apply_psis //.
+  by apply: Hint; rewrite in_cons Hi orbT.
+have Hintv_psi : is_internal v (psi u w).
+  by rewrite -[psi u w]/(apply_psis [::u] w) is_internal_apply_psis.
+have Hdv_psi : has_left_child v (psi u w).
+  by rewrite -[psi u w]/(apply_psis [::u] w) has_left_child_apply_psis.
+rewrite /= -/(apply_psis _ _).
+rewrite (IH (psi u w) Hupsi Husss Hint_psi Hintv_psi Hdv_psi).
+have Hv_pos : 0 < v.
+  case Hv0: v Hdv => [|n] //=.
+  by rewrite has_left_child_0.
+have Hv_lt := is_internal_lt Hintv.
+have Hvm1_lt : v.-1 < (size w).-1 := leq_ltn_trans (leq_pred v) Hv_lt.
+have Hvm1u_neq : u != v.-1.
+  apply: contraTneq Hintu => ->.
+  by have := LR_pred_is_endpoint Hu Hv_pos Hintv Hdv.
+rewrite in_cons.
+case Hvss: (v \in ss) => /=.
+- rewrite orbT.
+  rewrite (descent_psi_effect Hu Hintu Hvm1_lt).
+  case Hvu: (v == u).
+    by move/eqP: Hvu => Hvu; move: Hunin; rewrite -Hvu Hvss.
+  have Hvm1u : (v.-1 == u) = false.
+    by apply: negbTE; rewrite eq_sym; exact: Hvm1u_neq.
+  rewrite Hvm1u.
+  case Hlcu: (has_left_child u w) => //.
+  have Hu_pos : 0 < u.
+    case Hu0: u Hlcu => [|n] //=.
+    by rewrite has_left_child_0.
+  have Hvm1um1 : (v.-1 == u.-1) = false.
+    apply: negbTE; apply/eqP => H.
+    move: Hvu; suff -> : v = u by rewrite eqxx.
+    by rewrite -(prednK Hv_pos) -(prednK Hu_pos) H.
+  by rewrite Hvm1um1.
+- rewrite orbF.
+  rewrite (descent_psi_effect Hu Hintu Hv_lt).
+  case Hvu: (v == u) => /=.
+  + move/eqP: Hvu => Heq.
+    have Hlcu : has_left_child u w by rewrite -Heq.
+    by rewrite Hlcu -Heq.
+  + case Hlcu: (has_left_child u w) => //.
+    have Hu_pos : 0 < u.
+      case Hu0: u Hlcu => [|n] //=.
+      by rewrite has_left_child_0.
+    have Hvum1 : (v == u.-1) = false.
+      apply: negbTE; apply: contraTneq Hintv => ->.
+      by have := LR_pred_is_endpoint Hu Hu_pos Hintu Hlcu.
+    by rewrite Hvum1.
+Qed.
 
 Lemma size_expand_cde letters :
   size (expand_cde letters) =
