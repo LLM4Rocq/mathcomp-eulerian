@@ -771,29 +771,93 @@ Qed.
 
 (* -- Injectivity: distinct subsets give distinct char_monos --------------- *)
 
+(* Membership in internal_vertices is exactly is_internal.                    *)
+Lemma in_internal_vertices i w :
+  (i \in internal_vertices w) = is_internal i w.
+Proof.
+rewrite /internal_vertices mem_filter.
+case Hi: (is_internal i w) => /=; last by [].
+rewrite mem_iota /=.
+by move: Hi => /andP [-> _].
+Qed.
+
+(* Recover the membership ss-bit from the char_mono bits at v (and v.-1).     *)
+(* Uses C-bit / D-bit recovery + D_vertex_descent_transition for D-vertices.  *)
+Lemma char_mono_apply_psis_inj w ss1 ss2 :
+  uniq w ->
+  ss1 \in powerset_internal w ->
+  ss2 \in powerset_internal w ->
+  char_mono (apply_psis ss1 w) = char_mono (apply_psis ss2 w) ->
+  ss1 = ss2.
+Proof.
+move=> Hu Hss1 Hss2 Heq.
+have Hivs_uniq : uniq (internal_vertices w).
+  by rewrite /internal_vertices filter_uniq // iota_uniq.
+have Hsub1 : subseq ss1 (internal_vertices w) := subseq_powerset_internal Hss1.
+have Hsub2 : subseq ss2 (internal_vertices w) := subseq_powerset_internal Hss2.
+have Hu1 : uniq ss1 := subseq_uniq Hsub1 Hivs_uniq.
+have Hu2 : uniq ss2 := subseq_uniq Hsub2 Hivs_uniq.
+have Hint1 : forall i, i \in ss1 -> is_internal i w.
+  by move=> i Hi; rewrite -in_internal_vertices; exact: (mem_subseq Hsub1).
+have Hint2 : forall i, i \in ss2 -> is_internal i w.
+  by move=> i Hi; rewrite -in_internal_vertices; exact: (mem_subseq Hsub2).
+(* Step 1: equal char_monos ⟹ same membership for every internal vertex.    *)
+have Hmem : ss1 =i ss2.
+  move=> x.
+  case Hin: (x \in internal_vertices w); last first.
+    have HF1 : (x \in ss1) = false.
+      apply/negP => Hx.
+      by have := mem_subseq Hsub1 Hx; rewrite Hin.
+    have HF2 : (x \in ss2) = false.
+      apply/negP => Hx.
+      by have := mem_subseq Hsub2 Hx; rewrite Hin.
+    by rewrite HF1 HF2.
+  rewrite in_internal_vertices in Hin.
+  have Hbit : forall k, k < (size w).-1 ->
+    nth false (char_mono (apply_psis ss1 w)) k =
+    nth false (char_mono (apply_psis ss2 w)) k by move=> k Hk; rewrite Heq.
+  case Hlc: (has_left_child x w).
+  - (* D-vertex: use self bit + transition to recover (x \in ss). *)
+    have Hxlt := is_internal_lt Hin.
+    have Hxpos : 0 < x.
+      case Hx0: x Hlc => [|n] //=.
+      by rewrite has_left_child_0.
+    have H1 := char_mono_apply_psis_D_bit_self Hu Hu1 Hint1 Hin Hlc.
+    have H2 := char_mono_apply_psis_D_bit_self Hu Hu2 Hint2 Hin Hlc.
+    have Hxx := Hbit _ Hxlt.
+    rewrite H1 H2 in Hxx.
+    have Hdiff := D_vertex_descent_transition Hu Hxpos Hin Hlc.
+    case E1: (x \in ss1); case E2: (x \in ss2) => //.
+    + rewrite E1 E2 /= in Hxx.
+      by rewrite Hxx eqxx in Hdiff.
+    + rewrite E1 E2 /= in Hxx.
+      by rewrite -Hxx eqxx in Hdiff.
+  - (* C-vertex: use C-bit lemma; xor-cancel. *)
+    have Hcv : ~~ has_left_child x w by rewrite Hlc.
+    have Hxlt := is_internal_lt Hin.
+    have H1 := char_mono_apply_psis_C_bit Hu Hu1 Hint1 Hin Hcv.
+    have H2 := char_mono_apply_psis_C_bit Hu Hu2 Hint2 Hin Hcv.
+    have Hxx := Hbit _ Hxlt.
+    rewrite H1 H2 in Hxx.
+    by move: Hxx; case: (is_descent_seq w x);
+      case: (x \in ss1); case: (x \in ss2).
+(* Step 2: same membership + both subseqs of uniq base ⟹ equal sequences.   *)
+have Eq1 : ss1 = [seq x <- internal_vertices w | x \in ss1].
+  exact: (elimT (subseq_uniqP Hivs_uniq) Hsub1).
+have Eq2 : ss2 = [seq x <- internal_vertices w | x \in ss2].
+  exact: (elimT (subseq_uniqP Hivs_uniq) Hsub2).
+rewrite Eq1 Eq2.
+by apply: eq_in_filter => x _; exact: Hmem.
+Qed.
+
 Lemma uniq_map_char_mono_powerset w :
   uniq w -> 2 <= size w ->
   uniq [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
 Proof.
-move=> Hu Hsz2.
-set lhs := [seq _ | _ <- _].
-set rhs := expand_cde (phi_w w).
-have Hmem : {subset lhs <= rhs}.
-  move=> x /mapP [ss _ ->]. exact: char_mono_apply_psis_mem.
-have Hsz_lhs : size lhs = size rhs.
-  rewrite /lhs /rhs size_map size_powerset_internal.
-  by rewrite -size_expand_cde_phi_w.
-have Huniq_rhs : uniq rhs := uniq_expand_cde _.
-apply/negPn/negP => Hnuniq.
-have : size lhs > size (undup lhs).
-  by rewrite ltn_size_undup.
-move=> Hdup.
-have Hsub : size (undup lhs) <= size rhs.
-  apply: uniq_leq_size; first exact: undup_uniq.
-  move=> x; rewrite mem_undup; exact: Hmem.
-have : size lhs <= size rhs by rewrite Hsz_lhs.
-move=> Hle.
-by have := leq_ltn_trans Hsub Hdup; rewrite Hsz_lhs ltnn.
+move=> Hu _.
+rewrite map_inj_in_uniq; first exact: uniq_powerset_internal.
+move=> ss1 ss2 Hss1 Hss2 Heq.
+exact: char_mono_apply_psis_inj Hu Hss1 Hss2 Heq.
 Qed.
 
 (* -- check_fact3_true: structural proof ----------------------------------- *)
