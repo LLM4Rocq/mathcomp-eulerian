@@ -14,3 +14,16 @@ rocq_mcp_cache_*.v
 
 # Per-session Claude Code state.
 .claude/
+
+# Python / uv
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / per-user environment
+.envrc
+.vscode/
+
+# Generated artifacts (built from source files)
+PROOF_STATEMENTS.pdf
+.lia.cache

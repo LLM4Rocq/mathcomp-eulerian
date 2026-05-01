@@ -1,0 +1,14 @@
+[project]
+name = "mathcomp-eulerian"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "pytanque",
+    "rocq-mcp",
+    "tqdm>=4.67.3",
+]
+
+[tool.uv.sources]
+rocq-mcp = { git = "https://github.com/llm4rocq/rocq-mcp", rev = "48e0cd747c738970cacc8ad2ed8487555d753d24" }
+pytanque = { git = "https://github.com/LLM4Rocq/pytanque", rev = "44a62525a078fc0dc0321245e01ee464aa9ee397" }
