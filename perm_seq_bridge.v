@@ -524,9 +524,7 @@ move/andP: Hiota => [H1 _].
 have Hbd := window_size_bound i w.
 suff Hi_le : i <= (size w).-2.
   by rewrite -ltnS prednK //; rewrite -[X in _ < X]prednK // -subn1 subn_gt0.
-have Hsw : (size w).-2 = size w - 2
-  by case: (size w) => [|[|n']] //=; rewrite !subSS subn0.
-rewrite Hsw.
+rewrite -subn2.
 have H2si : 2 <= size w - i by exact: leq_trans Hws Hbd.
 have Hisz' : i <= size w
   by apply: ltnW; rewrite -subn_gt0 (leq_trans _ H2si).
@@ -826,25 +824,7 @@ have Horder_iso : forall p q : nat, p < size w0 -> q < size w0 ->
   have Huniq_sorted : uniq w0_sorted by rewrite sort_uniq.
   have Hsorted : sorted leq w0_sorted
     by apply: sort_sorted; exact: leq_total.
-  have Hle_imp : forall a b, a \in w0_sorted -> b \in w0_sorted ->
-                 index a w0_sorted <= index b w0_sorted -> a <= b.
-    move=> a b Ha Hb Hab.
-    exact: (sorted_leq_index leq_trans leqnn Hsorted a b Ha Hb Hab).
-  apply/idP/idP.
-  - move=> Hsplt.
-    rewrite ltn_neqAle.
-    apply/andP; split.
-      apply/eqP => Hidx_eq.
-      move: Hsplt.
-      by rewrite -(nth_index 0 Hsp_s) -(nth_index 0 Hsq_s) Hidx_eq ltnn.
-    rewrite leqNgt; apply/negP => Hlt.
-    have Hle : sq <= sp := Hle_imp _ _ Hsq_s Hsp_s (ltnW Hlt).
-    by move: Hsplt; rewrite ltnNge Hle.
-  - move=> Hidxlt.
-    have Hle : sp <= sq := Hle_imp _ _ Hsp_s Hsq_s (ltnW Hidxlt).
-    rewrite ltn_neqAle Hle andbT.
-    apply/eqP => Heq.
-    by rewrite Heq ltnn in Hidxlt.
+  exact: index_lt_sorted Hsorted Huniq_sorted Hsp_s Hsq_s.
 (* Convert w0_norm to a perm *)
 set sigma0 := seq_to_perm Hsz_norm Huniq_norm Hbnd_norm.
 have Hpts0 : perm_to_seq sigma0 = w0_norm.
