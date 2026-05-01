@@ -61,7 +61,7 @@ whose in-order position is `i−1`. Inside MathComp we index from 0, so we
 treat ψᵢ with `i : nat` meaning "the vertex at in-order position `i`", with
 `0 ≤ i < n`.
 
-**Critical note (AXIOMS_TODO.md §5, item 1).** The i-th internal vertex in the
+**Critical note (docs/internal/AXIOMS_TODO.md §5, item 1).** The i-th internal vertex in the
 in-order word sits at position `i`, not `2i`. Do not reintroduce the `2*i`
 mistake from the discarded scaffolding.
 
@@ -737,9 +737,9 @@ Proof strategy for `psi_involutive`:
 | two `Example`s | 6 |
 | **Total** | **~220** |
 
-This lines up with the "~200 LOC" target in AXIOMS_TODO.md §4 row 2.
+This lines up with the "~200 LOC" target in docs/internal/AXIOMS_TODO.md §4 row 2.
 
-### 6.8 Pitfalls to avoid (from AXIOMS_TODO.md §5)
+### 6.8 Pitfalls to avoid (from docs/internal/AXIOMS_TODO.md §5)
 
 - **No `2*i` indexing.** `subtree_at i` means "the vertex at in-order
   position `i`", period. The window in `psi` has size `size L = 1 +
@@ -749,7 +749,7 @@ This lines up with the "~200 LOC" target in AXIOMS_TODO.md §4 row 2.
   `by []` to the stated non-identity value. If it doesn't, something is
   wrong.
 - **Don't stuff hypotheses into the *definition*** (cf. "Packaged-hypothesis
-  bridges" in AXIOMS_TODO.md §5, item 2). `psi` should be a total function
+  bridges" in docs/internal/AXIOMS_TODO.md §5, item 2). `psi` should be a total function
   `nat → seq nat → seq nat`, with correctness conditions (`uniq`) appearing
   only in the *lemmas' statements*.
 - **Don't weaken the involutivity lemma to a decidable-equality boolean

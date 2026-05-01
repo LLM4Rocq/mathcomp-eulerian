@@ -858,7 +858,7 @@ both involutions must commute (when they affect disjoint positions).
 Disadvantages:
 - Fact #2 is significantly harder than commutativity. It requires the
   "tree-classifier" machinery (M4 in the roadmap, ~200 LOC per
-  AXIOMS_TODO.md).
+  docs/internal/AXIOMS_TODO.md).
 - The implication "independence => commutativity" is not trivial: it
   requires showing that two permutations of S_n with the same descent-set
   effect are equal, which itself needs a non-trivial argument (the
