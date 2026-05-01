@@ -82,7 +82,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: blueprint-web
-          path: blueprint/web/
+          path: blueprint/src/web/
 
   combine-and-deploy:
     needs: [build-docs, build-blueprint]
