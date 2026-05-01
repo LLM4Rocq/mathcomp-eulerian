@@ -1,3 +1,10 @@
+> **Historical document.** Status note from the 2026-04-22 → 2026-04-24
+> transition that retired the original heavy `psi_descent.v` in favor of
+> the `psi_descent_v2.v` + `psi_descent_thms.v` split (Option A:
+> structural recursion on `mmtree`).  See
+> [`OPTION_A_PROGRESS.md`](OPTION_A_PROGRESS.md) for the parallel progress
+> log and [`README.md`](README.md) for the chronological frame.
+
 # psi_descent.v: Status and Next Steps
 
 ## RESOLVED (2026-04-24)

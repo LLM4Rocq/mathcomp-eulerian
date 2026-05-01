@@ -1,3 +1,10 @@
+> **Historical document.** Plan that designed the `mmtree_shape`
+> Opaque-sealed Fixpoint refactor — collapse five repeated 3-way-split
+> structural inductions into one shape-induction with thin corollaries.
+> Successfully executed; lives in `psi_cdindex_tree_shape.v` plus thin
+> wrappers in `psi_cdindex_tree_hlc.v` / `psi_cdindex_tree.v`.  Both
+> files now compile cleanly to `.vo`.  See [`README.md`](README.md).
+
 # Plan: Refactor mmtree proofs for -vo compilation
 
 ## Problem

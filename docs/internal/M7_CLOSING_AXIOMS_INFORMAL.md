@@ -1,3 +1,12 @@
+> **Historical document — mid-project diagnosis.**  Records the
+> discovery that the original `beta_swap_lt_caseB` axiom (and its
+> monotone variant) were **mathematically false as stated**, with
+> counterexample.  The eventual resolution was *not* to repair these
+> axioms but to re-route through Stanley Prop 1.6.4
+> (`omega_proper_beta_lt`) and Cor 1.6.5 (`beta_alt_max`); see
+> `perm_seq_bridge.v` and `beta_swap.v`.
+> See [`README.md`](README.md) for the chronological frame.
+
 # Milestone 7: Closing the two axioms in `beta_swap.v`
 
 **Critical finding:** The two axioms as currently stated are **false**. The

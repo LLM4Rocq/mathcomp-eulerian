@@ -1,3 +1,14 @@
+> **Historical document.** V1 surgical refactor plan for the last three
+> `.vo` holdouts (`psi_cdindex_support.v`, `perm_seq_bridge.v`,
+> `beta_swap.v`).  The diagnosis (heavy proof terms in support files)
+> was correct, but the proposed surgical fixes hit kernel walls *as
+> originally stated*.  The eventual fix path was different: a bit-level
+> M-class injectivity argument in `psi_cdindex_core.v` plus
+> mathcomp-signature-drift compat fixes in `perm_seq_bridge.v` (May 2026).
+> See [`REFACTOR_PLAN_V2.md`](REFACTOR_PLAN_V2.md) for the abandoned V2
+> attempt and [`COMPILE_ALL_REFACTOR_PLAN.md`](COMPILE_ALL_REFACTOR_PLAN.md)
+> for the plan that finally landed.
+
 # Heavy `-vo` Refactor Plan
 
 Roadmap for getting the last 3 files to full `-vo` compilation. To be executed

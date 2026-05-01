@@ -1,3 +1,8 @@
+> **Historical document.** The May 2026 plan that actually finished the
+> project: every phase is complete, every result is `.vo` and
+> kernel-checked.  Kept here as the canonical record of the path that
+> worked.  See [`README.md`](README.md) for the full chronology.
+
 # Compile-All Refactor Plan
 
 Snapshot date: 2026-05-01.

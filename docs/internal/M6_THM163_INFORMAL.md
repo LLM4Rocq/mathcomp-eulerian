@@ -1,3 +1,10 @@
+> **Historical document — pre-formalization proof sketch (Milestone 6).**
+> Paper-style scaffold for Stanley Theorem 1.6.3 (cd-index of S_n has
+> nonnegative coefficients).  The theorem is not formalized as a
+> standalone Rocq lemma — Fact #3 (`fact3`) supplies the substantive
+> content.  Superseded by the blueprint chapter `ch_cdindex.tex` for
+> current readers.  See [`README.md`](README.md).
+
 # Milestone 6: Theorem 1.6.3 --- the cd-index of S_n has nonneg coefficients
 
 **Source of truth.** Stanley, *Enumerative Combinatorics* vol. 1 (2nd ed.),

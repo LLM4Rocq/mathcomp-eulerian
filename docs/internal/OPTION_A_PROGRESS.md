@@ -1,3 +1,10 @@
+> **Historical document.** Progress log of the 2026-04-24 refactor that
+> rewrote five structural lemmas in `psi_descent.v` to do their heavy
+> inductive work as **structural recursion on `mmtree nat`** rather than
+> strong induction on `size w`.  Result: `psi_descent_v2.v` (151 KB
+> `.vo`) + `psi_descent_thms.v` (82 KB `.vo`), both compiling in seconds.
+> See [`README.md`](README.md).
+
 # Option A: Structural Recursion on mmtree --- Progress Log
 
 ## Goal

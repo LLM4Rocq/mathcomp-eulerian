@@ -1,3 +1,12 @@
+> **Historical document.** V2 tree-native re-architecture, marked
+> ABANDONED at its top in 2026-04-28.  Two attempts both hit the kernel
+> wall.  At the time the project's terminal state was the
+> `v1-vos-stable` tag; the eventual compile-all completion took a
+> different path entirely (M-class bit-level injectivity + mathcomp
+> compat fixes).  Kept for the postmortem at the bottom of the doc.
+> See [`COMPILE_ALL_REFACTOR_PLAN.md`](COMPILE_ALL_REFACTOR_PLAN.md) and
+> [`README.md`](README.md).
+
 # Refactor Plan V2 — Tree-Native Re-Architecture
 
 > **STATUS — 2026-04-28: ABANDONED.** Phase 0 was attempted twice (once by an

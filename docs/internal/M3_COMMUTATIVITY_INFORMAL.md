@@ -1,3 +1,10 @@
+> **Historical document — pre-formalization proof sketch (Milestone 3).**
+> Paper-style scaffold for `psi_comm` (Stanley Fact #1, commutativity).
+> The math is still accurate; the file references axiomatized
+> intermediate facts that are now proven.  Superseded by the blueprint
+> chapter `ch_mmtree.tex` for current readers.
+> See [`README.md`](README.md).
+
 # Milestone 3: Commutativity of the operators psi_i (informal proof note)
 
 **Claim (Fact #1, Stanley EC1 2nd ed., lines 234--238).**

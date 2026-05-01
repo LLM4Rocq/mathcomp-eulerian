@@ -1,3 +1,9 @@
+> **Historical document — pre-formalization proof sketch (Milestone 4).**
+> Paper-style scaffold for the descent-set effect of ψᵢ (Stanley
+> Fact #2), eventually realized in `psi_descent_v2.v` +
+> `psi_descent_thms.v`.  Superseded by the blueprint chapter
+> `ch_omega.tex` for current readers.  See [`README.md`](README.md).
+
 # Milestone 4: Fact #2 --- the descent-set effect of psi_i
 
 **Source of truth.** Stanley, *Enumerative Combinatorics* vol. 1 (2nd ed.),

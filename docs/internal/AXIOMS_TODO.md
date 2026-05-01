@@ -1,3 +1,17 @@
+> **Historical document — axiom-closure trail.** Inventory of the 13
+> axioms posed during early development and how each was discharged. All
+> listed axioms are now closed end-to-end: `Print Assumptions beta_alt_max`
+> reports "Closed under the global context" and `coqchk` validates the
+> full library. See [`README.md`](README.md) for the full chronology.
+
+> **Historical document.** Inventory of the 13 axioms posed during early
+> development and how each was closed.  Marked "complete" on 2026-04-24,
+> but at that point the closure of the cd-index axioms still depended on
+> three `.vos`-only files; the *kernel-checked* closure of every result
+> only landed with the May 2026 [`COMPILE_ALL_REFACTOR_PLAN.md`](COMPILE_ALL_REFACTOR_PLAN.md)
+> session.  Currently authoritative source: `Print Assumptions beta_alt_max`
+> reports "Closed under the global context".  See [`README.md`](README.md).
+
 # Axioms status — COMPLETE (2026-04-24)
 
 ## Executive summary

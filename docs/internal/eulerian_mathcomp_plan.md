@@ -1,3 +1,11 @@
+> **Historical document.** The original architecture sketch for the
+> Eulerian / β development (Layers 0–5).  Almost everything in the
+> current `descent.v` / `eulerian.v` / `beta.v` / `beta_swap.v` chain
+> grew from this plan.  Two statement-level discrepancies (the Eulerian
+> recurrence and closed-form indices) were corrected during
+> implementation; both are noted in the `README.md` history.
+> See [`README.md`](README.md) for the chronological frame.
+
 # Eulerian Numbers and Descent Statistics for MathComp
 
 ## Overview

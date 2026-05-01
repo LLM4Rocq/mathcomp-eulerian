@@ -1,3 +1,12 @@
+> **Historical document.** Build-status snapshot at the `v1-vos-stable`
+> tag (21/21 `.vos`, 18/21 `.vo`, 3 hardware-bound holdouts).  Both the
+> 188 GB / 4 cores narrative and the "kernel wall is intrinsic" claim
+> were superseded by the May 2026 compile-all session, which closed the
+> remaining gap by treating the failures as missing M-class injectivity
+> + mathcomp signature drift rather than kernel cost.  Current state:
+> 23/23 `.vo`, 0 axioms.  See [`COMPILE_ALL_REFACTOR_PLAN.md`](COMPILE_ALL_REFACTOR_PLAN.md)
+> and [`README.md`](README.md).
+
 # Build Plan
 
 > **2026-04-28 update — terminal state.** Project complete at tag

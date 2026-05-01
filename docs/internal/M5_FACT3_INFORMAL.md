@@ -1,3 +1,10 @@
+> **Historical document — pre-formalization proof sketch (Milestone 5).**
+> Paper-style scaffold for Stanley Fact #3 (the M-class multiset
+> identity), realized as `fact3` in `psi_cdindex_support.v`.  References
+> axiomatized Fact #2 lemmas that are now proven.  Superseded by the
+> blueprint chapter `ch_cdindex.tex` for current readers.
+> See [`README.md`](README.md).
+
 # Milestone 5: Fact #3 --- Phi_w(a+b, ab+ba) = Sum_{v in [w]} u_{D(v)}
 
 **Source of truth.** Stanley, *Enumerative Combinatorics* vol. 1 (2nd ed.),

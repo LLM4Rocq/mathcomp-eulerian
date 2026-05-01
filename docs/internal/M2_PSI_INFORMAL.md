@@ -1,3 +1,10 @@
+> **Historical document — pre-formalization proof sketch (Milestone 2).**
+> Paper-style scaffold for the ψᵢ operators in `psi_core.v`.  The math
+> is still accurate; references to "Fact #2 axioms" reflect the
+> mid-project state when those facts were postulated, not the final
+> proven form.  Superseded by the blueprint chapter `ch_mmtree.tex` for
+> current readers.  See [`README.md`](README.md).
+
 # Milestone 2: The operators ψᵢ on min-max trees (informal proof note)
 
 **Source of truth.** Stanley, *Enumerative Combinatorics* vol. 1 (2nd ed.), §1.6.3,

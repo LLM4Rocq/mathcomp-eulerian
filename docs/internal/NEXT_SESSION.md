@@ -1,3 +1,11 @@
+> **Historical document.** "Formalization complete" status from the
+> 2026-04-24 milestone (zero axioms, zero `Admitted`).  At the time the
+> three cd-index files were `.vos`-only; the kernel-checked closure
+> followed in the May 2026 compile-all session.  Current state: 23/23
+> `.v` files at `.vo`, headline theorems closed under the global context.
+> See [`COMPILE_ALL_REFACTOR_PLAN.md`](COMPILE_ALL_REFACTOR_PLAN.md) and
+> [`README.md`](README.md).
+
 # Status: FORMALIZATION COMPLETE
 
 ## All axioms closed (2026-04-24)
