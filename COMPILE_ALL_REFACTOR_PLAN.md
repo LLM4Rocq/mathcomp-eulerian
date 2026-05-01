@@ -32,9 +32,8 @@ sources were moved out of the `.v` build surface:
 Observed build results:
 
 - `make vos -j2` succeeds for the active `_CoqProject` target.
-- `make -j2` (full `.vo`) produces **21 `.vo` files** (out of 23 maintained `.v`
-  files). Build progresses through `psi_cdindex_support.v` and stops in
-  `perm_seq_bridge.v`.
+- `make -j2` (full `.vo`) produces **all 23 `.vo` files**. The full
+  `make clean && make -j2` build runs end-to-end through `beta_swap.v`.
 - `psi_cdindex_support.v` now full-compiles. The M-class injectivity gap is
   closed: see commit `35a1bd0`. Bit-level recovery lemmas in
   `psi_cdindex_core.v` (`char_mono_apply_psis_C_bit`,
@@ -47,10 +46,8 @@ Observed build results:
 - `psi_cdindex_support_defs.v` is split out and full-compiles quickly.
 - The previous `.vo` wall in `D_vertex_descent_transition` has been removed:
   that lemma is now a small corollary of `exactly_one_descent_LR`.
-- The active `.vo` holdouts are now:
-  - `perm_seq_bridge.v` — partial mathcomp-compat fixes landed in commit
-    `b39f109`; still blocked on `desc_positions_bvec`. See Phase 3 below.
-  - `beta_swap.v` — not yet attempted; depends on `perm_seq_bridge.v`.
+- No `.vo` holdouts remain. `perm_seq_bridge.v` and `beta_swap.v` both
+  full-compile.
 - `psi_descent.v` is a compatibility wrapper exporting `psi_descent_v2.v`
   and `psi_descent_thms.v`; it full-compiles quickly.
 - The archived `psi.v` and `psi_base.v` are stale monoliths that previously
@@ -215,12 +212,13 @@ rocq compile -q -w -deprecated-library-file -w -notation-overridden \
 
 ## Phase 3: Fix `perm_seq_bridge.v`
 
-Status: **in progress** (partial commit `b39f109`).
+Status: **complete**.
 
 Diagnosis change from earlier drafts: the file does *not* hit a kernel
-proof-term wall after Phase 2. Compilation is blocked by a series of
+proof-term wall after Phase 2. Compilation was blocked by a series of
 mathcomp-version compatibility mismatches (signature drift). No file
-split is required — just lemma-by-lemma compat fixes.
+split was required — lemma-by-lemma compat fixes drove the file to
+`.vo`.
 
 ### Fixes already applied in `b39f109`
 
@@ -238,47 +236,27 @@ split is required — just lemma-by-lemma compat fixes.
 | `char_mono_class_inj` | Two issues: (1) `rewrite (nth_map [::]) //` does not auto-discharge the index_mem goal — split into `rewrite (nth_map [::]); last by rewrite index_mem` with a separate `rewrite -Hn1`. (2) After `rewrite Hcm_idx eqxx`, the equation is `true = (idx1 == idx2)`; use `=> /esym/eqP Heq_idx` instead of `=> /eqP Heq_idx`. |
 | `desc_positions_bvec` (partial) | `leq_anti` renamed to `anti_leq`. `sorted_filter` now needs `leq_trans` explicitly. `sort_sorted` is now curried with `leq_total` — needs `apply: sort_sorted; exact: leq_total` after unfolding `set_to_seq`. |
 
-### Current blocker
+### Additional fixes applied to drive to `.vo`
 
-[`desc_positions_bvec` at perm_seq_bridge.v:262](perm_seq_bridge.v#L262)
-— the third subgoal of `sorted_eq` is now `perm_eq s1 s2`, not `s1 =i s2`,
-so the `move=> x; ...` proof body no longer types.
-
-**Fix shape:** wrap the existing membership-equality proof with `uniq_perm`:
-
-```coq
-apply: (sorted_eq leq_trans anti_leq).
-- by apply: (sorted_filter leq_trans); exact: iota_sorted.
-- by rewrite /set_to_seq; apply: sort_sorted; exact: leq_total.
-- apply: uniq_perm.
-  + by apply: filter_uniq; apply: iota_uniq.
-  + rewrite /set_to_seq sort_uniq map_inj_uniq; first exact: enum_uniq.
-    by move=> x y /val_inj.
-  + (* original membership-equality proof body, but rewriting against
-       `mem_set_to_seq` instead of `mem_sort` since set_to_seq is the RHS *)
-    move=> x.
-    rewrite mem_filter mem_iota add0n mem_set_to_seq.
-    apply/andP/mapP.
-    + (* same case bodies as before, but each `rewrite nth_enum_ord` needs
-         the `val_inj => /=` wrapper as in `nth_perm_to_seq` above. *)
-      ...
-```
-
-The `nth_enum_ord` calls inside the `+`/`+` branches at lines 271 / 276
-need the same `val_inj => /=` wrapper as the earlier fixes.
-
-### Likely subsequent blockers
-
-After `desc_positions_bvec`, expect more of the same pattern downstream:
-
-- Other `nth_enum_ord` callsites at lines 271, 276, 335.
-- `Ordinal Hk = i` non-definitional substitutions in similar shape.
-- More signature drift on totality / transitivity arguments
-  (`sort_*`, `path_sorted`, etc).
-
-Strategy: keep iterating with `rocq compile -q -R . mathcomp_eulerian
-perm_seq_bridge.v`; each error message points to the next compat
-mismatch. Use the table above as a pattern dictionary.
+| Lemma | Change |
+|-------|--------|
+| `desc_positions_bvec` | Wrapped third `sorted_eq` subgoal with `apply: uniq_perm`. Body rewritten to use `nth_descent_to_bvec` directly (the original `mem_enum`-based proof was structurally wrong anyway). |
+| `perm_to_seq_seq_to_perm` | After `(nth_map (Ordinal Hk))`, `nth_enum_ord` no longer substitutes the ordinal directly. Insert `have Hord : nth (Ordinal Hk) (enum 'I_n) k = Ordinal Hk by apply: val_inj => /=; rewrite nth_enum_ord` then `rewrite Hord`. |
+| `all_bnd_apply_psis` | `rewrite (perm_mem (perm_eq_apply_psis ss w))` was wrong direction (`perm_eq_apply_psis : perm_eq (apply_psis ss w) w`); use `rewrite -(perm_mem ...)`. |
+| `uniq_expand_cde` | `cat_uniq` is now flat `[&& A, B & C]`, so `?andbT` no longer fires on the IH residue. Insert explicit `rewrite IH andbT` after `!map_inj_uniq //`. |
+| `nil_in_powerset_internal` | `mem_seq1` LHS unification needed an explicit type annotation: `[::] \in [:: [::] : seq nat]`. |
+| `char_mono_in_expand_cde` | `apply/mapP; exists [::] => //. ... by rewrite apply_psis_nil` failed because `=> //` now eats the `apply_psis [::] w = w` subgoal. Restructure to `exists [::]; first exact: nil_in_powerset_internal. by rewrite apply_psis_nil`. |
+| `find_ss_spec` | `set flt` does not fold inside earlier hypotheses; add `have Hfilter' : ss \in flt by rewrite /flt` before using. `mem_head` lost its `s != [::]` hypothesis form: case-split on `flt` to obtain `head [::] flt \in flt`. |
+| `omega_set_seq_bridge_bounded` | The lemma equation now goes `lhs = rhs` opposite of what `exact:` expected; use `rewrite` instead of `exact:`. |
+| `S_w_seq_all_lt` | `(size w).-2 = size w - 2` no longer auto-discharges via `case ... //`; needs `case: (size w) => [\|[\|n']] //=; rewrite !subSS subn0`. `leq_subRL` direction flipped — needed an explicit `Hisz' : i <= size w` derived from `H2si : 2 <= size w - i` via `subn_gt0`. |
+| `omega_proper_beta_lt` (Step 1) | After `phi_w_support_general` rewrite, the goal had `(size (perm_to_seq sigma)).-1` whereas surrounding lemmas used `m.+1`; insert `have Hrew : (size (perm_to_seq sigma)).-1 = m.+1` and rewrite via `[X in iota 0 X]Hrew` to avoid breaking the surrounding `'I_m.+2` types. Same for the `bvE` direction with explicit hyp args to `phi_w_support_general`. |
+| `omega_proper_beta_lt` (Step 3) | `apply: char_mono_class_inj Hss1_pw Hss2_pw _` now leaves an extra `uniq w'` goal; replace with `apply: (char_mono_class_inj Hu' Hss1_pw Hss2_pw)`. The second `Hss2_pw` rewrite needed `-Hw'` first to align `w'` with `apply_psis ss2 w2` for `powerset_internal_apply_psis` to fire. |
+| `omega_proper_beta_lt` (Step 3 closing) | `rewrite /w1 /w2 Hw12` lost the alias visibility after unfold; replace with `exact: Hw12`. |
+| `omega_proper_beta_lt` (Step 4) | Same `(size w0).-1` vs `m.+1` mismatch in `bvE_in_w0` / `bvD_notin_w0`. Same `[X in iota 0 X]`-pattern fix. Closing the omega-set step needs an explicit `have -> : Ordinal Hkm = k by apply: val_inj` to bridge `Ordinal Hkm` (rebuilt) and `k` (original). |
+| `omega_proper_beta_lt` (`Hnotin`) | The `have := img_has_bvD sigma_new. rewrite Heq => Habs.` flow no longer applies cleanly; restructure to first establish `Hsigma_in : sigma_new \in [set f tau' | ...]`, then `Habs := img_has_bvD sigma_new Hsigma_in`. |
+| `omega_proper_beta_lt` (`Hproper`) | `by move: Hx; rewrite (subsetP img_sub).` no longer types — `subsetP` returns a function, not a rewrite. Use `exact: (subsetP img_sub _ Hx)`. `cardsD1` rewrite needed pattern restriction `[X in _ < X](cardsD1 sigma_new)` followed by `Hin_E ltnS leqnn`. Final `rewrite /beta -card_img` simplified to just `-card_img` (unfolding `beta` removes the rewrite target). |
+| Local `Horder_iso` | `index_inj` lost its `uniq` arg. Switched `map_inj_uniq` to `map_inj_in_uniq` and rebuilt the `sp < sq ↔ index sp < index sq` equivalence inline using `sorted_leq_index` (only one direction is in mathcomp now). The `!(nth_map 0) ?Hsz0 //` side-condition discharge had to be rewritten as `!(nth_map 0) //; try by rewrite -Hsz0; first [exact: Hp \| exact: Hq]`. |
+| `phi_w_order_iso` and `HS_w0` | `window_size_order_iso` and `has_left_child_order_iso` take `i` as the explicit first arg before the size/uniq/order proofs (they were being called with the proofs in the `i`-position). |
 
 ### Imports & dependencies — DO NOT do
 
@@ -298,13 +276,11 @@ rocq compile -q -w -deprecated-library-file -w -notation-overridden \
 
 ## Phase 4: Finish `beta_swap.v`
 
-Status: not started. Likely shape will be the same as Phase 3 (mathcomp
-compat fixes rather than a kernel wall), since `beta_swap.v` is also a
-leaf and was a `.vos`-only holdout in the same baseline that
-`perm_seq_bridge.v` was. Confirm by running the gate after Phase 3
-finishes — do not preemptively split.
+Status: **complete**. Once `perm_seq_bridge.vo` was produced, `beta_swap.v`
+full-compiled with no further changes. No kernel wall reappeared, no
+file split was needed.
 
-If a kernel wall *does* reappear:
+If a kernel wall *does* reappear in future drift:
 
 | New file | Contents |
 |----------|----------|
@@ -322,34 +298,22 @@ rocq compile -q -w -deprecated-library-file -w -notation-overridden \
 
 ## Phase 5: Build and CI Cleanup
 
-Goal: make regressions obvious.
+Status: **complete**.
 
-Tasks:
+Verified gates:
 
-1. Update `_CoqProject` to list every maintained `.v` file.
-2. Keep the topological order explicit.
-3. Add documented build commands to `README.md`:
-
-```bash
-make clean
-make vos -j2
-make -j1
-```
-
-4. Add a no-axioms/no-admits check for maintained files:
-
-```bash
-rg -n "\b(Axiom|Parameter|Conjecture|Admitted|admit)\b" *.v
-```
-
-5. Run `coqchk` on the final maintained library set.
-
-Gate:
-
-- `make clean && make -j1` succeeds.
+- `make clean && make -j2` succeeds — all 23 maintained `.v` files
+  build to `.vo`.
 - `make vos -j2` succeeds.
-- `coqchk` succeeds for the maintained library.
-- No stale monolith remains as a non-building `.v` file.
+- `coqchk -R . mathcomp_eulerian mathcomp_eulerian.beta_swap` reports
+  "Modules were successfully checked".
+- `rg "\b(Axiom|Parameter|Conjecture|Admitted|admit)\b" *.v` returns
+  no matches in maintained files.
+- `Print Assumptions beta_alt_max` and `omega_proper_beta_lt` both
+  report "Closed under the global context".
+
+Optional remaining doc work: update `README.md` to include the
+documented build commands.
 
 ## Risks
 
@@ -366,22 +330,19 @@ Gate:
 4. Full `.vo` success may depend on machine memory.
    Mitigation: measure one holdout at a time with `-time-file`, and keep a
    documented `.vos` fallback if a kernel wall reappears in Phases 3/4.
-5. mathcomp signature drift may continue to surface lemma-by-lemma in
-   `perm_seq_bridge.v` and `beta_swap.v`. Strategy: iterate on the gate,
-   apply the patterns documented in Phase 3.
+5. mathcomp signature drift surfaced lemma-by-lemma in
+   `perm_seq_bridge.v`; resolved by iterating on the gate and
+   applying the patterns documented in Phase 3. `beta_swap.v` did
+   not exhibit further drift on top of `perm_seq_bridge.vo`.
 
 ## Immediate Next Actions
 
-1. Resume Phase 3 by closing `desc_positions_bvec` (see Phase 3 → "Current
-   blocker"). Apply the `uniq_perm`-wrapped proof shape; fix the residual
-   `nth_enum_ord` callsites at lines 271, 276, 335 with the same
-   `apply: val_inj => /=` pattern as `nth_perm_to_seq`.
-2. Re-run `rocq compile -q -R . mathcomp_eulerian perm_seq_bridge.v`
-   after each fix. Each error message points to the next compat
-   mismatch; expect more of the same patterns.
-3. Once `perm_seq_bridge.v` compiles, retry `beta_swap.v` unchanged.
-4. After both leaf files build, run Phase 5 (`make clean && make -j1`,
-   `coqchk`, no-axioms grep).
+All compile-all phases are done. Remaining nice-to-haves:
+
+1. Optionally update `README.md` with the documented build commands
+   from Phase 5.
+2. Optionally clean up the stray `.lia.cache` deletion that surfaced
+   during the M-class work (or add it to `.gitignore`).
 
 ## Next-Session Handoff
 
@@ -394,12 +355,14 @@ This is the most important section if continuing from a fresh session.
 | Phase 0 — freeze and measure | done | n/a |
 | Phase 1 — archive monoliths, wrap `psi_descent.v` | done | `01c7858` |
 | Phase 2 — `psi_cdindex_support.v` full-compiles | done | `35a1bd0` |
-| Phase 3 — `perm_seq_bridge.v` full-compile | partial | `b39f109` |
-| Phase 4 — `beta_swap.v` full-compile | not started | n/a |
-| Phase 5 — CI cleanup | not started | n/a |
+| Phase 3 — `perm_seq_bridge.v` full-compile | done | (this session, on top of `b39f109`) |
+| Phase 4 — `beta_swap.v` full-compile | done | (no source changes — built once `perm_seq_bridge.vo` was produced) |
+| Phase 5 — CI cleanup | done | (this session) |
 
-`make vos -j2` passes. `make -j2` produces 21 of 23 `.vo` files; build
-stops in `perm_seq_bridge.v`.
+`make vos -j2` passes. `make clean && make -j2` produces all 23 `.vo`
+files. `coqchk -R . mathcomp_eulerian mathcomp_eulerian.beta_swap`
+passes. `Print Assumptions beta_alt_max` and `omega_proper_beta_lt`
+both report "Closed under the global context".
 
 ### Files changed (cumulative across all commits)
 
@@ -435,34 +398,30 @@ stops in `perm_seq_bridge.v`.
   - New: `in_internal_vertices`, `char_mono_apply_psis_inj`.
   - `uniq_map_char_mono_powerset` rewritten as
     `map_inj_in_uniq` + `uniq_powerset_internal`.
-- `perm_seq_bridge.v` — partial mathcomp-compat fixes (see Phase 3
-  above). Currently blocked at `desc_positions_bvec`.
+- `perm_seq_bridge.v` — full mathcomp-compat fixes (see Phase 3
+  table above). Drives end-to-end to `.vo`; the closing lemma
+  `omega_proper_beta_lt` is closed under the global context.
+- `beta_swap.v` — unchanged source; full-compiles once
+  `perm_seq_bridge.vo` is built. `beta_alt_max` is closed under the
+  global context.
 
 ### Verified commands (current tree)
 
 ```bash
-make vos -j2
-# OK — all 23 maintained files at .vos.
-
-rocq compile -q -w -deprecated-library-file -w -notation-overridden \
-  -R . mathcomp_eulerian psi_cdindex_support.v
-# OK — produces psi_cdindex_support.vo.
+make clean && make -j2
+# OK — all 23 maintained files at .vo.
 
 rg -n "\b(Axiom|Parameter|Conjecture|Admitted|admit)\b" *.v
 # No matches in maintained files.
+
+coqchk -R . mathcomp_eulerian mathcomp_eulerian.beta_swap
+# Modules were successfully checked.
+
+echo 'From mathcomp_eulerian Require Import beta_swap. \
+      Print Assumptions beta_alt_max.' \
+  | rocq top -R . mathcomp_eulerian
+# Closed under the global context.
 ```
-
-### Current full-compile failure
-
-```bash
-rocq compile -q -w -deprecated-library-file -w -notation-overridden \
-  -R . mathcomp_eulerian perm_seq_bridge.v
-```
-
-Fails at `desc_positions_bvec` (around line 262) because mathcomp's
-`sorted_eq` now takes a `perm_eq s1 s2` proof in its third hypothesis,
-but the existing proof body uses `move=> x` to do `s1 =i s2`. See
-Phase 3 → "Current blocker" for the fix shape.
 
 ### Imports & cycle-prevention
 
@@ -499,12 +458,10 @@ For Phase 3 / 4, search for these before inventing new machinery:
 
 ### Practical next steps
 
-1. Resume Phase 3: close `desc_positions_bvec` per the "Current blocker"
-   guidance above, then iterate on the gate
-   (`rocq compile ... perm_seq_bridge.v`) until it produces `.vo`.
-2. Try `beta_swap.v` unchanged. If it stalls, apply the same compat
-   pattern dictionary from Phase 3.
-3. Run Phase 5: `make clean && make -j1`, then `coqchk -R . mathcomp_eulerian`
-   on the maintained library, then the no-axioms grep.
-4. Optionally clean up: remove the `.lia.cache` deletion that surfaced
-   during the M-class work (or add it to `.gitignore`).
+The compile-all goal is achieved. Optional follow-ups:
+
+1. Update `README.md` with the documented build commands above.
+2. Clean up the stray `.lia.cache` deletion (or add it to `.gitignore`).
+3. Consider regenerating `Makefile.coq` on first build automatically
+   (the committed one had a stale macOS opam path; the pattern
+   `rm -f Makefile.coq Makefile.coq.conf .Makefile.coq.d` clears it).
