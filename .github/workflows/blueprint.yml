@@ -1,0 +1,113 @@
+name: Deploy Blueprint
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: coq-community/docker-coq-action@v1
+        with:
+          coq_version: '9.1'
+          ocaml_version: '5.2-flambda'
+          before_install: |
+            startGroup "Add coq-released repo"
+              opam repo add coq-released https://coq.inria.fr/opam/released
+            endGroup
+          before_script: |
+            startGroup "Workaround permission issue"
+              sudo chown -R 1000:1000 .
+            endGroup
+            startGroup "Install MathComp"
+              opam install coq-mathcomp-ssreflect -y
+            endGroup
+          script: |
+            startGroup "Build project"
+              coq_makefile -f _CoqProject -o CoqMakefile
+              make -f CoqMakefile -j2
+            endGroup
+            startGroup "Generate coqdoc"
+              make -f CoqMakefile html
+            endGroup
+          after_script: |
+            sudo chown -R $(id -u):$(id -g) html/
+
+      - name: Revert permissions
+        if: ${{ always() }}
+        run: sudo chown -R 1001:116 .
+
+      - name: Upload coqdoc artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coqdoc-html
+          path: html/
+
+  build-blueprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz libgraphviz-dev texlive-latex-base python3-dev
+
+      - name: Install rocqblueprint
+        run: pip install rocqblueprint
+
+      - name: Build blueprint
+        run: |
+          cd blueprint/src
+          rocqblueprint web
+
+      - name: Upload blueprint artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: blueprint-web
+          path: blueprint/web/
+
+  combine-and-deploy:
+    needs: [build-docs, build-blueprint]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download blueprint
+        uses: actions/download-artifact@v4
+        with:
+          name: blueprint-web
+          path: site/
+
+      - name: Download coqdoc
+        uses: actions/download-artifact@v4
+        with:
+          name: coqdoc-html
+          path: site/doc/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

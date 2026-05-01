@@ -1,0 +1,190 @@
+\chapter{Min-max trees and the $\PsiOp{i}$ operators}
+\label{ch:mmtree}
+
+This chapter formalizes Stanley EC1 \S1.6.3, pp.~56--57: the min-max
+tree construction $\Mtree{w}$, its window structure, and the
+involutive operators $\PsiOp{i}$ that generate the
+\emph{$M$-equivalence class} $\Mclass{w}$ on which the cd-monomial
+$\PhiW{w}$ will be defined (Chapter~\ref{ch:cdindex}).
+
+% ============================================================
+\section{The min-max tree of a sequence}
+% ============================================================
+
+\begin{definition}[Min-max tree datatype]
+  \label{def:mmtree}
+  \rocq{mathcomp_eulerian.mmtree.mmtree}
+  \rocqok
+  A \emph{min-max tree} over a type $T$ is the inductive
+  \[
+    \mathrm{mmtree}\,T \;::=\;
+      \mathrm{Leaf}
+      \;\mid\;
+      \mathrm{Node}\,(\mathrm{mmtree}\,T)\,T\,(\mathrm{mmtree}\,T).
+  \]
+  Its in-order traversal is
+  \[
+    \mathrm{mmtree\_to\_seq}(\mathrm{Node}\,\ell\,x\,r)
+      \;=\;
+      \mathrm{mmtree\_to\_seq}(\ell) \mathbin{+\!\!+} x :: \mathrm{mmtree\_to\_seq}(r).
+  \]
+\end{definition}
+
+\begin{definition}[The mm position]
+  \label{def:mm_pos}
+  \rocq{mathcomp_eulerian.psi_core.mm_pos}
+  \rocqok
+  For a non-empty sequence $s$, $\code{mm\_pos}(s)$ is the position of
+  $s$'s minimum if it occurs strictly before its maximum, and the
+  position of its maximum otherwise.  This is the position of the root
+  of $\Mtree{s}$.
+\end{definition}
+
+\begin{lemma}[mm position is in range]
+  \label{lem:mm_pos_lt}
+  \uses{def:mm_pos}
+  \rocq{mathcomp_eulerian.psi_core.mm_pos_lt}
+  \rocqok
+  For non-empty $s$, $\code{mm\_pos}(s) < |s|$.
+\end{lemma}
+
+\begin{theorem}[Min-max tree round-trip]
+  \label{thm:mmtree_of_seqK}
+  \uses{def:mmtree, def:mm_pos}
+  \rocq{mathcomp_eulerian.mmtree.mmtree_of_seqK}
+  \rocqok
+  For every $s \in \mathrm{seq}\,\NN$,
+  \[
+    \mathrm{mmtree\_to\_seq}(\mathrm{mmtree\_of\_seq}(s)) = s.
+  \]
+  This identifies $\Mtree{s}$ as a faithful representation of the
+  underlying sequence: every position in $w$ corresponds to a $\mathrm{Node}$
+  of $\Mtree{w}$.
+\end{theorem}
+
+% ============================================================
+\section{Windows, internal vertices, and left children}
+% ============================================================
+
+For a position $i$ in $w$, its \emph{window} is the interval
+$[i,\; i + \windowSize_i(w))$, the in-order range of the subtree
+rooted at the $\mathrm{Node}$ for position $i$ in $\Mtree{w}$.
+
+\begin{definition}[Window size]
+  \label{def:window_size}
+  \uses{def:mm_pos}
+  \rocq{mathcomp_eulerian.psi_core.window_size}
+  \rocqok
+  $\windowSize_i(w)$ is defined by fuel-based recursion that descends
+  $\Mtree{w}$ via $\code{mm\_pos}$: at the root position one returns
+  $|w| - i$; otherwise one recurses into the left or right subtree
+  according to whether $i$ lies before or after the root.
+\end{definition}
+
+\begin{definition}[Internal vertex]
+  \label{def:is_internal}
+  \uses{def:window_size}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.is_internal}
+  \rocqok
+  Position $i$ is \emph{internal} in $w$ iff $i < |w|$ and
+  $\windowSize_i(w) > 1$.  Equivalently, the $\mathrm{Node}$ for
+  position $i$ in $\Mtree{w}$ has at least one non-$\mathrm{Leaf}$
+  child.
+\end{definition}
+
+\begin{definition}[Has left child]
+  \label{def:has_left_child}
+  \uses{def:is_internal, def:window_size}
+  \rocq{mathcomp_eulerian.psi_descent_v2.has_left_child}
+  \rocqok
+  $\hasLC_i(w)$ is true iff in $\Mtree{w}$ the $\mathrm{Node}$ at
+  position $i$ has a non-$\mathrm{Leaf}$ left subtree.  This is
+  Stanley's $\hasLC$ predicate from p.~57 (it distinguishes the
+  cd-letters \texttt{c} and \texttt{d}; see Chapter~\ref{ch:cdindex}).
+\end{definition}
+
+\begin{definition}[Internal vertices of $w$]
+  \label{def:internal_vertices}
+  \uses{def:is_internal}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.internal_vertices}
+  \rocqok
+  $\code{internal\_vertices}(w)$ is the strictly increasing sequence
+  of positions $i$ for which $\internal_i(w)$ holds.
+\end{definition}
+
+% ============================================================
+\section{The operators $\PsiOp{i}$}
+% ============================================================
+
+For each internal position $i$, $\PsiOp{i}$ is a permutation on
+sequences that toggles the \emph{local order} of the window at $i$
+without changing the unlabelled tree shape.  This is Stanley's
+$\psi_i$ from EC1 \S1.6.3, p.~57.
+
+\begin{definition}[The $\PsiOp{i}$ operator]
+  \label{def:psi}
+  \uses{def:window_size, def:has_left_child, def:internal_vertices}
+  \rocq{mathcomp_eulerian.psi_core.psi}
+  \rocqok
+  For an internal position $i$ of $w$, $\PsiOp{i}(w)$ is defined by a
+  rank-shift inside the window at $i$ (the precise formula is given
+  in \code{psi\_core.v:219}).  For non-internal $i$, $\PsiOp{i}$ acts
+  as the identity.
+\end{definition}
+
+\begin{theorem}[Each $\PsiOp{i}$ is an involution]
+  \label{thm:psi_involutive}
+  \uses{def:psi}
+  \rocq{mathcomp_eulerian.psi_core.psi_involutive}
+  \rocqok
+  For every $i \in \NN$ and every uniq sequence $w$,
+  $\PsiOp{i}(\PsiOp{i}(w)) = w$.
+\end{theorem}
+
+\begin{theorem}[Stanley Fact \#1: commutativity of $\PsiOp{i}$]
+  \label{thm:psi_comm}
+  \uses{def:psi, thm:psi_involutive}
+  \rocq{mathcomp_eulerian.psi_comm.psi_comm}
+  \rocqok
+  For all $i, j \in \NN$ and every uniq sequence $w$,
+  $\PsiOp{i}(\PsiOp{j}(w)) = \PsiOp{j}(\PsiOp{i}(w))$.
+  This is the commutativity half of Stanley's
+  \emph{Fact \#1} (EC1 p.~57): the $\PsiOp{i}$ for internal vertices
+  generate an abelian group $G_w \cong (\ZZ/2)^{\iota(w)}$, where
+  $\iota(w)$ is the number of internal vertices.
+\end{theorem}
+
+\begin{definition}[Iterated $\Psi$ application]
+  \label{def:apply_psis}
+  \uses{def:psi}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.apply_psis}
+  \rocqok
+  For a sequence $\mathrm{ss}$ of internal positions,
+  $\code{apply\_psis}(\mathrm{ss})(w)$ is the left-fold composition of
+  the corresponding $\PsiOp{i}$.  By
+  Theorem~\ref{thm:psi_comm} and Theorem~\ref{thm:psi_involutive},
+  the result depends only on the \emph{set} $\mathrm{ss} \subseteq
+  \code{internal\_vertices}(w)$, and the M-equivalence class
+  $\Mclass{w} = \{\code{apply\_psis}(\mathrm{ss})(w) : \mathrm{ss}
+  \subseteq \code{internal\_vertices}(w)\}$ has size $2^{\iota(w)}$.
+\end{definition}
+
+\begin{lemma}[$\Psi$ preserves the unlabelled tree shape]
+  \label{lem:shape_apply_psis}
+  \uses{def:apply_psis, def:window_size, def:has_left_child, def:is_internal, def:internal_vertices}
+  \rocq{mathcomp_eulerian.psi_cdindex_core.window_size_apply_psis}
+  \rocq{mathcomp_eulerian.psi_cdindex_core.has_left_child_apply_psis}
+  \rocq{mathcomp_eulerian.psi_cdindex_core.is_internal_apply_psis}
+  \rocq{mathcomp_eulerian.psi_cdindex_core.internal_vertices_apply_psis}
+  \rocqok
+  For every $\mathrm{ss}$, every position $i$, and every uniq $w$:
+  $\windowSize_i(\code{apply\_psis}(\mathrm{ss})(w)) = \windowSize_i(w)$,
+  $\hasLC_i(\code{apply\_psis}(\mathrm{ss})(w)) = \hasLC_i(w)$,
+  $\internal_i(\code{apply\_psis}(\mathrm{ss})(w)) = \internal_i(w)$,
+  and the lists of internal vertices coincide.
+
+  These four invariances express that $\Psi$-action permutes labels
+  inside windows but preserves the unlabelled tree shape — the
+  load-bearing geometric fact behind Stanley Fact~\#1's
+  well-definedness clause for $\PhiW{w}$ (Chapter~\ref{ch:cdindex}).
+\end{lemma}

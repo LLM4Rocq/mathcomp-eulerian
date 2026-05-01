@@ -1,0 +1,212 @@
+\chapter{The cd-index and Stanley's Fact \#3}
+\label{ch:cdindex}
+
+This chapter formalizes Stanley EC1 \S1.6.3, pp.~57--60: the cd-letter
+classification of internal vertices, the cd-monomial $\PhiW{w}$, the
+characteristic monomial $\charmono{S}$ of a descent set, and the
+multiset identity (\emph{Fact \#3}, p.~58)
+\[
+  \sum_{v \in \Mclass{w}} \charmono{\DescSet{v}}
+  \;=\;
+  \PhiW{w}(a + b,\; ab + ba).
+\]
+The substantive support theorem \emph{$\PhiW{w} = \sum_{\omegaSet{X}
+\supseteq S_w} \charmono{X}$} (Stanley's identity inside the proof of
+Prop 1.6.4, p.~60--61) is proved here as
+\rocq{mathcomp_eulerian.psi_cdindex_support.phi_w_support_general}.
+
+% ============================================================
+\section{The cd-letter alphabet}
+% ============================================================
+
+\begin{definition}[cd-letter alphabet]
+  \label{def:cde}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.cde}
+  \rocqok
+  $\code{cde} \;::=\; \mathtt{C\_letter} \;\mid\; \mathtt{D\_letter}
+  \;\mid\; \mathtt{E\_letter}$.  These correspond to Stanley's
+  cd-letters $\mathtt{c}$, $\mathtt{d}$ and the deleted endpoint
+  $\mathtt{e}$.
+\end{definition}
+
+\begin{definition}[Vertex classification]
+  \label{def:classify_vertex_cde}
+  \uses{def:cde, def:is_internal, def:has_left_child}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.classify_vertex_cde}
+  \rocqok
+  Position $i$ in $w$ is classified as:
+  \[
+    \mathrm{classify\_vertex\_cde}(i, w)
+    \;=\;
+    \begin{cases}
+      \mathtt{E\_letter} & \text{if $i$ is not internal,} \\
+      \mathtt{D\_letter} & \text{if $i$ is internal with left child,} \\
+      \mathtt{C\_letter} & \text{if $i$ is internal without left child.}
+    \end{cases}
+  \]
+\end{definition}
+
+\begin{definition}[Unfiltered and cd-monomials]
+  \label{def:phi_w}
+  \uses{def:classify_vertex_cde}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.phi'_w}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.phi_w}
+  \rocqok
+  $\PhiprimeW{w} = [\,\mathrm{classify\_vertex\_cde}(i, w) : i \in \{0,
+  \dots, |w|-1\}\,]$ is the unfiltered list of cd-letters by position.
+  $\PhiW{w}$ is $\PhiprimeW{w}$ with $\mathtt{E\_letter}$s filtered out
+  — Stanley's $\Phi_w$, the cd-monomial associated with $w$ (EC1
+  pp.~58--59).
+\end{definition}
+
+\begin{theorem}[Stanley Fact \#1, well-definedness]
+  \label{thm:phi_w_apply_psis}
+  \uses{def:phi_w, def:apply_psis, lem:shape_apply_psis}
+  \rocq{mathcomp_eulerian.psi_cdindex_core.phi_w_apply_psis}
+  \rocqok
+  For every $\mathrm{ss}$ and every uniq $w$,
+  $\PhiW{\code{apply\_psis}(\mathrm{ss})(w)} = \PhiW{w}$.
+
+  Equivalently: $\PhiW{w}$ depends only on the M-equivalence class
+  $\Mclass{w}$ — equivalently, only on $\Mtree{w}$ as an unlabelled
+  tree.  This is the well-definedness clause of Stanley's
+  \emph{Fact \#1} (EC1 p.~57).  Internally it follows from the
+  shape-invariance lemmas in
+  \cref{lem:shape_apply_psis}.
+\end{theorem}
+
+% ============================================================
+\section{The cd $\to$ ab expansion}
+% ============================================================
+
+\begin{definition}[Bit-string expansion of cd-monomials]
+  \label{def:expand_cde}
+  \uses{def:cde}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.expand_cde}
+  \rocqok
+  $\code{expand\_cde}\,m \in \mathrm{seq}\,(\mathrm{seq}\,\mathrm{bool})$
+  substitutes $\mathtt{c} \mapsto a + b$, $\mathtt{d} \mapsto ab + ba$,
+  $\mathtt{e} \mapsto 1$ in the cd-monomial $m$:
+  \begin{align*}
+    \code{expand\_cde}\,[\,] &= [\,[\,]\,]\\
+    \code{expand\_cde}\,(\mathtt{C} :: \mathit{rest}) &=
+      [\,\mathtt{false} :: t : t \in \code{expand\_cde}\,\mathit{rest}\,]\\
+    &\quad +\!\!+\;
+      [\,\mathtt{true} :: t : t \in \code{expand\_cde}\,\mathit{rest}\,]\\
+    \code{expand\_cde}\,(\mathtt{D} :: \mathit{rest}) &=
+      [\,\mathtt{false}::\mathtt{true}::t : t \in \code{expand\_cde}\,\mathit{rest}\,]\\
+    &\quad +\!\!+\;
+      [\,\mathtt{true}::\mathtt{false}::t : t \in \code{expand\_cde}\,\mathit{rest}\,]\\
+    \code{expand\_cde}\,(\mathtt{E} :: \mathit{rest}) &=
+      \code{expand\_cde}\,\mathit{rest}.
+  \end{align*}
+  Each element of the result is a bit-string representing a descent
+  pattern; the total length is $2^{c} \cdot 2^{d}$ where $c, d$ are
+  the C- and D-counts of $m$.
+\end{definition}
+
+\begin{definition}[Sequence-level descent test]
+  \label{def:is_descent_seq}
+  \rocq{mathcomp_eulerian.psi_descent_v2.is_descent_seq}
+  \rocqok
+  For a sequence $w$ and $k \in \NN$,
+  $\code{is\_descent\_seq}(w, k) = (w_{k+1} < w_k)$ — the
+  sequence-level analogue of the permutation-level
+  \cref{def:descent_set}.
+\end{definition}
+
+\begin{definition}[Characteristic monomial]
+  \label{def:char_mono}
+  \uses{def:is_descent_seq}
+  \rocq{mathcomp_eulerian.psi_cdindex_defs.char_mono}
+  \rocqok
+  $\charmono{w} \;=\; [\,\code{is\_descent\_seq}(w, k) : k \in \{0,
+  \dots, |w| - 2\}\,]$ is the bit-vector of descent positions.
+
+  For a permutation $\sigma$, this matches Stanley's $\charmono{S} =
+  e_1 e_2 \cdots e_{n-1}$ (eq.~1.60, p.~58) with $e_i = a$ if
+  $i \notin S$ and $e_i = b$ if $i \in S$.  Our representation uses
+  $\mathtt{false} \mapsto a$ and $\mathtt{true} \mapsto b$.
+\end{definition}
+
+% ============================================================
+\section{Stanley's identity for $\PhiW{w}$}
+% ============================================================
+
+The next theorem is the load-bearing intermediate step in Stanley's
+proof of Proposition 1.6.4 (p.~60--61).  It says that the bit-strings
+in $\code{expand\_cde}\,(\PhiW{w})$ are exactly those whose induced
+descent pattern is compatible with $S_w$ (the position set of D-letters
+in $\PhiW{w}$, see \cref{ch:omega} and
+Chapter~\ref{ch:propositions}).
+
+\begin{theorem}[Stanley's $\PhiW{w} = \sum_{\omegaSet{X} \supseteq S_w} \charmono{X}$]
+  \label{thm:phi_w_support_general}
+  \uses{def:phi_w, def:expand_cde, def:char_mono, def:apply_psis}
+  \rocq{mathcomp_eulerian.psi_cdindex_support.phi_w_support_general}
+  \rocqok
+  For every uniq $w$ with $|w| \geq 2$ and every bit-string $X$ with
+  $|X| = |w| - 1$:
+  \[
+    X \in \code{expand\_cde}\,(\PhiW{w})
+    \;\Longleftrightarrow\;
+    \forall k \in S_w,\;\;
+       k \in \omegaSet{\,\text{descent positions of }X\,}.
+  \]
+  This formalizes Stanley's identity at the top of EC1 p.~61
+  inside the proof of Prop 1.6.4.
+
+  The supporting bit-level definitions
+  ($\code{cde\_width}$, $\code{cde\_total\_width}$,
+  $\code{cde\_offset}$, $\code{D\_offsets}$,
+  $\code{expand\_cde\_mem\_iff}$) live in
+  \rocq{mathcomp_eulerian.psi_cdindex_support_defs}.
+\end{theorem}
+
+% ============================================================
+\section{Stanley Fact \#3}
+% ============================================================
+
+\begin{theorem}[Stanley Fact \#3 (EC1 p.~58)]
+  \label{thm:fact3}
+  \uses{def:phi_w, def:expand_cde, def:char_mono, def:apply_psis, thm:psi_comm, thm:psi_involutive}
+  \rocq{mathcomp_eulerian.psi_cdindex_support.fact3}
+  \rocqok
+  Stanley's statement (verbatim, p.~58):
+  \begin{quote}
+    \emph{Let $w \in \Sn$, and let $\Mclass{w}$ be the M-equivalence
+    class containing $w$.  Then
+    $\sum_{v \in \Mclass{w}} \charmono{\DescSet{v}} =
+    \PhiW{w}(a + b,\; ab + ba)$.}
+  \end{quote}
+  Our formalization, with multisets represented as sorted seqs:
+  \[
+    \mathrm{sort}\!\left(\,\{\,\charmono{\code{apply\_psis}(\mathrm{ss})(w)} :
+      \mathrm{ss} \subseteq \code{internal\_vertices}(w)\,\}\,\right)
+    \;=\;
+    \mathrm{sort}\!\left(\,\code{expand\_cde}\,(\PhiW{w})\,\right).
+  \]
+
+  Stanley uses Fact \#3 as a stepping stone to \emph{Theorem 1.6.3}
+  (the ab-index of $\Sn$ factors through the cd-substitution); our
+  $\code{fact3}$ matches this directly.
+
+  \begin{proof}[Proof outline]
+    The right-hand side is enumerated by Stanley's bit-string
+    expansion (\cref{def:expand_cde}), and the left-hand side is
+    enumerated by ranging over subsets of $\code{internal\_vertices}(w)$.
+    Both have size $2^{\iota(w)}$ where $\iota(w)$ is the number of
+    internal vertices.
+
+    The map $\mathrm{ss} \mapsto \charmono{\code{apply\_psis}(\mathrm{ss})(w)}$
+    is shown to be injective via a bit-level recovery argument (in
+    \rocq{mathcomp_eulerian.psi_cdindex_core}): for each internal
+    vertex $v$, one can read off $(v \in \mathrm{ss})$ from the bits
+    of $\charmono{\code{apply\_psis}(\mathrm{ss})(w)}$ at positions
+    owned by $v$.  Disjointness of the bit-positions across
+    distinct internal vertices follows from
+    \rocq{mathcomp_eulerian.psi_cdindex_core.LR_pred_is_endpoint}
+    (D-vertex predecessors are non-internal).  Equality of the two
+    multisets then follows from injectivity plus equal cardinality.
+  \end{proof}
+\end{theorem}

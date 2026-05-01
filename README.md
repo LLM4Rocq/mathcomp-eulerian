@@ -52,6 +52,7 @@ documents:
 
 | Document | What it gives you |
 |----------|-------------------|
+| The **blueprint** at https://llm4rocq.github.io/mathcomp-eulerian/ (source: [`blueprint/`](blueprint/)) | Interactive paper-style document with a clickable dependency graph. Every theorem links back to its Rocq lemma. **Best starting point.** |
 | [`PROOF_STATEMENTS.md`](PROOF_STATEMENTS.md) | Per-result informal statement with verification status and Stanley page reference. The **table of contents** for the formal development. |
 | [`FORMAL_VS_STANLEY.md`](FORMAL_VS_STANLEY.md) | Maps each formal definition / theorem to its statement in Stanley EC1 Chapter 1. The **notation glossary**. |
 | The `M*_INFORMAL.md` series ([M2](M2_PSI_INFORMAL.md), [M3](M3_COMMUTATIVITY_INFORMAL.md), [M4](M4_DESCENT_EFFECT_INFORMAL.md), [M5](M5_FACT3_INFORMAL.md), [M6](M6_THM163_INFORMAL.md), [M7](M7_CLOSING_AXIOMS_INFORMAL.md)) | Module-by-module informal proof notes — paper-style mathematical reading of each milestone. |

@@ -1,0 +1,193 @@
+\chapter{The toggle action and the $\omegaSet{S}$ map}
+\label{ch:omega}
+
+This chapter formalizes Stanley EC1 \S1.6.3, pp.~57--60: the
+single-position toggle action on descent sets (the combinatorial
+shadow of \emph{Fact \#2}), the $\omegaSet{S}$ map characterizing
+when consecutive positions of $S$ flip membership, and Stanley's
+\emph{equation (1.65)} (p.~60) — the alternating descent set is
+exactly the one with $\omegaSet{S}$ equal to the universal set.
+These ingredients feed directly into Proposition 1.6.4 and Corollary
+1.6.5 (Chapter~\ref{ch:propositions}).
+
+% ============================================================
+\section{The toggle action}
+% ============================================================
+
+\begin{definition}[Symmetric difference]
+  \label{def:sym_diff}
+  \rocq{mathcomp_eulerian.beta_omega.sym_diff}
+  \rocqok
+  For $D, E \subseteq \{0, \dots, n-1\}$,
+  $D \,\triangle\, E = (D \setminus E) \cup (E \setminus D)$.
+\end{definition}
+
+\begin{definition}[Single-position toggle]
+  \label{def:toggle_at}
+  \uses{def:sym_diff}
+  \rocq{mathcomp_eulerian.beta_omega.toggle_at}
+  \rocqok
+  $\toggleAt{D}{i} = D \,\triangle\, \{i\}$ flips the membership of
+  position $i$ in $D$.
+\end{definition}
+
+\begin{lemma}[Toggle is an involution]
+  \label{lem:toggle_atK}
+  \uses{def:toggle_at}
+  \rocq{mathcomp_eulerian.beta_omega.toggle_atK}
+  \rocqok
+  $\toggleAt{(\toggleAt{D}{i})}{i} = D$.
+\end{lemma}
+
+\begin{remark}[Stanley Fact \#2 as block-toggle calculus]
+  \label{rem:fact2}
+  Stanley's \emph{Fact \#2} (EC1 pp.~57--58) describes how the descent
+  set changes under $\PsiOp{i}$: in the right-only-child case
+  $\DescSet{\PsiOp{i}(w)} = \DescSet{w} \,\triangle\, \{i\}$, while in
+  the two-children case
+  $\DescSet{\PsiOp{i}(w)} = \DescSet{w} \,\triangle\, \{i-1, i\}$.
+
+  The combinatorial heart of this — that toggling a single descent at
+  position $i$ propagates correctly through ``blocks'' of consecutive
+  descents/ascents — is captured in
+  \rocq{mathcomp_eulerian.beta_omega} by
+  $\code{block\_left\_le}$, $\code{block\_right\_ge}$,
+  $\code{block\_descent\_chain}$, $\code{block\_chain\_step}$,
+  $\code{block\_chain\_values}$ (all $\rocqok$).
+\end{remark}
+
+% ============================================================
+\section{The $\omegaSet{D}$ map}
+% ============================================================
+
+\begin{definition}[The omega map on descent sets]
+  \label{def:omega_set}
+  \rocq{mathcomp_eulerian.beta_omega.omega_set}
+  \rocqok
+  For $D \subseteq \{0, \dots, n\}$, the \emph{omega set} is
+  \[
+    \omegaSet{D}
+    \;=\;
+    \{\, k \in \{0, \dots, n-1\} : (k \in D) \oplus (k+1 \in D)\,\}
+    \;\subseteq\;
+    \{0, \dots, n-1\}.
+  \]
+  This is exactly Stanley's $\omegaSet{S}$ from EC1 just before eq.~(1.64),
+  p.~60: positions $k$ where exactly one of $\{k, k+1\}$ lies in $D$.
+  Equivalently, $\omegaSet{D} = D \,\triangle\, (D - 1)$ where $D - 1$
+  is $D$ shifted by one.
+\end{definition}
+
+\begin{lemma}[Membership criterion for $\omegaSet{D}$]
+  \label{lem:mem_omega_set}
+  \uses{def:omega_set, def:toggle_at}
+  \rocq{mathcomp_eulerian.beta_omega.mem_omega_set}
+  \rocqok
+  $k \in \omegaSet{D}$ iff toggling $D$ at one of $\{k, k+1\}$ flips
+  the membership at the other position.
+\end{lemma}
+
+% ============================================================
+\section{The set $\leftrightarrow$ seq bridges}
+% ============================================================
+
+The cd-index machinery in Chapters~\ref{ch:mmtree}--\ref{ch:cdindex}
+operates on $\mathrm{seq}\,\NN$.  The bridges below let us apply it to
+finset-level objects.
+
+\begin{definition}[Set-to-seq bridge]
+  \label{def:set_to_seq}
+  \rocq{mathcomp_eulerian.beta_bridge.set_to_seq}
+  \rocqok
+  For $D \subseteq \{0, \dots, n-1\}$,
+  $\code{set\_to\_seq}(D) = \mathrm{sort}\,(\leq, [\,\mathrm{val}(i) :
+  i \in \mathrm{enum}(D)\,])$ is the sorted list of underlying naturals
+  of elements of $D$.
+\end{definition}
+
+\begin{lemma}[Seq bridge for $\omegaSet$]
+  \label{lem:omega_set_seq_local_bridge}
+  \uses{def:omega_set, def:set_to_seq}
+  \rocq{mathcomp_eulerian.beta_bridge.omega_set_seq_local_bridge}
+  \rocqok
+  For $k \in \{0, \dots, m-1\}$ and $D \subseteq \{0, \dots, m\}$,
+  \[
+    k \in \omegaSet{D}
+    \;\Longleftrightarrow\;
+    \mathrm{val}(k) \in \code{omega\_seq\_local}\,(\code{set\_to\_seq}(D)).
+  \]
+  This identifies the finset-level $\omegaSet$ with the seq-level
+  $\code{omega\_seq}$, letting the heavy machinery in
+  $\code{psi\_cdindex\_*.v}$ apply to $\{\,\code{set}\,\}$-style
+  consumers.
+\end{lemma}
+
+\begin{definition}[Seq-level omega]
+  \label{def:omega_seq}
+  \rocq{mathcomp_eulerian.psi_cdindex_witness.omega_seq}
+  \rocqok
+  $\code{omega\_seq}(s)$ is the seq-level analogue of $\omegaSet{D}$:
+  it lists positions $k$ such that exactly one of $\{k, k+1\}$ appears
+  in $s$.  It is the computational backbone of the omega map and the
+  bridge between $\omegaSet$ and bit-strings.
+\end{definition}
+
+% ============================================================
+\section{The alternating descent set and equation (1.65)}
+% ============================================================
+
+\begin{definition}[Alternating descent set]
+  \label{def:alt_desc_set}
+  \rocq{mathcomp_eulerian.beta_swap.alt_desc_set}
+  \rocqok
+  $\altSet_n = \{\, i \in \{0, \dots, n-1\} : i \text{ is odd}\,\}$.
+  Stanley's ``alternating set'' is
+  $S = \{1, 3, 5, \dots\} \cap [n-1]$ (eq.~1.65, p.~60); via our
+  index shift this matches $\altSet_n$ exactly.
+\end{definition}
+
+\begin{definition}[Set-alternating predicate]
+  \label{def:set_is_alt}
+  \uses{def:alt_desc_set}
+  \rocq{mathcomp_eulerian.beta_swap.set_is_alt}
+  \rocqok
+  $D \subseteq \{0, \dots, n-1\}$ is \emph{set-alternating} iff for
+  every consecutive pair $i, i+1$ in $\{0, \dots, n-1\}$, exactly one
+  of $\{i, i+1\}$ belongs to $D$.  There are exactly two such sets on
+  $\{0, \dots, n-1\}$ (the ``odd-position'' and ``even-position''
+  alternating descents).
+\end{definition}
+
+\begin{lemma}[Alt $\Rightarrow$ omega is full]
+  \label{lem:omega_set_alt_full}
+  \uses{def:alt_desc_set, def:omega_set}
+  \rocq{mathcomp_eulerian.beta_swap.omega_set_alt_full}
+  \rocqok
+  For $m \geq 1$,
+  $\omegaSet{(\altSet_{m+2})}
+   \;=\;
+   \{0, \dots, m\}
+   \;=\;
+   \mathrm{set\_T}.$
+  This is the ``$\Leftarrow$'' direction of Stanley's eq.~(1.65)
+  (p.~60): the alternating descent set has full omega.
+\end{lemma}
+
+\begin{lemma}[Non-alt $\Rightarrow$ omega is strictly smaller]
+  \label{lem:not_set_is_alt_omega_not_full}
+  \uses{def:set_is_alt, def:omega_set}
+  \rocq{mathcomp_eulerian.beta_swap.not_set_is_alt_omega_not_full}
+  \rocqok
+  For $D \subseteq \{0, \dots, m\}$ with $D$ not set-alternating,
+  $\omegaSet{D} \subsetneq \mathrm{set\_T}$.
+
+  This is the contrapositive of the ``$\Rightarrow$'' direction of
+  Stanley's eq.~(1.65): non-alternating sets have strictly smaller
+  omega.  Together with \cref{lem:omega_set_alt_full} it gives the
+  full characterization
+  \[
+    \omegaSet{D} = \mathrm{set\_T}
+    \;\Longleftrightarrow\;
+    D \text{ is set-alternating}.
+  \]
+\end{lemma}
