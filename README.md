@@ -53,9 +53,10 @@ documents:
 | Document | What it gives you |
 |----------|-------------------|
 | The **blueprint** at https://llm4rocq.github.io/mathcomp-eulerian/ (source: [`blueprint/`](blueprint/)) | Interactive paper-style document with a clickable dependency graph. Every theorem links back to its Rocq lemma. **Best starting point.** |
-| [`PROOF_STATEMENTS.md`](PROOF_STATEMENTS.md) | Per-result informal statement with verification status and Stanley page reference. The **table of contents** for the formal development. |
+| [`PROOF_STATEMENTS.md`](PROOF_STATEMENTS.md) | Per-result informal statement with verification status and Stanley page reference. The **table of contents** for the formal development (markdown counterpart of the blueprint). |
 | [`FORMAL_VS_STANLEY.md`](FORMAL_VS_STANLEY.md) | Maps each formal definition / theorem to its statement in Stanley EC1 Chapter 1. The **notation glossary**. |
-| The `M*_INFORMAL.md` series ([M2](M2_PSI_INFORMAL.md), [M3](M3_COMMUTATIVITY_INFORMAL.md), [M4](M4_DESCENT_EFFECT_INFORMAL.md), [M5](M5_FACT3_INFORMAL.md), [M6](M6_THM163_INFORMAL.md), [M7](M7_CLOSING_AXIOMS_INFORMAL.md)) | Module-by-module informal proof notes — paper-style mathematical reading of each milestone. |
+
+Historical milestone-by-milestone informal proof notes (`M2`–`M7_*_INFORMAL.md`) are kept in [`docs/internal/`](docs/internal/) for the record; their content is subsumed by the blueprint chapters above.
 
 Stanley *Enumerative Combinatorics* Vol. 1, 2nd ed. (Cambridge, 2012),
 §1.4 (descents and Eulerian polynomials) and §1.6.3 (the cd-index of
