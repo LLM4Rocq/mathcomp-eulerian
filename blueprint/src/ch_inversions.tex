@@ -134,6 +134,36 @@ become our $\{0, \dots, n-1\}$ via the index shift.
   $\mathrm{inv}(\mathrm{id}) = 0$.
 \end{lemma}
 
+\begin{lemma}[Triangular counting]
+  \label{lem:card_ord_pair}
+  \rocq{mathcomp_eulerian.inversions.card_ord_pair}
+  \rocqok
+  $\#\{(i, j) \in \{0, \dots, m-1\}^2 : i < j\} = \binom{m}{2}$.
+\end{lemma}
+
+\begin{lemma}[Inversion bound]
+  \label{lem:inv_le}
+  \uses{def:inv, lem:card_ord_pair}
+  \rocq{mathcomp_eulerian.inversions.inv_le}
+  \rocqok
+  $\mathrm{inv}(\sigma) \leq \binom{n+1}{2}$.  The maximum is achieved by
+  the order-reversing permutation, which has every pair inverted.
+\end{lemma}
+
+\begin{theorem}[Inversion reversal symmetry]
+  \label{thm:inv_rev_perm}
+  \uses{def:inv, lem:card_ord_pair, lem:des_rev_perm}
+  \rocq{mathcomp_eulerian.inversions.inv_rev_perm}
+  \rocqok
+  Let $\rev_n \in \Snp{n+1}$ be the order-reversing permutation.  Then
+  \[
+    \mathrm{inv}(\rev_n \cdot \sigma) \;=\; \binom{n+1}{2} - \mathrm{inv}(\sigma).
+  \]
+  Each pair $(i, j)$ with $i < j$ is either an inversion or a
+  co-inversion of $\sigma$ (exactly one), and the bijection
+  $(i, j) \mapsto (\rev_n(j), \rev_n(i))$ swaps the two.
+\end{theorem}
+
 % ============================================================
 \section{The major index}
 % ============================================================
@@ -157,6 +187,33 @@ become our $\{0, \dots, n-1\}$ via the index shift.
   \rocqok
   $\mathrm{maj}(\mathrm{id}) = 0$.
 \end{lemma}
+
+\begin{lemma}[Major index bound]
+  \label{lem:maj_le}
+  \uses{def:maj}
+  \rocq{mathcomp_eulerian.inversions.maj_le}
+  \rocqok
+  $\mathrm{maj}(\sigma) \leq \binom{n+1}{2}$.  The maximum is achieved
+  by the order-reversing permutation, where every position is a descent
+  and the sum is $1 + 2 + \dots + n = \binom{n+1}{2}$.
+\end{lemma}
+
+\begin{theorem}[Major index reversal identity]
+  \label{thm:maj_rev_perm}
+  \uses{def:maj, def:des_asc, lem:des_rev_perm}
+  \rocq{mathcomp_eulerian.inversions.maj_rev_perm}
+  \rocqok
+  For $\rev_n \in \Snp{n+1}$,
+  \[
+    \mathrm{maj}(\rev_n \cdot \sigma) + (n + 1) \cdot \des(\sigma)
+    \;=\; \binom{n+1}{2} + \mathrm{maj}(\sigma).
+  \]
+  The naive identity $\mathrm{maj}(\rev_n \cdot \sigma) = \binom{n+1}{2}
+  - \mathrm{maj}(\sigma)$ is \emph{false} in general: the asymmetry
+  comes from $\mathrm{maj}$'s 1-indexed positions.  The correct
+  identity above accounts for it via the per-descent offset
+  $(n - i) + (i + 1) = n + 1$.
+\end{theorem}
 
 % ============================================================
 \section{The classical equidistribution — work in progress}
