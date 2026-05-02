@@ -28,4 +28,6 @@ beta_bridge.v
 perm_seq_bridge.v
 beta_swap.v
 cycles.v
+cycles_rec.v
+stirling_fiber.v
 inversions.v
