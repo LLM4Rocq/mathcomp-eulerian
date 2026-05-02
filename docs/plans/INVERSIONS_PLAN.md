@@ -1,8 +1,72 @@
 # Plan: Stanley EC1 §1.3 (Cycles and Inversions)
 
-> **Forward-looking design document.** This describes a proposed extension
-> of the formalization to cover Stanley EC1 §1.3 (cycles, inversions, the
-> major index, and their generating functions).  Not yet started.
+> **Status snapshot — Session 1 (2026-05-01).** Phases 1, 2, and 6
+> partially landed; Phases 3-5 not yet started.  Specifically:
+>
+> - Phase 1 (`cycles.v`) — definitions + `stirling_c_row_sum_fact`
+>   landed; **Stirling recurrence deferred** (needs the
+>   `lift_perm`-based cycle-count change argument, ~150–200 LOC).
+> - Phase 2 (`inversions.v`) — `inv`, `maj` definitions + `inv_id`,
+>   `maj_id` landed; **bounds and reversal symmetry deferred**.
+> - Phase 6 — blueprint chapter `ch_inversions.tex` landed and
+>   published with the rest.
+>
+> Both Stirling-recurrence and Foata's-bijection work were attempted in
+> the autonomous run but proved to be tasks that need *interactive*
+> work with iterative `rocq_check` testing — too much risk in a
+> single autonomous burst (each helper bijection has subtle
+> correctness invariants).  Honest scope re-estimate at the end of
+> this document.
+
+## 0. Session-1 wrap-up — three-agent analysis of the Stirling rec
+
+A second autonomous session attempted Phase 1's hardest piece, the
+Stirling cycle-number recurrence
+
+```
+stirling_c n.+1 k.+1 = n * stirling_c n k.+1 + stirling_c n k.
+```
+
+A team of three subagents (mathematician / Rocq expert / devil's
+advocate) was launched in parallel to scope the proof.  Their
+converged conclusion is preserved in
+[`/workspace/cycles_rec.v`](../../cycles_rec.v) (architecture sketch,
+**not in `_CoqProject`** to preserve the main project's
+"0 axioms 0 admits" invariant).  The headlines:
+
+- **Strategy.** Use `porbits_mul_tperm` (mathcomp `perm.v`) which
+  governs cycle-count change under multiplication by a transposition.
+  This avoids reproving cycle-count change from the porbit
+  decomposition for every case.
+
+- **Two helper lemmas needed:**
+  - **H1**: `cycle_count (perm.lift_perm ord_max ord_max s) =
+    (cycle_count s).+1` — extending with a fixed point adds one cycle.
+  - **H2**: `cycle_count (perm.lift_perm ord_max j s) =
+    cycle_count s` for `j ≠ ord_max` — inserting into an existing
+    cycle preserves the count.
+
+  H2 follows from H1 plus `porbits_mul_tperm` once we have the right
+  conjugation/decomposition relating `perm.lift_perm ord_max j s` to
+  `perm.lift_perm ord_max ord_max s`.  H1 is the harder one; it
+  needs an explicit `porbits` decomposition into a singleton
+  `[set ord_max]` and `lift ord_max @: P` images of the `porbits s`.
+
+- **Severe gotcha — `lift_perm` shadowing.**  `perm_compress.v`
+  defines its own `lift_perm` with a different signature.  In any
+  file that imports `perm_compress`, mathcomp's must be qualified as
+  `perm.lift_perm`, `perm.lift_perm_id`, `perm.lift_perm_lift`.
+  This trips up casual rewrites; ~30 minutes of confusion in the
+  first attempt before recognized.
+
+- **Estimated effort.**  Devil's advocate: 1-3 working days for the
+  full recurrence + Foata.  Both Stirling-rec and Foata are tasks
+  that need *interactive* `rocq_step_multi` iteration — autonomous
+  attempts in a single session have a high probability of churning
+  on subtle orbit/cycle invariants.
+
+The path forward is documented in `cycles_rec.v` as a scaffold for
+the next interactive session.
 
 ## 1. Scope
 
