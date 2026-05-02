@@ -14,13 +14,17 @@
      and conclude `cycle_count (perm.lift_perm ord_max ord_max s) =
                    (cycle_count s).+1`.
 
-   - H2 (STUBBED): cycle_count under [perm.lift_perm ord_max j s]
-     for j != ord_max equals cycle_count s.  Attempted via
-     `porbits_mul_tperm`; the natural conjugation identity does not
-     hold cleanly, and a direct porbits-of-merged-cycle proof would
-     be of similar size to H1.  Left for follow-up.
+   - H2 (REJECTED — see §H2 below): the originally-proposed lemma
+     [cycle_count (perm.lift_perm ord_max j s) = cycle_count s] for
+     j != ord_max is FALSE.  Counterexample: n=2, s=identity, j=0;
+     the lifted perm is a single 3-cycle (cycle_count 1) while
+     cycle_count s = 2.  The combinatorially-correct construction
+     for the j != ord_max class of the Stirling fiber bijection is
+     a cycle-insertion operation [insert_after], not [lift_perm];
+     this is deferred to a follow-up file [stirling_fiber.v].
 
-   - stirling_fiber lemma + assembly: depends on H2.
+   - stirling_fiber lemma + assembly: depends on [insert_after]
+     (not on H2 of this file).
 
    THE NAME-COLLISION GOTCHA
    =========================
@@ -128,38 +132,70 @@ Qed.
 End H1.
 
 (* ========================================================================= *)
-(* §H2.  Cycle count under "lift to j != ord_max" — NOT PROVED               *)
+(* §H2.  Cycle count under "lift to j != ord_max" — UNPROVABLE AS STATED     *)
 (* ========================================================================= *)
 
-(* Lemma cycle_count_lift_perm_swap n (s : {perm 'I_n}) (j : 'I_n.+1) :
-     j != ord_max ->
-     cycle_count (perm.lift_perm ord_max j s) = cycle_count s.
+(* The originally-conjectured lemma
 
-   Approach attempted: express
-     perm.lift_perm ord_max j s = (tperm ord_max j) * (perm.lift_perm ord_max ord_max s)
-   and apply [porbits_mul_tperm] together with H1.
+     Lemma cycle_count_lift_perm_swap n (s : {perm 'I_n}) (j : 'I_n.+1) :
+       j != ord_max ->
+       cycle_count (perm.lift_perm ord_max j s) = cycle_count s.
 
-   This identity is FALSE: at [lift ord_max k], the LHS is [lift j (s k)]
-   while the RHS is [tperm ord_max j (lift ord_max (s k))], and the latter
-   only equals [lift j (s k)] when [s k != j0] (where [j = lift ord_max j0]).
+   IS MATHEMATICALLY FALSE.
 
-   A clean proof would either:
-   (a) directly decompose the porbits of [perm.lift_perm ord_max j s]
-       (one cycle through ord_max merging with the s-cycle of j0, all
-       other cycles lifted unchanged); or
-   (b) construct an explicit auxiliary [s'] in 'I_n with a tperm-twist
-       so that the conjugation identity holds.
+   Counterexample 1.  n = 2, s = identity on 'I_2 (so cycle_count s = 2),
+   j = 0 = lift ord_max ord0.  Compute:
+     perm.lift_perm ord_max 0 1 (ord_max=2) = 0
+     perm.lift_perm ord_max 0 1 (0)         = lift 0 (s 0) = lift 0 0 = 1
+     perm.lift_perm ord_max 0 1 (1)         = lift 0 (s 1) = lift 0 1 = 2
+   So the lifted perm is the 3-cycle 2→0→1→2, with cycle_count = 1 ≠ 2.
 
-   Both are substantial; deferred. *)
+   Verified mechanically (test_action / test_action2 lemmas above
+   established σ(2) = 0 and σ(0) = 1 for this concrete instance).
+
+   ROOT CAUSE.  [perm.lift_perm ord_max j s] is a *renaming* operation:
+   it sends [lift ord_max k] to [lift j (s k)], so it changes which value
+   sits at each position.  This is NOT the cycle-insertion operation
+   needed for the Stirling recurrence.  The combinatorially-correct
+   operation is "insert ord_max into s's cycle right after element j0",
+   defined for j0 : 'I_n by:
+       insert_after j0 s ord_max          = lift ord_max (s j0)
+       insert_after j0 s (lift ord_max j0)= ord_max
+       insert_after j0 s (lift ord_max k) = lift ord_max (s k)   (k != j0)
+   This different perm DOES preserve cycle_count (it splices ord_max into
+   the j0-cycle without creating or destroying cycles), and is the right
+   building block for the Stirling fiber bijection.
+
+   ACTION ITEM.  The follow-up file [stirling_fiber.v] should:
+   (1) define [insert_after j0 s : {perm 'I_n.+1}] as above;
+   (2) prove [cycle_count (insert_after j0 s) = cycle_count s];
+   (3) prove the Stirling fiber bijection using [insert_after] (NOT
+       [lift_perm]) for the j != ord_max class, and [lift_perm
+       ord_max ord_max] (i.e. H1 of this file) for the j = ord_max
+       class.
+
+   Hence: H1 of this file IS the building block for the j = ord_max
+   class, but the j != ord_max class needs a different perm
+   construction.  H2 as a lemma about [lift_perm] is abandoned. *)
 
 (* ========================================================================= *)
-(* §Bij.  Per-fiber bijection — NOT PROVED (depends on H2)                   *)
+(* §Bij.  Per-fiber bijection — NOT PROVED                                   *)
+(*        (depends on a future [insert_after] construction; see §H2 above)   *)
 (* ========================================================================= *)
 
 (* Lemma stirling_fiber n k (j : 'I_n.+1) :
      #|[set s : {perm 'I_n.+1} | (s ord_max == j) && (cycle_count s == k.+1)]|
      = #|[set s : {perm 'I_n} | cycle_count s == (if j == ord_max then k else k.+1)]|.
-   *)
+
+   For j = ord_max:  bijection [s ↦ perm.lift_perm ord_max ord_max s]
+   between [{perm 'I_n} with k cycles] and [{perm 'I_n.+1} fixing ord_max
+   with k.+1 cycles].  Cycle-count step is [cycle_count_lift_perm_id]
+   (H1) of this file.
+
+   For j != ord_max:  write j = lift ord_max j0.  Bijection
+   [(s, j0) ↦ insert_after j0 s] between [{perm 'I_n} with k.+1 cycles] x
+   ['I_n] and [{perm 'I_n.+1} sending ord_max to j with k.+1 cycles].
+   Needs the [insert_after] lemma described in §H2 above. *)
 
 (* ========================================================================= *)
 (* §Rec.  The recurrence itself — NOT PROVED                                 *)
