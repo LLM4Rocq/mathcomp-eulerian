@@ -1,22 +1,27 @@
 # Plan: Stanley EC1 §1.3 (Cycles and Inversions)
 
-> **Status snapshot — Session 1 (2026-05-01).** Phases 1, 2, and 6
-> partially landed; Phases 3-5 not yet started.  Specifically:
+> **Status snapshot — Session 3 (2026-05-02).**
 >
-> - Phase 1 (`cycles.v`) — definitions + `stirling_c_row_sum_fact`
->   landed; **Stirling recurrence deferred** (needs the
->   `lift_perm`-based cycle-count change argument, ~150–200 LOC).
+> - **Phase 1 — DONE.** `cycles.v` (definitions + row sum) +
+>   `cycles_rec.v` (H1 cycle-count under fixed-point extension) +
+>   `stirling_fiber.v` (`insert_after` construction +
+>   `stirling_c_rec` headline).  All closed under the global context.
 > - Phase 2 (`inversions.v`) — `inv`, `maj` definitions + `inv_id`,
->   `maj_id` landed; **bounds and reversal symmetry deferred**.
-> - Phase 6 — blueprint chapter `ch_inversions.tex` landed and
->   published with the rest.
+>   `maj_id` landed; **bounds and reversal symmetry still deferred**.
+> - Phase 6 — blueprint chapter `ch_inversions.tex` landed; deferral
+>   on the Stirling recurrence has been replaced with a real
+>   `\begin{theorem}` block referencing
+>   \rocq{mathcomp_eulerian.stirling_fiber.stirling_c_rec}.
+> - Phases 3-5 (Foata + q-factorial) — not started.
 >
-> Both Stirling-recurrence and Foata's-bijection work were attempted in
-> the autonomous run but proved to be tasks that need *interactive*
-> work with iterative `rocq_check` testing — too much risk in a
-> single autonomous burst (each helper bijection has subtle
-> correctness invariants).  Honest scope re-estimate at the end of
-> this document.
+> The Phase 1 closure took 3 sessions: a design session (3 agents
+> in parallel), a session that proved H1 + diagnosed a
+> mathematical bug in H2, and a third session that re-did H2 via
+> an algebraic decomposition (`insert_after = tperm * lift_perm`)
+> instead of orbit-by-orbit reasoning.  The interactive subagent
+> pattern was decisive — it caught the H2 falsehood mechanically
+> in session-2 and found the cleaner H2-via-tperm proof in
+> session-3.
 
 ## 0. Session-1 wrap-up — three-agent analysis of the Stirling rec
 

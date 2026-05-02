@@ -71,19 +71,36 @@ become our $\{0, \dots, n-1\}$ via the index shift.
   exactly one $k$, so the row sum recovers the total.
 \end{lemma}
 
-\begin{remark}[Stirling recurrence — in progress]
-  \label{rem:stirling_c_rec}
-  The defining recurrence
+\begin{theorem}[Stirling recurrence]
+  \label{thm:stirling_c_rec}
+  \uses{def:stirling_c}
+  \rocq{mathcomp_eulerian.stirling_fiber.stirling_c_rec}
+  \rocqok
+  For all $n, k \in \NN$,
   \[
-    c(n+1, k) \;=\; n \cdot c(n, k) + c(n, k-1),
+    c(n+1, k+1) \;=\; n \cdot c(n, k+1) + c(n, k).
   \]
-  expressing whether $n+1$ becomes a fixed point of a $(k-1)$-cycle
-  permutation or is inserted into one of $n$ positions of a $k$-cycle
-  permutation, is not yet formalized.  Its proof requires an
-  ``insert max into a cycle'' bijection analogous to the
-  \texttt{insert\_max\_perm} construction used for the Eulerian
-  recurrence.
-\end{remark}
+  Combinatorially: $n+1$ either becomes a fixed point of a
+  $k$-cycle permutation (giving $c(n, k)$), or is inserted into one
+  of $n$ positions of a $(k+1)$-cycle permutation (giving
+  $n \cdot c(n, k+1)$).
+
+  \emph{Formalization route.}  The proof factors through a
+  construction $\mathrm{insert\_after}\,j_0\,s : \Snp{n+1}$ that
+  splices $\mathrm{ord\_max}$ into the $s$-cycle through $j_0$.
+  The key algebraic identity
+  \[
+    \mathrm{insert\_after}\,j_0\,s
+    \;=\;
+    \mathrm{tperm}\,(\mathrm{ord\_max})\,(\mathrm{lift}\,\mathrm{ord\_max}\,j_0)
+    \;\cdot\;
+    \mathrm{lift\_perm}\,\mathrm{ord\_max}\,\mathrm{ord\_max}\,s
+  \]
+  reduces cycle-count preservation to MathComp's
+  \texttt{porbits\_mul\_tperm} composed with the fixed-point
+  cycle-count lemma in
+  \rocq{mathcomp_eulerian.cycles_rec.cycle_count_lift_perm_id}.
+\end{theorem}
 
 % ============================================================
 \section{Inversions}
