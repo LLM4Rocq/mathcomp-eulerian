@@ -1164,3 +1164,557 @@ Qed.
 
 End UpperBoundAssembly.
 
+(* ========================================================================= *)
+(* §T. Existence: as_perm_max s >= (turn_count s).+2                          *)
+(* ========================================================================= *)
+
+(* Construction: I := {ord0; ord_max} ∪ {(val t).+1 | t turning point of s}.
+   The picked sequence is alternating because between consecutive picked
+   positions there are no turning points (by construction), so s is monotone
+   there (by inter_turn_monotone), and adjacent runs alternate in direction
+   (because each interior witness corresponds to a turning point). *)
+
+Section LowerBound.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+(* Inject a turn t : 'I_n into 'I_n.+2 at position (val t).+1. *)
+Definition turn_inj (t : 'I_n) : 'I_n.+2 :=
+  lift ord0 (widen_ord (leqnSn n) t).
+
+Lemma val_turn_inj (t : 'I_n) : val (turn_inj t) = (val t).+1.
+Proof. by rewrite /turn_inj /= /bump /= add1n. Qed.
+
+Lemma turn_inj_inj : injective turn_inj.
+Proof.
+move=> a b /(congr1 val); rewrite !val_turn_inj => /succn_inj.
+exact: val_inj.
+Qed.
+
+Definition turn_witness s : {set 'I_n.+2} :=
+  ord0 |: (ord_max |: [set turn_inj t | t in [set i : 'I_n | is_turn s i]]).
+
+(* The image of turn_inj on the turn-set has cardinality = turn_count s. *)
+Lemma card_turn_image s :
+  #|[set turn_inj t | t in [set i : 'I_n | is_turn s i]]| = turn_count s.
+Proof. by rewrite card_imset //; apply: turn_inj_inj. Qed.
+
+(* Element membership characterizations for the turn_image *)
+Lemma turn_image_lt_max s (x : 'I_n.+2) :
+  x \in [set turn_inj t | t in [set i : 'I_n | is_turn s i]] ->
+  0 < val x <= n.
+Proof.
+case/imsetP => t _ ->.
+rewrite val_turn_inj /=.
+by have := ltn_ord t.
+Qed.
+
+Lemma ord0_notin_turn_image s :
+  (ord0 : 'I_n.+2) \notin [set turn_inj t | t in [set i : 'I_n | is_turn s i]].
+Proof.
+apply/negP => /turn_image_lt_max /andP [].
+by rewrite (_ : val (ord0 : 'I_n.+2) = 0).
+Qed.
+
+Lemma ord_max_notin_turn_image s :
+  (ord_max : 'I_n.+2) \notin
+    [set turn_inj t | t in [set i : 'I_n | is_turn s i]].
+Proof.
+apply/negP => /turn_image_lt_max /andP [_].
+rewrite (_ : val (ord_max : 'I_n.+2) = n.+1) //.
+by rewrite ltnn.
+Qed.
+
+Lemma ord0_neq_ord_max : (ord0 : 'I_n.+2) != ord_max.
+Proof. by rewrite -val_eqE /=. Qed.
+
+Lemma card_turn_witness s :
+  #|turn_witness s| = (turn_count s).+2.
+Proof.
+rewrite /turn_witness.
+rewrite cardsU1 in_setU1 (negbTE ord0_neq_ord_max) /=.
+rewrite (negbTE (ord0_notin_turn_image s)) /=.
+rewrite cardsU1 (negbTE (ord_max_notin_turn_image s)) /=.
+by rewrite card_turn_image add1n add1n.
+Qed.
+
+(* Strict-left variant of slot_descent_const: only requires no turns in the
+   STRICTLY interior slot range (val t).+1 ∈ (val i, val j). *)
+Lemma slot_descent_const_strict s (i j : 'I_n.+2) :
+  (forall t : 'I_n, val i < (val t).+1 < val j -> ~~ is_turn s t) ->
+  forall (k1 k2 : 'I_n.+1),
+    val i <= val k1 -> val k1 <= val k2 -> val k2 < val j ->
+    is_descent s k1 = is_descent s k2.
+Proof.
+move=> Hnoturn k1 k2 Hi1 H12 H2j.
+move: H12 Hi1.
+elim: (val k2 - val k1) {-2}k1 (refl_equal (val k2 - val k1)) =>
+      [|d IH] k1' Hd H12 Hi1.
+- move/eqP: Hd; rewrite subn_eq0 => Hk21.
+  have : val k1' = val k2 by apply/eqP; rewrite eqn_leq H12 Hk21.
+  by move=> /val_inj ->.
+- have Hk1lt : val k1' < val k2 by rewrite -subn_gt0 Hd.
+  have Hk1ord : val k1' < n.
+    by have := ltn_ord k2; rewrite ltnS => Hk2; rewrite (leq_trans Hk1lt).
+  pose t : 'I_n := Ordinal Hk1ord.
+  have Ht : val i < (val t).+1 < val j.
+    apply/andP; split; first by apply: leq_ltn_trans Hi1 _.
+    by rewrite (leq_trans _ H2j).
+  have := Hnoturn t Ht.
+  rewrite /is_turn negb_add => /eqP Hd1.
+  have Hk1eq : (widen_ord (leqnSn n) t : 'I_n.+1) = k1' by apply: val_inj.
+  rewrite Hk1eq in Hd1; rewrite Hd1.
+  have HSk1 : val (lift ord0 t : 'I_n.+1) = (val k1').+1
+    by rewrite /= /bump /= add1n.
+  apply: (IH (lift ord0 t)).
+  - rewrite HSk1; apply: succn_inj.
+    by rewrite subnSK // Hd.
+  - by rewrite HSk1.
+  - by rewrite HSk1 (leq_trans Hi1).
+Qed.
+
+(* Strict-left variant of inter_turn_monotone. *)
+Lemma inter_turn_monotone_strict s (i j : 'I_n.+2) :
+  val i < val j ->
+  (forall t : 'I_n, val i < (val t).+1 < val j -> ~~ is_turn s t) ->
+  forall (p q : 'I_n.+2),
+    val i <= val p -> val p < val q -> val q <= val j ->
+    (val (s p) < val (s q))%N = (val (s i) < val (s j))%N.
+Proof.
+move=> Hij Hnoturn p q Hip Hpq Hqj.
+have Hjle : val i < n.+1.
+  by have := ltn_ord j; rewrite ltnS => Hj2; rewrite (leq_trans Hij).
+pose k0 : 'I_n.+1 := Ordinal Hjle.
+have Hk0range : val i <= val k0 < val j by rewrite /= leqnn /= Hij.
+pose b := is_descent s k0.
+have Hconst_ij : forall k : 'I_n.+1,
+                   val i <= val k < val j -> is_descent s k = b.
+  move=> k /andP [Hki Hkj].
+  case: (leqP (val k0) (val k)) => Hkk0.
+  - rewrite /b /=.
+    by apply: esym; apply: (slot_descent_const_strict Hnoturn) => //=.
+  - apply: (slot_descent_const_strict Hnoturn) => //=.
+    exact: ltnW.
+have Hconst_pq : forall k : 'I_n.+1,
+                   val p <= val k < val q -> is_descent s k = b.
+  move=> k /andP [Hkp Hkq].
+  apply: Hconst_ij.
+  by rewrite (leq_trans Hip Hkp) /= (leq_trans Hkq).
+have Hmono_ij := constant_descent_monotone Hij Hconst_ij.
+have Hmono_pq := constant_descent_monotone Hpq Hconst_pq.
+case Eb : b Hmono_ij Hmono_pq => Hmono_ij Hmono_pq /=.
+- rewrite ltnNge (ltnW Hmono_pq) /=.
+  by rewrite ltnNge (ltnW Hmono_ij) /=.
+- by rewrite Hmono_pq Hmono_ij.
+Qed.
+
+(* Direction at pair (a, b) is determined by descent slot.  Specifically,
+   when b = turn_inj t and there are no interior turns in (val a, val b),
+   the direction val (s a) < val (s b) equals ~~ is_descent s (widen_ord t). *)
+Lemma dir_left_of_turn s (a b : 'I_n.+2) (t : 'I_n) :
+  b = turn_inj t -> val a <= val t ->
+  (forall t' : 'I_n, val a < (val t').+1 < val b -> ~~ is_turn s t') ->
+  (val (s a) < val (s b))%N = ~~ is_descent s (widen_ord (leqnSn n) t).
+Proof.
+move=> Hbeq Hat Hno.
+have Hbval : val b = (val t).+1 by rewrite Hbeq val_turn_inj.
+(* Position p' = (val t) lifted to 'I_n.+2. *)
+have Htlt2 : val t < n.+2 by rewrite (leq_trans (ltn_ord t)) //; apply: ltnW.
+pose p' : 'I_n.+2 := Ordinal Htlt2.
+have Hp'val : val p' = val t by [].
+have Hap' : val a <= val p' by rewrite Hp'val.
+have Hp'b : val p' < val b by rewrite Hp'val Hbval.
+have Hbb : val b <= val b by [].
+have Hab : val a < val b by rewrite (leq_ltn_trans Hap' Hp'b).
+(* Use inter_turn_monotone_strict on (a, b) with sub-interval (p', b). *)
+rewrite -(inter_turn_monotone_strict Hab Hno Hap' Hp'b Hbb).
+(* Now compute direction at (p', b): position p' = val t and b = (val t).+1
+   are adjacent, so the direction equals ~~ is_descent s (widen_ord t). *)
+have Hwt : (widen_ord (leqnSn n.+1) (widen_ord (leqnSn n) t) : 'I_n.+2) = p'
+  by apply: val_inj.
+have Hlt : (lift ord0 (widen_ord (leqnSn n) t) : 'I_n.+2) = b
+  by apply: val_inj => /=; rewrite Hbval /bump /= add1n.
+have := not_is_descentE s (widen_ord (leqnSn n) t).
+by rewrite Hwt Hlt => ->.
+Qed.
+
+Lemma dir_right_of_turn s (b c : 'I_n.+2) (t : 'I_n) :
+  b = turn_inj t -> val b < val c ->
+  (forall t' : 'I_n, val b < (val t').+1 < val c -> ~~ is_turn s t') ->
+  (val (s b) < val (s c))%N = ~~ is_descent s (lift ord0 t).
+Proof.
+move=> Hbeq Hbc Hno.
+have Hbval : val b = (val t).+1 by rewrite Hbeq val_turn_inj.
+(* Position c' = (val t).+2 lifted to 'I_n.+2. *)
+have Htn : val t < n by apply: ltn_ord.
+have HtSlt2 : (val t).+2 < n.+2 by rewrite !ltnS.
+pose c' : 'I_n.+2 := Ordinal HtSlt2.
+have Hc'val : val c' = (val t).+2 by [].
+have Hbc' : val b < val c' by rewrite Hbval Hc'val.
+have Hbb : val b <= val b by [].
+have Hc'c : val c' <= val c.
+  by rewrite Hc'val -Hbval.
+(* Use inter_turn_monotone_strict on (b, c) with sub-interval (b, c'). *)
+rewrite -(inter_turn_monotone_strict Hbc Hno Hbb Hbc' Hc'c).
+(* Now compute direction at (b, c'): b = (val t).+1 and c' = (val t).+2,
+   adjacent positions; direction equals ~~ is_descent s (lift ord0 t). *)
+have Hwt : (widen_ord (leqnSn n.+1) (lift ord0 t) : 'I_n.+2) = b.
+  by apply: val_inj => /=; rewrite Hbval /bump /= add1n.
+have Hlt : (lift ord0 (lift ord0 t) : 'I_n.+2) = c'.
+  by apply: val_inj => /=; rewrite /bump /= !add1n.
+have := not_is_descentE s (lift ord0 t).
+by rewrite Hwt Hlt => ->.
+Qed.
+
+(* The KEY adjacency lemma: for an interior witness b = turn_inj t and
+   neighbors a (left) and c (right), the directions across (a,b) and (b,c)
+   differ. *)
+Lemma sign_flip_at_turn s (a b c : 'I_n.+2) (t : 'I_n) :
+  is_turn s t -> b = turn_inj t ->
+  val a <= val t -> val b < val c ->
+  (forall t' : 'I_n, val a < (val t').+1 < val b -> ~~ is_turn s t') ->
+  (forall t' : 'I_n, val b < (val t').+1 < val c -> ~~ is_turn s t') ->
+  (val (s a) < val (s b))%N != (val (s b) < val (s c))%N.
+Proof.
+move=> Htn Hbeq Hat Hbc Hno_left Hno_right.
+rewrite (dir_left_of_turn Hbeq Hat Hno_left).
+rewrite (dir_right_of_turn Hbeq Hbc Hno_right).
+move: Htn; rewrite /is_turn.
+by case: (is_descent _ _); case: (is_descent _ _).
+Qed.
+
+End LowerBound.
+
+(* ========================================================================= *)
+(* §T. is_alt characterization via alternating sign_seq + distinctness        *)
+(* ========================================================================= *)
+
+(* Converse to sign_seq_is_alt: alternating signs (with adjacent distinctness)
+   imply is_alt.  We need this so we can build is_alt from sign-flip data. *)
+
+(* All adjacent pairs in xs are distinct. *)
+Definition uniq_adj (xs : seq nat) : bool :=
+  match xs with
+  | [::] => true
+  | x :: xs' => all (fun p => p.1 != p.2) (zip (x :: xs') xs')
+  end.
+
+Lemma uniq_adj_cons2 x y rest :
+  uniq_adj (x :: y :: rest) = (x != y) && uniq_adj (y :: rest).
+Proof. by rewrite /= eqE. Qed.
+
+(* Uniqueness of adjacent pairs reflected through cons. *)
+Lemma uniq_adj_tail x y rest :
+  uniq_adj (x :: y :: rest) -> uniq_adj (y :: rest).
+Proof. by case: rest => [|z r] /= /andP []. Qed.
+
+Lemma uniq_adj_head_neq x y rest :
+  uniq_adj (x :: y :: rest) -> x != y.
+Proof. by case: rest => [|z r] /= /andP []. Qed.
+
+(* Comparison sign at adjacent distinct nats: x < y iff ~~ (y < x) (and x ≠ y). *)
+Lemma sign_pair_neq (x y : nat) : x != y -> (x < y)%N = ~~ (y < x)%N.
+Proof.
+move=> Hne; case Hxy : (x < y)%N.
+  by rewrite ltnNge ltnW.
+move/negbT: Hxy; rewrite -leqNgt leq_eqVlt => /orP [/eqP Hxy|->] //.
+by rewrite Hxy eq_refl in Hne.
+Qed.
+
+(* Key reverse direction: alternating sign_seq + adjacent uniqueness ⟹ alt_aux.
+   Direction at y is OPPOSITE of (x < y), since alternation means the next
+   step flips. *)
+Lemma alt_aux_from_sign x y xs :
+  uniq_adj (x :: y :: xs) ->
+  is_alt_bool (sign_seq (x :: y :: xs)) ->
+  alt_aux (~~ (x < y)%N) y xs.
+Proof.
+elim: xs y x => [|z rest IH] y x /=.
+  by [].
+move=> Hu Hab.
+have Hyz_ne : y != z by case/and3P: Hu.
+have Huyz : uniq_adj (y :: z :: rest).
+  by case: rest Hu {IH Hab} => [|w r] /=; case/and3P=> _ Hyz Hr; rewrite Hyz //=.
+move: Hab => /=.
+case/andP=> Hflip Hbabool.
+have Hrec : alt_aux (~~ (y < z)%N) z rest by exact: IH.
+move: Hrec.
+have Hxy_yz : (x < y)%N (+) (y < z)%N by exact: Hflip.
+case Exy : (x < y)%N Hxy_yz => Hxy_yz /=.
+- have Hyz_false : (y < z)%N = false by case: (y < z)%N Hxy_yz.
+  rewrite Hyz_false /= => ->.
+  by rewrite andbT ltn_neqAle leqNgt Hyz_false /= eq_sym Hyz_ne.
+- have Hyz_true : (y < z)%N = true by case: (y < z)%N Hxy_yz.
+  by rewrite Hyz_true /= => ->.
+Qed.
+
+(* The sign_seq of the image of any seq under val ∘ s is alternating
+   if every adjacent triple in the position seq has flipping s-direction. *)
+Lemma sign_seq_alt_of_triple_flip n (s : {perm 'I_n.+2}) (js : seq 'I_n.+2) :
+  (forall i, i.+2 < size js ->
+     (val (s (nth ord0 js i)) < val (s (nth ord0 js i.+1)))%N
+       != (val (s (nth ord0 js i.+1)) < val (s (nth ord0 js i.+2)))%N) ->
+  is_alt_bool (sign_seq [seq val (s j) | j <- js]).
+Proof.
+elim: js => [|x [|y [|z rest]]] // IH Htriples /=.
+have Hrec_hyp : forall i, i.+2 < size [:: y, z & rest] ->
+  (val (s (nth ord0 [:: y, z & rest] i))
+     < val (s (nth ord0 [:: y, z & rest] i.+1)))%N
+     != (val (s (nth ord0 [:: y, z & rest] i.+1))
+            < val (s (nth ord0 [:: y, z & rest] i.+2)))%N.
+  by move=> i Hi; apply: (Htriples i.+1).
+have Hrec := IH Hrec_hyp.
+move: Hrec; rewrite /sign_seq /=.
+move=> Hrec.
+apply/andP; split; last exact: Hrec.
+have H0 : 2 < size [:: x, y, z & rest] by [].
+have := Htriples 0%N H0; rewrite /=.
+by case: (val (s x) < _)%N; case: (val (s y) < _)%N.
+Qed.
+
+(* uniq_adj implied by uniq for nat sequences. *)
+Lemma uniq_adj_of_uniq (xs : seq nat) : uniq xs -> uniq_adj xs.
+Proof.
+case: xs => [|x xs] //=.
+elim: xs x => [|y rest IH] x //= /andP [Hx /andP [Hy Hu]].
+have Hxy : x != y by apply: contraNneq Hx => ->; rewrite mem_head.
+rewrite Hxy /=.
+by apply: IH; rewrite Hy Hu.
+Qed.
+
+(* Main reverse: is_alt characterized by alt_bool sign_seq + adjacent uniq. *)
+Lemma is_alt_from_sign xs :
+  uniq_adj xs -> is_alt_bool (sign_seq xs) -> is_alt xs.
+Proof.
+case: xs => [|x [|y rest]] // Hu Hab.
+have Hxy_ne : x != y by exact: uniq_adj_head_neq Hu.
+rewrite is_alt_cons2.
+have Hrec := alt_aux_from_sign Hu Hab.
+case Exy : (x < y)%N Hrec => /= Hrec.
+  by rewrite Hrec.
+by rewrite Hrec andbT ltn_neqAle leqNgt Exy /= eq_sym Hxy_ne.
+Qed.
+
+(* ========================================================================= *)
+(* §U. Existence of an alternating subsequence of length turn_count + 2     *)
+(* ========================================================================= *)
+
+Section ExistenceLB.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+(* The sorted positions in turn_witness s. *)
+Definition pos_seq s : seq 'I_n.+2 :=
+  sort (fun a b : 'I_n.+2 => val a <= val b) (enum (turn_witness s)).
+
+Lemma size_pos_seq s : size (pos_seq s) = (turn_count s).+2.
+Proof. by rewrite /pos_seq size_sort -cardE card_turn_witness. Qed.
+
+Lemma pos_seq_uniq s : uniq (pos_seq s).
+Proof. by rewrite /pos_seq sort_uniq enum_uniq. Qed.
+
+Lemma pick_seq_pos_seq s :
+  pick_seq s (turn_witness s) = [seq val (s j) | j <- pos_seq s].
+Proof. by []. Qed.
+
+Lemma pos_seq_strict_sorted s :
+  sorted (fun a b : 'I_n.+2 => val a < val b) (pos_seq s).
+Proof. exact: sort_enum_strict_sorted. Qed.
+
+(* Membership in pos_seq matches membership in turn_witness s. *)
+Lemma mem_pos_seq s (x : 'I_n.+2) :
+  x \in pos_seq s = (x \in turn_witness s).
+Proof. by rewrite /pos_seq mem_sort mem_enum. Qed.
+
+(* In a strict-sorted seq, the val-ordering is determined by index ordering. *)
+Lemma pos_seq_val_lt s (i j : nat) :
+  i < size (pos_seq s) -> j < size (pos_seq s) -> i < j ->
+  val (nth ord0 (pos_seq s) i) < val (nth ord0 (pos_seq s) j).
+Proof.
+move=> Hi Hj Hij.
+have Htrans : transitive (fun a b : 'I_n.+2 => val a < val b).
+  by move=> a b c; apply: ltn_trans.
+exact: (sorted_ltn_nth Htrans ord0 (pos_seq_strict_sorted s)).
+Qed.
+
+(* In a strict-sorted seq, val-ordering ⟹ index-ordering. *)
+Lemma pos_seq_val_lt_inv s (i j : nat) :
+  i < size (pos_seq s) -> j < size (pos_seq s) ->
+  val (nth ord0 (pos_seq s) i) < val (nth ord0 (pos_seq s) j) ->
+  i < j.
+Proof.
+move=> Hi Hj Hlt.
+case: (ltngtP i j) Hlt => // Hij Hlt.
+  by have := pos_seq_val_lt Hj Hi Hij; rewrite ltnNge ltnW.
+by rewrite Hij ltnn in Hlt.
+Qed.
+
+(* No element of pos_seq has val strictly between consecutive entries. *)
+Lemma no_inner_in_pos_seq s i (x : 'I_n.+2) :
+  i.+1 < size (pos_seq s) ->
+  x \in pos_seq s ->
+  val (nth ord0 (pos_seq s) i) < val x ->
+  val x < val (nth ord0 (pos_seq s) i.+1) ->
+  False.
+Proof.
+move=> Hi Hin Hxa Hxb.
+have Hi0 : i < size (pos_seq s) by exact: ltnW.
+have /(nthP ord0) [j Hj Hxnth] := Hin.
+rewrite -Hxnth in Hxa Hxb.
+have H1 := pos_seq_val_lt_inv Hi0 Hj Hxa.
+have H2 := pos_seq_val_lt_inv Hj Hi Hxb.
+by have := leq_trans H2 H1; rewrite ltnn.
+Qed.
+
+(* The first element of pos_seq is ord0. *)
+Lemma pos_seq_nth0 s : nth ord0 (pos_seq s) 0 = ord0.
+Proof.
+have Hsz : 0 < size (pos_seq s) by rewrite size_pos_seq.
+have Hord0_in : (ord0 : 'I_n.+2) \in pos_seq s.
+  by rewrite mem_pos_seq /turn_witness !inE eq_refl.
+have /(nthP ord0) [k Hk Hk_eq] := Hord0_in.
+case Ek : k Hk Hk_eq => [|k'] Hk Hk_eq.
+  by [].
+have Hk0lt : (0 < k'.+1)%N by [].
+have := pos_seq_val_lt Hsz Hk Hk0lt.
+rewrite Hk_eq /=.
+by [].
+Qed.
+
+(* The last element of pos_seq has val n.+1 (= ord_max). *)
+Lemma pos_seq_last_val s :
+  val (nth ord0 (pos_seq s) (turn_count s).+1) = n.+1.
+Proof.
+have Hszm1 : (turn_count s).+1 < size (pos_seq s) by rewrite size_pos_seq.
+have Hord_max_in : (ord_max : 'I_n.+2) \in pos_seq s.
+  by rewrite mem_pos_seq /turn_witness !inE eq_refl orbT.
+have /(nthP ord0) [k Hk Hk_eq] := Hord_max_in.
+have Hk_le : k <= (turn_count s).+1.
+  rewrite leqNgt; apply/negP => Hk_gt.
+  have Hsz_eq : size (pos_seq s) = (turn_count s).+2 by rewrite size_pos_seq.
+  by have := Hk; rewrite Hsz_eq ltnS leqNgt Hk_gt.
+case: (eqVneq k (turn_count s).+1) => [Heq|Hne].
+  by rewrite -Heq Hk_eq.
+have Hk_lt : k < (turn_count s).+1 by rewrite ltn_neqAle Hne.
+have := pos_seq_val_lt Hk Hszm1 Hk_lt.
+rewrite Hk_eq /= => Hcontr.
+have Hbound : val (nth ord0 (pos_seq s) (turn_count s).+1) < n.+2 by exact: ltn_ord.
+by apply/eqP; rewrite eqn_leq; apply/andP; split;
+  [have := Hbound; rewrite ltnS | apply: ltnW].
+Qed.
+
+(* Interior elements (index 1..size-2) are images under turn_inj. *)
+Lemma interior_is_turn_inj s (i : nat) :
+  0 < i -> i.+1 < size (pos_seq s) ->
+  exists t : 'I_n, is_turn s t /\ nth ord0 (pos_seq s) i = turn_inj t.
+Proof.
+move=> H0 Hi.
+have Hi0 : i < size (pos_seq s) by exact: ltnW.
+pose b := nth ord0 (pos_seq s) i.
+have Hbin : b \in pos_seq s by apply: mem_nth.
+rewrite mem_pos_seq /turn_witness !inE in Hbin.
+case/orP: Hbin => [/eqP Hb_ord0|].
+  exfalso.
+  have Hsz_pos : 0 < size (pos_seq s) by rewrite size_pos_seq.
+  have := pos_seq_val_lt Hsz_pos Hi0 H0.
+  by rewrite pos_seq_nth0 -/b Hb_ord0.
+case/orP => [/eqP Hb_ord_max|].
+  exfalso.
+  have Hsz_eq : size (pos_seq s) = (turn_count s).+2 by rewrite size_pos_seq.
+  have Hi_lt : i < (turn_count s).+1 by have := Hi; rewrite Hsz_eq.
+  have Hszm1 : (turn_count s).+1 < size (pos_seq s) by rewrite Hsz_eq.
+  have := pos_seq_val_lt Hi0 Hszm1 Hi_lt.
+  rewrite -/b Hb_ord_max pos_seq_last_val.
+  by rewrite ltnn.
+case/imsetP => t Hin Heq.
+exists t; split.
+  by move: Hin; rewrite inE.
+by [].
+Qed.
+
+(* Strict interior bounds: val of nth pos_seq i is in (0, n+1) for 0 < i < size-1. *)
+Lemma interior_val_bounds s i :
+  0 < i -> i.+1 < size (pos_seq s) ->
+  0 < val (nth ord0 (pos_seq s) i) /\
+  val (nth ord0 (pos_seq s) i) < n.+1.
+Proof.
+move=> H0 Hi.
+have Hi0 : i < size (pos_seq s) by exact: ltnW.
+have [t [Ht Heq]] := interior_is_turn_inj H0 Hi.
+rewrite Heq val_turn_inj.
+split; first by [].
+by have := ltn_ord t.
+Qed.
+
+(* The triple-flip property for adjacent triples in pos_seq. *)
+Lemma triple_flip_pos_seq s i :
+  i.+2 < size (pos_seq s) ->
+  (val (s (nth ord0 (pos_seq s) i)) < val (s (nth ord0 (pos_seq s) i.+1)))%N
+    != (val (s (nth ord0 (pos_seq s) i.+1)) < val (s (nth ord0 (pos_seq s) i.+2)))%N.
+Proof.
+move=> Hi.
+have Hi1 : i.+1 < size (pos_seq s) by exact: ltnW.
+have Hi0 : i < size (pos_seq s) by do 2 apply: ltnW.
+pose a := nth ord0 (pos_seq s) i.
+pose b := nth ord0 (pos_seq s) i.+1.
+pose c := nth ord0 (pos_seq s) i.+2.
+have Hab : val a < val b by exact: pos_seq_val_lt.
+have Hbc : val b < val c by exact: pos_seq_val_lt.
+have [t [Htn Heqb]] := interior_is_turn_inj (i := i.+1) (ltn0Sn _) Hi.
+have Hbeq : b = turn_inj t by [].
+have Hbval : val b = (val t).+1 by rewrite Hbeq val_turn_inj.
+have Hat : val a <= val t.
+  by rewrite -ltnS -Hbval.
+(* No turns in (val a, val b). *)
+have Hno_left : forall t' : 'I_n, val a < (val t').+1 < val b -> ~~ is_turn s t'.
+  move=> t' /andP [Ht1 Ht2].
+  apply/negP => Ht'turn.
+  pose x := turn_inj t'.
+  have Hxin : x \in pos_seq s.
+    rewrite mem_pos_seq /turn_witness !inE.
+    apply/orP; right; apply/orP; right.
+    apply/imsetP; exists t' => //.
+    by rewrite inE.
+  have Hxa : val a < val x by rewrite val_turn_inj.
+  have Hxb : val x < val b by rewrite val_turn_inj.
+  exact: (no_inner_in_pos_seq Hi1 Hxin Hxa Hxb).
+(* No turns in (val b, val c). *)
+have Hno_right : forall t' : 'I_n, val b < (val t').+1 < val c -> ~~ is_turn s t'.
+  move=> t' /andP [Ht1 Ht2].
+  apply/negP => Ht'turn.
+  pose x := turn_inj t'.
+  have Hxin : x \in pos_seq s.
+    rewrite mem_pos_seq /turn_witness !inE.
+    apply/orP; right; apply/orP; right.
+    apply/imsetP; exists t' => //.
+    by rewrite inE.
+  have Hxb : val b < val x by rewrite val_turn_inj.
+  have Hxc : val x < val c by rewrite val_turn_inj.
+  exact: (no_inner_in_pos_seq Hi Hxin Hxb Hxc).
+exact: (sign_flip_at_turn Htn Heqb Hat Hbc Hno_left Hno_right).
+Qed.
+
+(* The picked seq is alternating. *)
+Theorem is_alt_pick_turn_witness s :
+  is_alt (pick_seq s (turn_witness s)).
+Proof.
+rewrite pick_seq_pos_seq.
+apply: is_alt_from_sign.
+  apply: uniq_adj_of_uniq.
+  rewrite map_inj_in_uniq.
+    exact: pos_seq_uniq.
+  by move=> x y _ _ /val_inj /perm_inj.
+apply: sign_seq_alt_of_triple_flip.
+exact: triple_flip_pos_seq.
+Qed.
+
+(* Main lower bound. *)
+Theorem as_perm_max_lower s : (turn_count s).+2 <= as_perm_max s.
+Proof.
+rewrite -card_turn_witness.
+rewrite /as_perm_max.
+exact: (leq_bigmax_cond (turn_witness s) (is_alt_pick_turn_witness s)).
+Qed.
+
+End ExistenceLB.
+
