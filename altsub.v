@@ -1058,11 +1058,192 @@ Qed.
      val i <= val (head i xs) -> val (last i xs) <= val j ->
      flip_count (sign_seq [seq val (s x) | x <- xs])
        <= #|turn_iv s (val i) (val j)|.
-   STILL OPEN — needs strengthened induction tracking whether the
-   first slot interval contains a turn (a parity argument via
-   inter_turn_monotone).  Estimated 60-100 LOC.  *)
+   STILL OPEN — but session B-4 made significant infrastructure progress.
+   See §Q.1 below for the seq-level building blocks (`triangle_xor_nat_g`,
+   `bool_triangle`, `flip_count_pairmap_insert_anywhere`). The key
+   reduction now needed: assemble these into the TURN-INTERVAL bound. *)
 
 End UpperBound.
+
+(* ========================================================================= *)
+(* §Q.1. Seq-level monotonicity infrastructure (Session B-4)                  *)
+(* ========================================================================= *)
+
+(* These are PURE NAT-SEQ lemmas (no perm/turn structure). They establish
+   that flip_count is MONOTONE w.r.t. seq insertion — i.e., inserting one
+   element into a nat seq preserves or increases flip_count. This gives a
+   bridge to the GLOBAL bound:
+     flip_count(sign_seq(s @ xs)) <= flip_count(sign_seq(perm_seq s)) = turn_count s
+   for sorted-strict xs being a sub-listing of enum 'I_n.+2.
+
+   The pieces below FULLY PROVE the per-step monotonicity; the open work
+   is iterating this through subseq + applying it to the perm setting.
+
+   STATUS: building blocks are CLOSED, no axioms. The integration into
+   `flip_count_le_turn_iv` (or its global cousin `flip_count_le_turn_count`)
+   is SESSION B-5 work — see comment at the end. *)
+
+(* The Hamming triangle inequality on bools — used as a base for the
+   nat-comparison triangle. *)
+Lemma bool_triangle (a b c : bool) : (a (+) c) <= (a (+) b) + (b (+) c).
+Proof. by case: a; case: b; case: c. Qed.
+
+(* Triangle inequality for XOR of nat comparisons.
+   Crucial: this uses the INFEASIBLE-TRIPLES argument from nat order. *)
+Lemma triangle_xor_nat_g (a x y z : nat) :
+  (a < x) (+) (x < z) <= (a < x) (+) (x < y) + ((x < y) (+) (y < z)).
+Proof.
+case Hxy : (x < y)%N; case Hyz : (y < z)%N.
+- have Hxz : (x < z)%N by exact: ltn_trans Hxy Hyz.
+  rewrite Hxz /=.
+  by case: (a < x)%N.
+- by case: (a < x)%N; case: (x < z)%N.
+- by case: (a < x)%N; case: (x < z)%N.
+- move/negbT: Hxy; rewrite -leqNgt => Hyx.
+  move/negbT: Hyz; rewrite -leqNgt => Hzy.
+  have Hxz : ~~ (x < z)%N by rewrite -leqNgt (leq_trans Hzy Hyx).
+  rewrite (negbTE Hxz) /=.
+  by case: (a < x)%N.
+Qed.
+
+(* Variant of the triangle, with the middle position on the LEFT not RIGHT.
+   Used for "insert at front" reductions. *)
+Lemma triangle_xor_nat (w y z r : nat) :
+  (w < z) (+) (z < r) <= (w < y) (+) (y < z) + ((y < z) (+) (z < r)).
+Proof.
+case Hwz : (w < z)%N; case Hzr : (z < r)%N; rewrite /= ?addn0 ?addn1.
+- exact: leq0n.
+- case Hwy : (w < y)%N; case Hyz : (y < z)%N; rewrite //=.
+  move/negbT: Hwy; rewrite -leqNgt => Hyw.
+  move/negbT: Hyz; rewrite -leqNgt => Hzy.
+  have Hwz' : ~~ (w < z)%N by rewrite -leqNgt (leq_trans Hzy Hyw).
+  by rewrite Hwz in Hwz'.
+- case Hwy : (w < y)%N; case Hyz : (y < z)%N; rewrite //=.
+  have Hwz' : (w < z)%N by exact: ltn_trans Hwy Hyz.
+  by rewrite Hwz in Hwz'.
+- exact: leq0n.
+Qed.
+
+(* Inserting an element at the FRONT of a nat seq increases flip_count. *)
+Lemma flip_count_pairmap_insert (a y : nat) (xs : seq nat) :
+  flip_count (pairmap (fun u : nat => [eta leq u.+1]) a xs) <=
+  flip_count (pairmap (fun u : nat => [eta leq u.+1]) a (y :: xs)).
+Proof.
+case: xs => [|x xs] /=.
+- by rewrite /flip_count /= big_nil.
+- case Exs : xs => [|x' xs'] /=.
+  + rewrite /flip_count /= !big_cons big_nil !addn0.
+    by case: ((a < y)%N (+) (y < x)%N).
+  + rewrite /flip_count /= !big_cons.
+    rewrite addnA leq_add2r.
+    exact: (triangle_xor_nat a y x x').
+Qed.
+
+(* The KEY HELPER for insertion-anywhere: combines the IH with a case analysis
+   on whether (x<z) = (y<z) (which controls whether the inner sums match). *)
+Lemma flip_step_helper (a x y z : nat) (s1 s2 : nat) :
+  s1 <= ((x < y) (+) (y < z)) + s2 ->
+  ((x < z) = (y < z) -> s1 = s2) ->
+  (a < x) (+) (x < z) + s1 <= (a < x) (+) (x < y) + ((x < y) (+) (y < z) + s2).
+Proof.
+move=> IHv Hsame.
+case Hxz : (x<z)%N; case Hyz : (y<z)%N.
+- have Hs : s1 = s2 by apply: Hsame; rewrite Hxz Hyz.
+  rewrite Hs addnA leq_add2r.
+  exact: bool_triangle.
+- have Hxy : (x < y)%N.
+    move/negbT: Hyz; rewrite -leqNgt => Hzy.
+    have Hxz' : (x<z)%N by rewrite Hxz.
+    exact: leq_trans Hxz' Hzy.
+  rewrite Hxy /=.
+  rewrite leq_add2l.
+  by rewrite Hxy Hyz /= in IHv.
+- have Hyx : (x < y)%N = false.
+    move/negbT: Hxz; rewrite -leqNgt => Hzx.
+    have Hyz' : (y<z)%N by rewrite Hyz.
+    have Hyx' : (y < x)%N by exact: leq_trans Hyz' Hzx.
+    apply/negbTE; rewrite -leqNgt; exact: ltnW.
+  rewrite Hyx /=.
+  rewrite Hyx Hyz /= in IHv.
+  rewrite leq_add2l.
+  exact: IHv.
+- have Hs : s1 = s2 by apply: Hsame; rewrite Hxz Hyz.
+  rewrite Hs addnA leq_add2r.
+  exact: bool_triangle.
+Qed.
+
+(* THE KEY MILESTONE: Inserting an element ANYWHERE in a nat seq increases
+   flip_count of the resulting pairmap. *)
+Lemma flip_count_pairmap_insert_anywhere (xs ys : seq nat) (y : nat) (a : nat) :
+  flip_count (pairmap (fun u : nat => [eta leq u.+1]) a (xs ++ ys)) <=
+  flip_count (pairmap (fun u : nat => [eta leq u.+1]) a (xs ++ y :: ys)).
+Proof.
+move: a; elim: xs => [|x xs IH] a /=.
+- exact: flip_count_pairmap_insert.
+- have IHv := IH x.
+  case Exs : xs IHv => [|x' xs'] IHv.
+  + rewrite /= in IHv |- *.
+    case Eys : ys IHv => [|z ys'] IHv.
+    * rewrite /flip_count /= !big_cons big_nil !addn0.
+      by case: ((a < x)%N (+) (x < y)%N).
+    * rewrite /flip_count /= !big_cons in IHv |- *.
+      apply: flip_step_helper.
+      -- exact: IHv.
+      -- by move=> ->.
+  + rewrite /=.
+    rewrite /flip_count /= !big_cons.
+    rewrite leq_add2l.
+    rewrite /= in IHv.
+    exact: IHv.
+Qed.
+
+(* Sign-seq variant for nat seqs *)
+Lemma flip_count_sign_seq_insert_front (y : nat) (xs : seq nat) :
+  flip_count (sign_seq xs) <= flip_count (sign_seq (y :: xs)).
+Proof.
+case: xs => [|x xs] /=.
+  by [].
+case: xs => [|x' xs'] /=.
+  by rewrite /flip_count /= big_nil.
+rewrite /flip_count /= !big_cons.
+by case: ((y < x)%N (+) (x < x')%N).
+Qed.
+
+(* SESSION B-5 ROADMAP: complete the proof of `flip_count_le_turn_iv` (or
+   equivalently the global `flip_count_le_turn_count`).
+
+   Key steps remaining:
+
+   1. Generalize `flip_count_pairmap_insert_anywhere` from "insert one"
+      to "subseq". Concretely:
+        Lemma flip_count_pairmap_le_subseq (a : nat) (xs ys : seq nat) :
+          subseq xs ys ->
+          flip_count (pairmap leq.+1 a xs) <= flip_count (pairmap leq.+1 a ys).
+      Proof by induction on ys + case on whether to take or skip the head.
+      ~30 LOC.
+
+   2. Specialize to sign_seq:
+        Lemma flip_count_sign_seq_le_subseq (xs ys : seq nat) :
+          subseq xs ys ->
+          flip_count (sign_seq xs) <= flip_count (sign_seq ys).
+      Direct from (1) using the relation `sign_seq xs = pairmap leq.+1 (head 0 xs) (behead xs)`.
+      ~10 LOC.
+
+   3. Apply to perm_seq: for sorted-strict xs in 'I_n.+2 being a sub-listing
+      (after sorted_subseq_sort or similar) of perm_seq s:
+        flip_count(sign_seq(s @ xs)) ≤ flip_count(sign_seq(perm_seq s))
+      ~20 LOC of sort/subseq manipulation.
+
+   4. Compute flip_count of perm_seq:
+        flip_count(sign_seq(perm_seq s)) = turn_count s
+      Direct from `sign_seq_perm_seq` + counting argument.
+      ~30 LOC.
+
+   5. Final assembly: as_perm_max s ≤ (turn_count s).+2.
+      ~15 LOC.
+
+   Total estimated: ~100 LOC. The HARD CASES are now CLOSED above. *)
+
 
 (* ========================================================================= *)
 (* §R. Seq-level: alternating seq has flip_count(sign_seq) = size - 2.       *)
