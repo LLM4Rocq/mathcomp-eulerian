@@ -365,3 +365,87 @@ become our $\{0, \dots, n-1\}$ via the index shift.
   Formalized via the rmorphism wrapper $\mathrm{horner\_eval}(1)$
   applied coefficient-wise across the outer polynomial.
 \end{theorem}
+
+% ============================================================
+\section{Longest alternating subsequences (Stanley \S1.6.2)}
+% ============================================================
+
+\begin{definition}[Turning-point set]
+  \label{def:turn_count}
+  \uses{def:descent_set}
+  \rocq{mathcomp_eulerian.altsub.is_turn}
+  \rocq{mathcomp_eulerian.altsub.turn_count}
+  \rocqok
+  Position $i \in \{0, \dots, n-1\}$ is a \emph{turning point} of
+  $\sigma \in \Snp{n+2}$ if the direction of $\sigma$ changes between
+  slot $i$ and slot $i+1$:
+  \[
+    \mathrm{is\_turn}(\sigma, i)
+    \;:=\;
+    \mathrm{is\_descent}(\sigma, i) \,\oplus\, \mathrm{is\_descent}(\sigma, i+1).
+  \]
+  $\mathrm{turn\_count}(\sigma) = \#\{i \in \{0, \dots, n-1\} : \mathrm{is\_turn}(\sigma, i)\}$.
+\end{definition}
+
+\begin{definition}[Longest alternating subsequence]
+  \label{def:as_perm_max}
+  \rocq{mathcomp_eulerian.altsub.as_perm_max}
+  \rocqok
+  $\mathrm{as}(\sigma)$ is the length of the longest alternating
+  subsequence of $\sigma$, formalized as
+  \[
+    \mathrm{as\_perm\_max}(\sigma)
+    \;:=\;
+    \max_{I \subseteq \{0, \dots, n+1\}} \{|I| : \text{the subseq of }\sigma\text{ at positions }I\text{ is alternating}\}.
+  \]
+\end{definition}
+
+\begin{theorem}[Existence direction]
+  \label{thm:as_perm_max_lower}
+  \uses{def:turn_count, def:as_perm_max}
+  \rocq{mathcomp_eulerian.altsub.as_perm_max_lower}
+  \rocqok
+  $(\mathrm{turn\_count}(\sigma)).+2 \leq \mathrm{as\_perm\_max}(\sigma)$.
+
+  Witness: $I = \{0, n+1\} \cup \{(\mathrm{val}\,t).+1 : t \text{ is a turning point of }\sigma\}$.
+  Cardinality is $\mathrm{turn\_count}(\sigma) + 2$ (boundary endpoints
+  plus one position per turn).  Alternation is verified between
+  consecutive picks via the inter-turn monotonicity lemma applied to
+  the no-turn slot interval between them.
+\end{theorem}
+
+\begin{theorem}[Upper bound]
+  \label{thm:as_perm_max_upper}
+  \uses{def:turn_count, def:as_perm_max}
+  \rocq{mathcomp_eulerian.altsub.as_perm_max_upper}
+  \rocqok
+  $\mathrm{as\_perm\_max}(\sigma) \leq (\mathrm{turn\_count}(\sigma)).+2$.
+
+  Proved via the global bound chain: \texttt{flip\_count} (number of
+  direction changes in a boolean sequence) is monotone under
+  subsequence, so $\mathrm{flip\_count}(\mathrm{sign\_seq}(\mathrm{pick\_seq}\,\sigma\,I))
+  \leq \mathrm{flip\_count}(\mathrm{sign\_seq}(\mathrm{perm\_seq}\,\sigma))$.
+  The right-hand side equals $\mathrm{turn\_count}(\sigma)$ via the
+  bridge \rocq{mathcomp_eulerian.altsub.sign_seq_perm_seq}.
+\end{theorem}
+
+\begin{corollary}[Alternating-subsequence characterization]
+  \label{cor:as_perm_max_eq}
+  \uses{thm:as_perm_max_lower, thm:as_perm_max_upper}
+  \rocq{mathcomp_eulerian.altsub.as_perm_max_eq}
+  \rocqok
+  \emph{Stanley EC1 \S1.6.2.}  For every $\sigma \in \Snp{n+2}$,
+  \[
+    \mathrm{as}(\sigma) \;=\; \mathrm{turn\_count}(\sigma) + 2.
+  \]
+  The longest alternating subsequence has length exactly two more
+  than the number of turning points: one element from each ``monotone
+  run'' of $\sigma$, plus one boundary element.
+
+  \emph{Formalization remark.}  This took five sequential interactive
+  subagent sessions.  The naive ``leftmost turn in
+  $[\sigma_i, \sigma_{i+2})$'' injection (mapping each subseq sign-flip
+  to a turn) is \emph{not} injective — adjacent flips can share a
+  turn-window.  Session B-4 pivoted from per-interval to a global
+  bound via the subseq-monotonicity of $\mathrm{flip\_count}$.
+\end{corollary}
