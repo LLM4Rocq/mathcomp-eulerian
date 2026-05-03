@@ -32,3 +32,4 @@ cycles_rec.v
 stirling_fiber.v
 inversions.v
 foata.v
+qfact.v
