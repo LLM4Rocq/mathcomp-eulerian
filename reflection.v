@@ -424,4 +424,328 @@ apply/permP => i; rewrite !perm_rightE /cast_to_subj; congr cast_ord.
 by apply: eq_enum_rank_in (mem_image_right t i).
 Qed.
 
+(* ========================================================================= *)
+(* §E. Rank preservation                                                     *)
+(* ========================================================================= *)
+
+(* Helper: the val-image of [enum A] for A : {pred 'I_n} is strictly sorted.
+   This holds because [enum 'I_n] is strictly sorted by val (= [iota 0 n]),
+   and filtering preserves sortedness; map val on a uniq filter gives a
+   uniq, leq-sorted, hence ltn-sorted, list.                                  *)
+Lemma sorted_ltn_val_enum n (A : {pred 'I_n}) :
+  sorted ltn [seq \val i | i <- enum A].
+Proof.
+rewrite ltn_sorted_uniq_leq.
+apply/andP; split.
+- by rewrite map_inj_uniq ?enum_uniq //; exact: val_inj.
+- rewrite sorted_map.
+  apply: (sorted_filter (leT := relpre val (@leq))); first by move=> a b c; apply: leq_trans.
+  have ->: Finite.enum (fintype_ordinal__canonical__fintype_Finite n) = enum 'I_n by rewrite enumT.
+  by rewrite -sorted_map val_enum_ord; exact: iota_sorted.
+Qed.
+
+(* Key monotonicity: enum_val on 'I_n preserves the strict order (via val).  *)
+Lemma enum_val_ltn n (A : {pred 'I_n}) (i j : 'I_(#|A|)) :
+  ((val (enum_val i)) < (val (enum_val j)))%N = ((i : nat) < (j : nat))%N.
+Proof.
+have Hlt := sorted_ltn_val_enum A.
+have Hsz : size [seq \val k | k <- enum A] = #|A| by rewrite size_map -cardE.
+have Hi : (i : nat) < size [seq \val k | k <- enum A] by rewrite Hsz; exact: ltn_ord.
+have Hj : (j : nat) < size [seq \val k | k <- enum A] by rewrite Hsz; exact: ltn_ord.
+have Henum : forall (k : 'I_(#|A|)),
+    \val (enum_val k) = nth 0%N [seq \val k | k <- enum A] k.
+  move=> k.
+  rewrite /enum_val (nth_map (enum_default k)) //.
+  by rewrite -cardE; exact: ltn_ord.
+rewrite !Henum.
+have Hleq : sorted leq [seq \val k | k <- enum A].
+  by move: Hlt; rewrite ltn_sorted_uniq_leq => /andP[].
+apply/idP/idP.
+- move=> Hlt12.
+  rewrite ltnNge; apply/negP => Hge.
+  have Hge_app : nth 0%N [seq \val k | k <- enum A] j
+                <= nth 0%N [seq \val k | k <- enum A] i.
+    apply: (sorted_leq_nth (leT := leq) leq_trans leqnn 0%N Hleq);
+      try by [rewrite inE | exact Hge].
+  by rewrite leqNgt Hlt12 in Hge_app.
+- move=> Hij.
+  apply: (sorted_ltn_nth (leT := ltn) ltn_trans 0%N Hlt);
+    by [rewrite inE | exact Hij].
+Qed.
+
+(* Specialized to ordinals: enum_rank_in is monotonic w.r.t. val.            *)
+Lemma enum_rank_in_val_ltn n (A : {pred 'I_n}) (x0 : 'I_n) (Ax0 : x0 \in A)
+    (a b : 'I_n) (Ha : a \in A) (Hb : b \in A) :
+  ((enum_rank_in Ax0 a : nat) < (enum_rank_in Ax0 b : nat))%N
+  = ((val a) < (val b))%N.
+Proof.
+have Ea : enum_val (enum_rank_in Ax0 a) = a by rewrite enum_rankK_in.
+have Eb : enum_val (enum_rank_in Ax0 b) = b by rewrite enum_rankK_in.
+have := enum_val_ltn (A := [eta A])
+   (enum_rank_in Ax0 a) (enum_rank_in Ax0 b).
+by rewrite Ea Eb.
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* Rank preservation for perm_left                                           *)
+(* ------------------------------------------------------------------------- *)
+
+Lemma perm_left_lt_iff n (t : {perm 'I_n.+1}) (j : 'I_n.+2)
+    (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j) (i i' : 'I_j) :
+  ((perm_left Hx0 i : nat) < (perm_left Hx0 i' : nat))%N
+  = ((val (t (embed_left i))) < (val (t (embed_left i'))))%N.
+Proof.
+rewrite !perm_leftE /cast_to_j /=.
+exact: (enum_rank_in_val_ltn Hx0 (mem_image_left t i) (mem_image_left t i')).
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* Rank preservation for perm_right                                          *)
+(* ------------------------------------------------------------------------- *)
+
+Lemma perm_right_lt_iff n (t : {perm 'I_n.+1}) (j : 'I_n.+2)
+    (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j) (i i' : 'I_(n.+1 - j)) :
+  ((perm_right Hx0 i : nat) < (perm_right Hx0 i' : nat))%N
+  = ((val (t (embed_right i))) < (val (t (embed_right i'))))%N.
+Proof.
+rewrite !perm_rightE /cast_to_subj /=.
+exact: (enum_rank_in_val_ltn Hx0 (mem_image_right t i) (mem_image_right t i')).
+Qed.
+
+(* ========================================================================= *)
+(* §F. Descent-set translation                                               *)
+(* ========================================================================= *)
+
+(* For `j : 'I_n.+2` with `0 < j`, we have `j.-1 <= n`.                       *)
+Lemma leqj_pred_n n (j : 'I_n.+2) : j.-1 <= n.
+Proof.
+have := ltn_ord j; rewrite ltnS => Hj.
+by case: (j : nat) Hj => [|j'] /=.
+Qed.
+
+(* Specialized to `j = k.+1` with positive size, descent positions of         *)
+(* perm_left live in 'I_k (since {perm 'I_(k.+1)}, descents in 'I_k).         *)
+(* Map a descent position i : 'I_k of the left perm to position i : 'I_n     *)
+(* in t (since k.+1 ≤ n.+1, hence k ≤ n).                                     *)
+
+(* For j : 'I_n.+2 of the form Ordinal (m := k.+1) Hk, descents of perm_left  *)
+(* are at positions i : 'I_k.  Equivalent statement uses the fact `k <= n`   *)
+(* (from j : 'I_n.+2, k.+1 ≤ n.+1 so k ≤ n).                                  *)
+
+Section DescentTranslate.
+
+Variables (n : nat) (t : {perm 'I_n.+1}).
+
+(* Left-side translation: take j of the form k.+1 ≤ n.+1.                     *)
+Variables (k : nat) (Hk : k.+1 < n.+2).
+
+Let j : 'I_n.+2 := Ordinal Hk.
+Let Hkn : k <= n := Hk.
+
+(* Embed a descent position i : 'I_k into 'I_n. *)
+Definition embed_desc_left (i : 'I_k) : 'I_n := widen_ord Hkn i.
+
+Lemma is_descent_perm_left
+    (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j) (i : 'I_k) :
+  is_descent (perm_left Hx0) i
+  = is_descent t (embed_desc_left i).
+Proof.
+rewrite /is_descent.
+rewrite (perm_left_lt_iff Hx0).
+have E1 : embed_left (j := j) (widen_ord (leqnSn k) i)
+        = widen_ord (leqnSn n) (embed_desc_left i) :> 'I_n.+1.
+  by apply/val_inj.
+have E2 : embed_left (j := j) (lift ord0 i)
+        = lift ord0 (embed_desc_left i) :> 'I_n.+1.
+  by apply/val_inj => /=; rewrite /bump leq0n.
+by rewrite E1 E2.
+Qed.
+
+End DescentTranslate.
+
+(* Right-side translation. *)
+Section DescentTranslateRight.
+
+Variables (n : nat) (t : {perm 'I_n.+1}).
+Variables (j : 'I_n.+2) (Hj : j < n.+1).
+
+(* `n.+1 - j = (n - j).+1` since j ≤ n. *)
+Lemma sub_succ : (n - j).+1 = n.+1 - j.
+Proof. by rewrite subSn. Qed.
+
+(* Descent positions of perm_right live in 'I_(n.+1 - j).-1 = 'I_(n - j).
+   Map via shifting and casting to 'I_n. *)
+
+(* For i : 'I_(n - j), the descent slot in t lives at position
+   `j + i` in 'I_n (since n - j ≤ n - j ... actually j + i < n since i < n-j). *)
+Lemma j_plus_lt_n (i : 'I_(n - j)) : j + i < n.
+Proof.
+have Hi := ltn_ord i.
+by rewrite -ltn_subRL.
+Qed.
+
+Definition embed_desc_right (i : 'I_(n - j)) : 'I_n := Ordinal (j_plus_lt_n i).
+
+Lemma is_descent_perm_right
+    (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j) (i : 'I_(n - j)) :
+  is_descent (cast_perm (esym sub_succ) (perm_right Hx0)) i
+  = is_descent t (embed_desc_right i).
+Proof.
+rewrite /is_descent !cast_permE.
+rewrite (perm_right_lt_iff Hx0).
+set ci_w : 'I_(n.+1 - j) := cast_ord _ (widen_ord _ i).
+set ci_l : 'I_(n.+1 - j) := cast_ord _ (lift _ _).
+have E1 : embed_right (j := j) ci_w
+        = widen_ord (leqnSn n) (embed_desc_right i) :> 'I_n.+1.
+  by apply/val_inj.
+have E2 : embed_right (j := j) ci_l
+        = lift ord0 (embed_desc_right i) :> 'I_n.+1.
+  by apply/val_inj => /=; rewrite /bump leq0n /= addnS.
+by rewrite E1 E2.
+Qed.
+
+End DescentTranslateRight.
+
+(* ========================================================================= *)
+(* §G. Disjointness and cover                                                *)
+(* ========================================================================= *)
+
+(* image_left and image_right are disjoint (positions are disjoint, t inj).  *)
+Lemma image_left_right_disjoint n (t : {perm 'I_n.+1}) (j : 'I_n.+2) :
+  [disjoint image_left t j & image_right t j].
+Proof.
+rewrite -setI_eq0; apply/eqP/setP => x; rewrite !inE.
+apply/negbTE; apply/negP => /andP[/imsetP[il _ Hl_eq] /imsetP[ir _ Hr_eq]].
+have Hl := ltn_ord il.
+have Hr : (j : nat) <= j + ir by exact: leq_addr.
+have Heq : embed_left il = embed_right ir.
+  by apply: (@perm_inj _ t); rewrite -Hl_eq Hr_eq.
+have := congr1 \val Heq => /=.
+by move=> Hv; move: Hl; rewrite Hv ltnNge Hr.
+Qed.
+
+(* Their union covers everything. *)
+Lemma image_left_right_cover n (t : {perm 'I_n.+1}) (j : 'I_n.+2) :
+  image_left t j :|: image_right t j = [set: 'I_n.+1].
+Proof.
+apply/eqP; rewrite eqEcard; apply/andP; split; first by apply/subsetP => x _; rewrite inE.
+rewrite cardsT card_ord cardsU.
+rewrite (eqP (_ : (image_left t j :&: image_right t j == set0))).
+- rewrite cards0 subn0 card_image_left card_image_right.
+  by rewrite addnC subnK //; exact: leqj_n1.
+- by have := image_left_right_disjoint t j; rewrite -setI_eq0.
+Qed.
+
+(* Cardinality consequence: |L| + |R| = n+1. *)
+Lemma image_left_card_plus_right n (t : {perm 'I_n.+1}) (j : 'I_n.+2) :
+  #|image_left t j| + #|image_right t j| = n.+1.
+Proof.
+by rewrite card_image_left card_image_right addnC subnK //; exact: leqj_n1.
+Qed.
+
+(* ========================================================================= *)
+(* §H. Notes on Target 4 (per-position interior count) for Session C-5       *)
+(* ========================================================================= *)
+
+(* The structural infrastructure (sections D-G) provides:                    *)
+(*                                                                            *)
+(*   - perm_left t j Hx0 : {perm 'I_j}                                        *)
+(*   - perm_right t j Hx0 : {perm 'I_(n.+1 - j)}                              *)
+(*   - rank-preservation: (perm_left .. i < perm_left .. i')                 *)
+(*       <-> t(embed_left i) < t(embed_left i')                              *)
+(*   - is_descent_perm_left/right: descents of the sub-perms correspond      *)
+(*       slot-by-slot to descents of t at the corresponding positions.       *)
+(*   - image_left_right_disjoint/cover: L and R partition 'I_n.+1.           *)
+(*                                                                            *)
+(* What's MISSING for Target 4 (the per-position interior count):             *)
+(*                                                                            *)
+(* (A) A descent_set DECOMPOSITION lemma:                                     *)
+(*     For interior splits (1 <= j <= n), descent_set t : {set 'I_n.+1}      *)
+(*     decomposes into:                                                       *)
+(*       - "left" part: descents at positions i < j-1                         *)
+(*         (in bijection with descent_set (perm_left t j))                    *)
+(*       - "boundary" position j-1 (where the split happens)                  *)
+(*       - "right" part: descents at positions i >= j                         *)
+(*         (in bijection with descent_set (perm_right t j))                   *)
+(*                                                                            *)
+(* (B) An INVERSE construction: given                                          *)
+(*       sL : {perm 'I_j}, sR : {perm 'I_(n.+1 - j)}, and a partition         *)
+(*       L ⊔ R = 'I_n.+1 with #L = j,                                         *)
+(*     reconstruct a unique t : {perm 'I_n.+1} such that                       *)
+(*       perm_left t j = sL  and  perm_right t j = sR  and                    *)
+(*       image_left t j = L.                                                  *)
+(*     Combined with (A), this gives a bijection                              *)
+(*       {t | descent constraint} ≃                                           *)
+(*       {(L, sL, sR) | constraints on sL and sR}                             *)
+(*     which sums to a binomial * eulerA k * eulerA (n.+1 - j) closed form.   *)
+(*                                                                            *)
+(* (C) Then summing over j (positions of ord_max) and applying                *)
+(*     descent_set_insert_max_* (from §C) gives the recurrence:               *)
+(*       2 * eulerA n.+2 = sum_p binom(n.+1, p) * eulerA p * eulerA (n.+1-p) *)
+(*                                                                            *)
+(* ESTIMATED EFFORT for (A): 50-80 LOC.                                       *)
+(* ESTIMATED EFFORT for (B): 100-150 LOC (the trickiest part - need to        *)
+(*   construct t from (L, sL, sR) by setting t(i) = enum_val_of L (sL i) for  *)
+(*   i < j and t(j+i) = enum_val_of R (sR i) for i >= j, then prove this is  *)
+(*   the inverse of the (perm_left, perm_right, image_left) decomposition).   *)
+(* ESTIMATED EFFORT for (C): 80-100 LOC.                                      *)
+(*                                                                            *)
+(* TOTAL Session C-5 estimate: 230-330 LOC.                                   *)
+(*                                                                            *)
+(* The bijection (B) is the heart of the André recurrence.  It's standard    *)
+(* in Stanley but the formalization in mathcomp requires care with the       *)
+(* enum_val/enum_rank machinery (which is what §E sets up).                   *)
+
+(* ------------------------------------------------------------------------- *)
+(* §H.1.  A first piece of (A): is_descent t splits by position relative j.  *)
+(* ------------------------------------------------------------------------- *)
+
+(* For positions strictly before j-1, descent of t = descent of perm_left.   *)
+(* Conversely, every descent of perm_left lies in this region.               *)
+(* This is just the closure-of-§F-results, packaged for Session C-5 use.    *)
+
+(* For an interior split j = k.+1 (where k.+1 < n.+2), positions of          *)
+(* descent_set t : {set 'I_n.+1} that are < k correspond to descents of      *)
+(* perm_left (as widen_ord), and positions > k correspond to descents of     *)
+(* perm_right (as shifted index).  Position k itself is the boundary.        *)
+
+Section DescentSplit.
+
+Variables (n : nat) (t : {perm 'I_n.+1}).
+Variables (k : nat) (Hk : k.+1 < n.+2).
+
+Let j : 'I_n.+2 := Ordinal Hk.
+Let Hkn : k <= n := Hk.
+
+(* "Left part" of descent_set t: positions i : 'I_n with i < k.              *)
+(* These correspond bijectively (via widen_ord) to descents of perm_left.    *)
+Lemma descent_left_of_t (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j)
+    (i : 'I_k) :
+  (widen_ord Hkn i \in descent_set t) = (i \in descent_set (perm_left Hx0)).
+Proof.
+rewrite !mem_descent_set.
+have := is_descent_perm_left Hx0 i.
+by rewrite /embed_desc_left => ->.
+Qed.
+
+End DescentSplit.
+
+(* Right side: "Right part" of descent_set t: positions i : 'I_n with j <= i. *)
+Section DescentSplitRight.
+
+Variables (n : nat) (t : {perm 'I_n.+1}).
+Variables (j : 'I_n.+2) (Hjn : j < n.+1).
+
+Lemma descent_right_of_t (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j)
+    (i : 'I_(n - j)) :
+  (Ordinal (j_plus_lt_n i) \in descent_set t)
+  = (i \in descent_set (cast_perm (esym (sub_succ Hjn)) (perm_right Hx0))).
+Proof.
+rewrite !mem_descent_set.
+have := is_descent_perm_right Hjn Hx0 i.
+by rewrite /embed_desc_right => ->.
+Qed.
+
+End DescentSplitRight.
+
 
