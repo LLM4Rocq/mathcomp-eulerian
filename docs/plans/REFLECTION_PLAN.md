@@ -13,20 +13,34 @@ In our setup, the alternating descent set is `alt_desc_set n`
 (a `{set 'I_n}`), and the count of permutations with that exact
 descent set is `beta (alt_desc_set n)`.  This is precisely $E_n$.
 
-**Targets:**
+**Targets** (corrected after three-agent design session):
 
 ```coq
-Definition euler n := beta (alt_desc_set n).
+Definition euler n : nat := beta (alt_desc_set n).
+(* euler n = A_{n+1} in Stanley's notation (count for length n+1) *)
+
+Definition eulerA n : nat :=
+  if n is k.+1 then euler k else 1.
+(* eulerA n = A_n in Stanley's notation; base case eulerA 0 = 1 *)
 
 (* Base cases *)
-Lemma euler_0 : euler 0 = 1.
-Lemma euler_1 : euler 1 = 1.
+Lemma eulerA_0 : eulerA 0 = 1.       (* by def *)
+Lemma eulerA_1 : eulerA 1 = 1.       (* euler 0 = 1, only id ∈ S_1 *)
+Lemma eulerA_2 : eulerA 2 = 1.       (* euler 1 = 1, only [1;0] ∈ S_2 has descent {0} *)
+Lemma eulerA_3 : eulerA 3 = 2.       (* euler 2 = 2 *)
 
-(* The headline recurrence *)
+(* The headline recurrence — CORRECTED from the prior plan *)
 Theorem euler_rec n :
-  2 * euler n.+1 =
-    \sum_(k < n.+1) 'C(n, k) * (euler k) * (euler (n - k)).
+  2 * eulerA n.+2 =
+    \sum_(k < n.+2) 'C(n.+1, k) * eulerA k * eulerA (n.+1 - k).
 ```
+
+**Verification of the corrected recurrence:**
+- n=0: LHS = 2·eulerA 2 = 2·1 = 2; RHS = C(1,0)·1·1 + C(1,1)·1·1 = 1+1 = 2. ✓
+- n=1: LHS = 2·eulerA 3 = 2·2 = 4; RHS = C(2,0)·1·1 + C(2,1)·1·1 + C(2,2)·1·1 = 1+2+1 = 4. ✓
+- n=2: LHS = 2·eulerA 4 = 2·5 = 10; RHS = 1·1·2 + 3·1·1 + 3·1·1 + 1·2·1 = 10. ✓
+
+**The original plan's stated recurrence was WRONG** under our `alt_desc_set` convention.  Verified by hand-enumeration: at n=2, original LHS=10 vs RHS=6.
 
 The recurrence captures André's bijective proof: given $\sigma \in
 \Snp{n+1}$, let $j$ be the position of $n+1$.  The left subword
