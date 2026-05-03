@@ -324,3 +324,44 @@ become our $\{0, \dots, n-1\}$ via the index shift.
   \]
   Immediate corollary of \cref{thm:inv_q_fact} via Foata's bijection.
 \end{theorem>
+
+% ============================================================
+\section{The $q$-Eulerian polynomial — joint $(\mathrm{maj},\des)$ distribution}
+% ============================================================
+
+\begin{definition}[$q$-Eulerian polynomial]
+  \label{def:q_eul_pol}
+  \uses{def:maj, def:des_asc}
+  \rocq{mathcomp_eulerian.qeul.q_eul_pol}
+  \rocqok
+  \emph{Stanley EC1 §1.4.}  The bivariate generating function for the
+  joint distribution of $(\mathrm{maj}, \des)$ over $\Snp{n+1}$:
+  \[
+    A_n(q, t) \;:=\; \sum_{\sigma \in \Snp{n+1}}
+                     q^{\mathrm{maj}(\sigma)} \cdot t^{\des(\sigma)}.
+  \]
+  Formalized in $\ZZ[q][t]$ (mathcomp's \texttt{\{poly \{poly int\}\}}).
+\end{definition}
+
+\begin{theorem}[Specialization $t = 1$ — the $q$-factorial]
+  \label{thm:q_eul_pol_t1}
+  \uses{def:q_eul_pol, def:q_fact, thm:maj_q_fact}
+  \rocq{mathcomp_eulerian.qeul.q_eul_pol_t1}
+  \rocqok
+  $A_n(q, 1) = [n+1]_q!$.
+  Setting $t = 1$ collapses the bivariate to the marginal
+  generating function for $\mathrm{maj}$, which is the q-factorial
+  by \cref{thm:maj_q_fact}.
+\end{theorem}
+
+\begin{theorem}[Specialization $q = 1$ — the classical Eulerian polynomial]
+  \label{thm:q_eul_pol_q1}
+  \uses{def:q_eul_pol, def:eulerian, thm:beta_eulerian}
+  \rocq{mathcomp_eulerian.qeul.q_eul_pol_q1}
+  \rocqok
+  $A_n(1, t) = \mathrm{eul\_pol}_n(t) := \sum_{k=0}^{n} A_{n+1, k+1} \cdot t^k$.
+  Setting $q = 1$ drops the $\mathrm{maj}$ weight, leaving the
+  classical Eulerian polynomial $\sum_\sigma t^{\des(\sigma)}$.
+  Formalized via the rmorphism wrapper $\mathrm{horner\_eval}(1)$
+  applied coefficient-wise across the outer polynomial.
+\end{theorem}
