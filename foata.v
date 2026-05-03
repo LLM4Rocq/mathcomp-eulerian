@@ -1079,6 +1079,412 @@ by rewrite IHw.
 Qed.
 
 (* ========================================================================= *)
+(* §H'. Inverse Foata map (sequence level)                                  *)
+(* ========================================================================= *)
+
+(* cyc_first_to_back: undo of cyc_last_to_front. *)
+Definition cyc_first_to_back (s : seq nat) : seq nat :=
+  match s with
+  | [::] => [::]
+  | x :: rest => rcons rest x
+  end.
+
+Lemma cyc_first_to_back_size s :
+  size (cyc_first_to_back s) = size s.
+Proof. by case: s => //= ? ?; rewrite size_rcons. Qed.
+
+Lemma cyc_first_to_back_perm_eq s :
+  perm_eq (cyc_first_to_back s) s.
+Proof.
+case: s => [|x s] //=.
+by rewrite -cats1 -cat1s perm_catC.
+Qed.
+
+Lemma cyc_first_to_back_uniq s :
+  uniq (cyc_first_to_back s) = uniq s.
+Proof. exact: perm_uniq (cyc_first_to_back_perm_eq _). Qed.
+
+(* cyc_first_to_back is the left inverse of cyc_last_to_front. *)
+Lemma cyc_first_to_backK s :
+  cyc_first_to_back (cyc_last_to_front s) = s.
+Proof.
+case: s => [|x s] //=.
+by rewrite -lastI.
+Qed.
+
+(* cyc_last_to_front is the left inverse of cyc_first_to_back. *)
+Lemma cyc_last_to_frontK s :
+  cyc_last_to_front (cyc_first_to_back s) = s.
+Proof.
+case: s => [|x s] //=.
+case: s => [|y s] /=.
+  by [].
+rewrite last_rcons.
+rewrite belast_rcons /=.
+by [].
+Qed.
+
+(* split_blocks_inv P s: split a sequence into blocks each STARTING with a
+   P-element. Equivalent: cuts the sequence right BEFORE each P-element
+   (after the first). *)
+Fixpoint split_blocks_inv_aux (P : nat -> bool) (cur : seq nat) (s : seq nat) :
+  seq (seq nat) :=
+  match s with
+  | [::] => if cur is _ :: _ then [:: cur] else [::]
+  | x :: rest =>
+      if P x then
+        (* close current block (if non-empty) and start new one with x *)
+        if cur is _ :: _ then cur :: split_blocks_inv_aux P [:: x] rest
+        else split_blocks_inv_aux P [:: x] rest
+      else split_blocks_inv_aux P (rcons cur x) rest
+  end.
+
+Definition split_blocks_inv (P : nat -> bool) (s : seq nat) : seq (seq nat) :=
+  split_blocks_inv_aux P [::] s.
+
+Lemma split_blocks_inv_aux_flatten P cur s :
+  flatten (split_blocks_inv_aux P cur s) = cur ++ s.
+Proof.
+elim: s cur => [|x rest IH] cur /=.
+- by case: cur => //=; rewrite cats0.
+- case Hp: (P x).
+  + case: cur => [|y cur] /=.
+    * by rewrite IH /=.
+    * by rewrite IH.
+  + by rewrite IH cat_rcons.
+Qed.
+
+Lemma split_blocks_inv_flatten P s :
+  flatten (split_blocks_inv P s) = s.
+Proof. by rewrite /split_blocks_inv split_blocks_inv_aux_flatten. Qed.
+
+(* The key cancellation: split_blocks_inv P (flatten (map cyc_last_to_front bs))
+   = map cyc_last_to_front bs, when bs are wf_blocks for P. *)
+
+(* First, useful: the rotation of a wf_block starts with a P-element and
+   has all other elements not-P. *)
+Lemma cyc_last_to_front_wf (P : pred nat) b :
+  wf_block P b ->
+  if cyc_last_to_front b is x :: rest then
+    P x && all (fun y => ~~ P y) rest
+  else false.
+Proof.
+case/wf_block_decomp => b' [l] [-> Hl Hb' _].
+rewrite cyc_last_to_front_rcons /=.
+by rewrite Hl Hb'.
+Qed.
+
+(* Behavior of split_blocks_inv_aux when fed `cur ++ x :: rest` where
+   x is a P-element and `cur` is all not-P: it produces cur as a complete
+   block (if non-empty), then continues with [:: x] as the seed. *)
+
+(* Helper: split_blocks_inv_aux with cur all-not-P, applied to a
+   block (Px :: nots) ++ rest where nots are all not-P, treats the block
+   as forming part of the output. *)
+
+Lemma split_blocks_inv_aux_cons_P (P : pred nat) cur x rest :
+  P x ->
+  split_blocks_inv_aux P cur (x :: rest)
+  = (if cur is _ :: _ then [:: cur] else [::])
+    ++ split_blocks_inv_aux P [:: x] rest.
+Proof. by move=> Hx /=; rewrite Hx; case: cur. Qed.
+
+Lemma split_blocks_inv_aux_cons_notP (P : pred nat) cur x rest :
+  ~~ P x ->
+  split_blocks_inv_aux P cur (x :: rest)
+  = split_blocks_inv_aux P (rcons cur x) rest.
+Proof. by move=> /negbTE Hx /=; rewrite Hx. Qed.
+
+(* If we feed a wf_block with cur seed [:: l] (l is the P-letter at front)
+   and a tail of all-not-P followed by more, we should reproduce blocks. *)
+
+(* The main structural lemma: feeding split_blocks_inv_aux with a "current"
+   that already starts with a P-letter and has all rest not-P, AND a
+   tail s where every "fresh" P-letter starts a new block, recovers the
+   blocks. *)
+
+(* For simplicity, prove the cancellation directly on the sequence
+   produced by foata_step. *)
+
+(* Reformulate: split_blocks_inv applied to flatten(map cyc bs) returns
+   exactly map cyc bs, when bs are wf_blocks. *)
+
+Lemma split_blocks_inv_aux_app_notP (P : pred nat) cur nots rest :
+  all (fun y => ~~ P y) nots ->
+  split_blocks_inv_aux P cur (nots ++ rest)
+  = split_blocks_inv_aux P (cur ++ nots) rest.
+Proof.
+elim: nots cur => [|y nots IH] cur /= Hnots.
+  by rewrite cats0.
+move: Hnots => /andP[Hy Hnots].
+rewrite (negbTE Hy) IH // -cats1 -catA /=.
+by [].
+Qed.
+
+(* Combined: feeding split_blocks_inv_aux with cur (= [::] or starts with P)
+   and a wf-block-rotated sequence (l :: nots) ++ tail. *)
+
+Lemma split_blocks_inv_aux_one_block (P : pred nat) l nots tail :
+  P l -> all (fun y => ~~ P y) nots ->
+  split_blocks_inv_aux P [::] ((l :: nots) ++ tail)
+  = split_blocks_inv_aux P [:: l] (nots ++ tail).
+Proof. by move=> Hl _ /=; rewrite Hl. Qed.
+
+(* The key lemma: a single wf-block-rotated `l :: nots` followed by a
+   sequence whose first letter is P (or empty) produces `[:: l :: nots]`
+   prepended to the recursive result. *)
+
+Lemma split_blocks_inv_aux_block_then_P (P : pred nat) l nots rest :
+  P l -> all (fun y => ~~ P y) nots ->
+  (forall x, x \in rest -> True) ->
+  match rest with
+  | [::] => split_blocks_inv_aux P [:: l] nots
+            = [:: l :: nots]
+  | y :: _ => P y ->
+              split_blocks_inv_aux P [:: l] (nots ++ rest)
+              = (l :: nots) :: split_blocks_inv_aux P [::] rest
+  end.
+Proof.
+move=> Hl Hnots _.
+case: rest => [|y rest'].
+- rewrite -[in LHS](cats0 nots).
+  rewrite (split_blocks_inv_aux_app_notP _ _ Hnots) /=.
+  by case: nots Hnots => [|? ?] //=; rewrite cats0.
+- move=> Hy.
+  rewrite (split_blocks_inv_aux_app_notP _ _ Hnots) /=.
+  rewrite Hy.
+  by case: nots Hnots => [|? ?] //=; rewrite cats0.
+Qed.
+
+(* The big cancellation: split_blocks_inv P (flatten (map cyc_last_to_front bs))
+   = map cyc_last_to_front bs, when bs are wf_blocks for P. *)
+Lemma split_blocks_inv_cyc_wf (P : pred nat) bs :
+  bs != [::] ->
+  all (wf_block P) bs ->
+  split_blocks_inv P (flatten (map cyc_last_to_front bs))
+  = map cyc_last_to_front bs.
+Proof.
+rewrite /split_blocks_inv.
+elim: bs => [|b bs IH] // _ /andP[Hb Hbs].
+case/wf_block_decomp: (Hb) => b' [l] [Hbeq Hl Hb' _].
+rewrite Hbeq /= cyc_last_to_front_rcons /=.
+case Hbsnil: (bs == [::]).
+- move/eqP: Hbsnil => -> /=.
+  rewrite cats0.
+  rewrite Hl.
+  rewrite -[in LHS](cats0 b') (split_blocks_inv_aux_app_notP _ _ Hb') /=.
+  by case: b' Hb' Hbeq => [|? ?] /=; rewrite ?cats0.
+- have Hbs_ne : bs != [::] by rewrite Hbsnil.
+  have IHs := IH Hbs_ne Hbs.
+  rewrite Hl.
+  rewrite (split_blocks_inv_aux_app_notP _ _ Hb').
+  (* head of "bs" is some block c, which we decompose *)
+  case: bs Hbs Hbs_ne IHs Hbsnil IH => [|c bs0] //= /andP[Hc Hbs0] _ IHs _ _.
+  case/wf_block_decomp: (Hc) => c' [m] [Hceq Hm Hc' _].
+  rewrite Hceq /= cyc_last_to_front_rcons /=.
+  rewrite Hceq /= cyc_last_to_front_rcons /= in IHs.
+  rewrite Hm.
+  move: IHs.
+  rewrite Hm.
+  rewrite (split_blocks_inv_aux_app_notP _ _ Hc') => IHs.
+  by rewrite IHs.
+Qed.
+
+(* foata_step_undo: inverse of foata_step. (Named to avoid clash with
+   the inv-recursion lemma `foata_step_inv` that lives in §G.) *)
+Definition foata_step_undo (s : seq nat) : (nat * seq nat) :=
+  let a := last 0 s in
+  let r := belast (head 0 s) (behead s) in
+  match r with
+  | [::] => (a, [::])
+  | h :: _ =>
+      let P := if h < a then (fun y : nat => y < a) else (fun y => a < y) in
+      (a, flatten (map cyc_first_to_back (split_blocks_inv P r)))
+  end.
+
+(* Helper: split_blocks_inv only depends on the predicate extensionally. *)
+Lemma split_blocks_inv_aux_eq (P Q : pred nat) cur s :
+  P =1 Q -> split_blocks_inv_aux P cur s = split_blocks_inv_aux Q cur s.
+Proof.
+move=> HPQ.
+elim: s cur => [|x rest IH] cur //=.
+rewrite (HPQ x).
+by case: (Q x); case: cur; rewrite ?IH.
+Qed.
+
+Lemma split_blocks_inv_eq (P Q : pred nat) s :
+  P =1 Q -> split_blocks_inv P s = split_blocks_inv Q s.
+Proof.
+move=> HPQ.
+by rewrite /split_blocks_inv (split_blocks_inv_aux_eq _ _ HPQ).
+Qed.
+
+(* The cancellation lemma: foata_step_undo (foata_step a u) = (a, u). *)
+Lemma foata_step_undoK a u :
+  u != [::] -> uniq u -> a \notin u ->
+  foata_step_undo (foata_step a u) = (a, u).
+Proof.
+move=> Hne Hu Hau.
+have Hxu_last : last 0 u != a.
+  apply/eqP => Heq.
+  move/negP: Hau; apply.
+  rewrite -Heq.
+  case: (u) Hne => [|x0 u0] //= _.
+  exact: mem_last.
+(* foata_step a u = flatten(map cyc bs) ++ [:: a] *)
+rewrite /foata_step.
+case: u Hne Hu Hau Hxu_last => [|x u] //= _ Hu Hau Hxu_last.
+set P := if last x u < a then (fun y : nat => y < a) else (fun y => a < y).
+set bs := split_blocks P (x :: u).
+have HPlast : P (last 0 (x :: u)).
+  rewrite /P /=.
+  case Hcase: (last x u < a); first by rewrite Hcase.
+  rewrite ltn_neqAle leqNgt Hcase andbT.
+  by rewrite eq_sym Hxu_last.
+have Hwf : all (wf_block P) bs by exact: split_blocks_wf.
+have Hbs_ne : bs != [::].
+  rewrite -size_eq0 split_blocks_size_eq //.
+  rewrite -lt0n -has_count; apply/hasP; exists (last 0 (x :: u)) => //.
+  exact: mem_last.
+(* The rotated flatten *)
+set ru := flatten (map cyc_last_to_front bs).
+have Hperm_ru : perm_eq ru (x :: u).
+  rewrite /ru -[X in perm_eq _ X](split_blocks_flatten P (x :: u)).
+  exact: perm_eq_flatten_map_cyc.
+have Hru_size : size ru = size (x :: u).
+  by rewrite (perm_size Hperm_ru).
+have Hru_ne : ru != [::].
+  by rewrite -size_eq0 Hru_size /=.
+(* foata_step_undo on ru ++ [:: a] *)
+rewrite /foata_step_undo.
+have Hlast : last 0 (ru ++ [:: a]) = a by rewrite last_cat /=.
+have Hbelast : belast (head 0 (ru ++ [:: a])) (behead (ru ++ [:: a])) = ru.
+  move: Hru_ne Hperm_ru Hru_size Hlast.
+  case: ru => [|y ru'] //= _ Hperm Hsize Hlast.
+  by rewrite cats1 belast_rcons.
+rewrite Hlast Hbelast.
+(* The structure of bs: head bs is a wf_block, so bs = (rcons b1' l1) :: rest *)
+case Hbs_eq: bs Hbs_ne Hwf Hperm_ru Hru_size Hru_ne => [|b1 brest] // _.
+move=> /andP[Hb1 Hbrest] Hperm_ru Hru_size Hru_ne.
+case/wf_block_decomp: Hb1 => b1' [l1] [Hb1eq Hl1 Hb1' _].
+(* So head ru = l1 *)
+have Hru_decomp : ru = (l1 :: b1') ++ flatten (map cyc_last_to_front brest).
+  by rewrite /ru Hbs_eq /= Hb1eq cyc_last_to_front_rcons.
+have Hru_head : head 0 ru = l1 by rewrite Hru_decomp.
+case Hru: ru Hru_ne Hbelast Hru_decomp Hru_head => [|y ru'] //.
+move=> _ Hbelast Hru_decomp Hru_head.
+have Hyl : y = l1 by [].
+move: Hl1; rewrite -Hyl => Hyl1.
+(* y is in (x :: u): *)
+have Hy_in : y \in (x :: u).
+  rewrite -(perm_mem Hperm_ru) Hru.
+  by rewrite mem_head.
+have Hyne_a : y != a.
+  apply/eqP => Heq.
+  by move: Hau; rewrite -Heq Hy_in.
+(* Determine the P passed to foata_step_undo equals our P *)
+have HPunfold : forall z, P z = (if last x u < a then z < a else a < z).
+  by move=> z; rewrite /P; case: ifP.
+have Hy_la : (y < a) = (last x u < a).
+  case Hla: (last x u < a).
+  - (* P = (y < a). Hyl1 = P y = y < a *)
+    by move: Hyl1; rewrite (HPunfold y) Hla.
+  - (* P = (a < y). Hyl1 = a < y, want y < a is false. *)
+    have Hay : a < y by move: Hyl1; rewrite (HPunfold y) Hla.
+    apply/negbTE; rewrite -leqNgt.
+    exact: ltnW.
+rewrite Hy_la.
+(* The "P" inside foata_step_undo is `if last x u < a then ... else ...`,
+   exactly equal to our P. *)
+have Hbs_decomp : bs = b1 :: brest by rewrite Hbs_eq.
+have Hwf_full : all (wf_block P) bs.
+  exact: split_blocks_wf.
+have Hsbi : split_blocks_inv P ru = map cyc_last_to_front bs.
+  have Hru_eq : ru = flatten (map cyc_last_to_front bs) by [].
+  rewrite Hru_eq.
+  apply: split_blocks_inv_cyc_wf => //.
+  by rewrite Hbs_decomp.
+(* Now use predicate-equality to identify the inner P *)
+congr (_, _).
+have HPiff : forall (Q : pred nat),
+  Q =1 (if last x u < a then (fun z : nat => z < a) else (fun z => a < z)) ->
+  split_blocks_inv Q (y :: ru') = map cyc_last_to_front bs.
+  move=> Q HQ.
+  have HQP : Q =1 P by move=> z; rewrite HQ /P.
+  by rewrite (split_blocks_inv_eq _ HQP) -Hru Hsbi.
+rewrite HPiff; last by move=> z //=.
+rewrite -map_comp.
+have Hcomp : forall b, b \in bs ->
+  (cyc_first_to_back \o cyc_last_to_front) b = b.
+  by move=> b _ /=; exact: cyc_first_to_backK.
+rewrite (_ : [seq (cyc_first_to_back \o cyc_last_to_front) i | i <- bs] = bs);
+  first by exact: split_blocks_flatten.
+have Heq : [seq (cyc_first_to_back \o cyc_last_to_front) i | i <- bs]
+         = [seq id i | i <- bs] by apply/eq_in_map; apply: Hcomp.
+by rewrite Heq map_id.
+Qed.
+
+(* foata_inv: invert the entire foata function by repeatedly applying
+   foata_step_undo. *)
+Fixpoint foata_inv_aux (n : nat) (s : seq nat) : seq nat :=
+  match n with
+  | 0 => [::]
+  | n.+1 =>
+      let: (a, r) := foata_step_undo s in
+      rcons (foata_inv_aux n r) a
+  end.
+
+Definition foata_inv (s : seq nat) : seq nat :=
+  foata_inv_aux (size s) s.
+
+(* foata_inv (foata w) = w for uniq w. *)
+Lemma foata_invK_aux n w :
+  size w = n -> uniq w ->
+  foata_inv_aux n (foata w) = w.
+Proof.
+elim: n w => [|n IH] w Hsz Hu /=.
+  by move: Hu Hsz; case: w => //=.
+case/lastP: w Hsz Hu => [|w' a] // Hsz Hu.
+rewrite size_rcons in Hsz; case: Hsz => Hsz.
+have Hw' : uniq w' by move: Hu; rewrite rcons_uniq => /andP[].
+have Hau : a \notin w' by move: Hu; rewrite rcons_uniq => /andP[].
+have Hfw' := foata_perm_eq w'.
+have Hfw_uniq : uniq (foata w') by exact: foata_uniq.
+have Hfw_au : a \notin foata w'.
+  by rewrite (perm_mem Hfw').
+rewrite foata_rcons.
+case Hw'_nil: (w' == [::]).
+- move/eqP: Hw'_nil Hsz => -> Hsz0.
+  have Hsz_n : n = 0 by case: n IH Hsz0.
+  by rewrite Hsz_n /= /foata_step /foata_step_undo /=.
+- have Hw'_ne : w' != [::] by rewrite Hw'_nil.
+  have Hfw'_ne : foata w' != [::].
+    by rewrite -size_eq0 foata_size; case: (w') Hw'_ne.
+  have Hcanc := foata_step_undoK Hfw'_ne Hfw_uniq Hfw_au.
+  rewrite Hcanc.
+  have IHw := IH w' Hsz Hw'.
+  by rewrite IHw.
+Qed.
+
+Lemma foata_invK w :
+  uniq w -> foata_inv (foata w) = w.
+Proof.
+move=> Hu.
+rewrite /foata_inv foata_size.
+exact: foata_invK_aux.
+Qed.
+
+(* foata is injective on uniq sequences. *)
+Lemma foata_inj_uniq w1 w2 :
+  uniq w1 -> uniq w2 -> foata w1 = foata w2 -> w1 = w2.
+Proof.
+move=> Hu1 Hu2 Heq.
+have H1 := foata_invK Hu1.
+have H2 := foata_invK Hu2.
+by rewrite -H1 -H2 Heq.
+Qed.
+
+(* ========================================================================= *)
 (* §I. Lift to {perm 'I_n.+1}: foata_perm and inv-maj relation             *)
 (* ========================================================================= *)
 
@@ -1160,35 +1566,61 @@ have ->: Ordinal Hj' = j by apply: val_inj.
 by case Hij: (i < j); rewrite andbC //=.
 Qed.
 
-(* The interesting intermediate result: foata_perm preserves the bijection
-   between maj and inv at the perm level.
+(* The intermediate identity: at the perm level, foata_perm sends
+   maj-classes to inv-classes (inv (foata_perm s) = maj s).
 
-   This says: the Foata bijection sends {s : maj s = k} into {s : inv s = k}
-   for every k.  To upgrade this to the equidistribution theorem
-       #|{s : inv s == k}| = #|{s : maj s == k}|
-   we need foata_perm to be injective (hence bijective on the finite group
-   Sym_{n+1}, by injective ⇒ surjective on finite sets).
-
-   The injectivity reduces (via perm_to_seq_inj) to: foata is injective on
-   uniq sequences of length n+1.  Sketch (see also Stanley EC1, §1.3.6 for
-   the standard inverse construction):
-     - foata (rcons w a) ends in a, so a = last (foata w).
-     - The remaining prefix r determines the predicate P (lt a or gt a)
-       via head r vs a, since after `cyc_last_to_front` each block
-       starts with a P-letter (cf. `wf_block_rcons`).
-     - Re-split r at P-elements (split_blocks_inv) to recover the
-       cyc-rotated blocks; apply cyc_first_to_back (the inverse of
-       cyc_last_to_front, see preliminary lemmas in foata.v history)
-       to each, flatten, recover w.
-   The construction is straightforward but the formalization (~150-200 LOC
-   of bookkeeping about wf_block / split_blocks_inv cancellation lemmas)
-   is left as future work.                                                  *)
+   Injectivity (foata_perm_inj) follows from foata_invK (cancellation of
+   foata via foata_inv built from foata_step_undo); on the finite set
+   {perm 'I_n.+1}, injective implies surjective, giving the equidistribution
+   #|{s | inv s == k}| = #|{s | maj s == k}| (Theorem inv_maj_equidistr). *)
 Lemma foata_perm_inv_maj n (s : {perm 'I_n.+1}) :
   inv (foata_perm s) = maj s.
 Proof.
 rewrite inv_eq_inv_seq perm_to_seq_foata_perm.
 rewrite foata_inv_eq_maj; last exact: perm_to_seq_uniq.
 by rewrite -maj_eq_maj_seq.
+Qed.
+
+(* foata is injective on uniq sequences (cancellation lemma above). *)
+(* foata_perm is injective. *)
+Lemma foata_perm_inj n : injective (@foata_perm n).
+Proof.
+move=> s1 s2 Heq.
+apply: (@perm_to_seq_inj n.+1).
+have H1 := perm_to_seq_foata_perm s1.
+have H2 := perm_to_seq_foata_perm s2.
+have HF : foata (perm_to_seq s1) = foata (perm_to_seq s2).
+  by rewrite -H1 -H2 Heq.
+apply: foata_inj_uniq HF; exact: perm_to_seq_uniq.
+Qed.
+
+(* Headline equidistribution theorem. *)
+Theorem inv_maj_equidistr n k :
+  #|[set s : {perm 'I_n.+1} | inv s == k]|
+  = #|[set s : {perm 'I_n.+1} | maj s == k]|.
+Proof.
+(* The map foata_perm sends {maj == k} bijectively to {inv == k}.
+   foata_perm_inv_maj: inv (foata_perm s) = maj s.
+   foata_perm_inj: foata_perm is injective.
+   On a finite set, injective implies surjective; in particular every
+   t : {perm 'I_n.+1} arises as foata_perm s for some s. *)
+have Hinj := @foata_perm_inj n.
+have Hbij : [set s : {perm 'I_n.+1} | inv s == k]
+          = @foata_perm n @: [set s : {perm 'I_n.+1} | maj s == k].
+  apply/setP => t; rewrite !inE.
+  apply/idP/imsetP.
+  - move=> Hinv.
+    exists (finv (@foata_perm n) t).
+    + rewrite inE.
+      have Hcanc := f_finv Hinj t.
+      rewrite -[X in maj _ == X](_ : inv t = k); last by apply/eqP.
+      by rewrite -{2}Hcanc foata_perm_inv_maj.
+    + by rewrite (f_finv Hinj t).
+  - case=> s Hs ->.
+    rewrite inE in Hs.
+    by rewrite foata_perm_inv_maj.
+rewrite Hbij.
+by rewrite (card_imset _ Hinj).
 Qed.
 
 End Equidistribution.
