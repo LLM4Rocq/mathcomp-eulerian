@@ -656,6 +656,257 @@ by rewrite Hab' Hbc' in Habs.
 Qed.
 
 (* ========================================================================= *)
+(* §P. Slot-interval infrastructure                                          *)
+(* ========================================================================= *)
+
+(* The slot interval [i, j) is the set of descent slots in 'I_n.+1 whose
+   underlying nat lies between val i (inclusive) and val j (exclusive).
+   A "slot" k : 'I_n.+1 controls comparison between positions k and k+1
+   of a {perm 'I_n.+2}.  A "turn" t : 'I_n controls the comparison of
+   adjacent slots (val t) and (val t).+1 in 'I_n.+1. *)
+
+Section SlotInterval.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+Definition slot_iv (i j : 'I_n.+2) : {set 'I_n.+1} :=
+  [set k : 'I_n.+1 | (val i <= val k) && (val k < val j)].
+
+Lemma mem_slot_iv (i j : 'I_n.+2) (k : 'I_n.+1) :
+  (k \in slot_iv i j) = (val i <= val k) && (val k < val j).
+Proof. by rewrite inE. Qed.
+
+(* Cardinality: when val i <= val j, the interval has val j - val i
+   elements (clamped to 'I_n.+1, but since val j <= n.+1 < n.+2 the
+   relevant range fits cleanly). *)
+Lemma card_slot_iv (i j : 'I_n.+2) :
+  val j <= n.+1 ->
+  #|slot_iv i j| = val j - val i.
+Proof.
+move=> Hj.
+rewrite cardE size_filter -[Finite.enum _]enumT.
+have ME : forall k : 'I_n.+1, mem (slot_iv i j) k
+                            = (val i <= val k) && (val k < val j).
+  by move=> k; rewrite -mem_slot_iv.
+under eq_count => k do rewrite ME.
+rewrite -(count_map val (fun m => (val i <= m) && (m < val j))).
+rewrite val_enum_ord.
+have Hi := ltn_ord i.
+have HiSm : val i <= n.+1 by rewrite -ltnS (leq_trans Hi).
+case: (leqP (val i) (val j)) => Hij; last first.
+  have -> : val j - val i = 0 by apply/eqP; rewrite subn_eq0 ltnW.
+  apply/eqP; rewrite -leqn0 leqNgt -has_count; apply/hasPn => m _ /=.
+  by case: (leqP (val i) m) => //= Him; rewrite ltnNge (leq_trans (ltnW Hij) Him).
+have HX : n.+1 = val i + (n.+1 - val i) by rewrite subnKC.
+rewrite [in iota 0 n.+1]HX iotaD count_cat.
+have -> : count (fun m : nat => val i <= m < val j) (iota 0 (val i)) = 0.
+  apply/eqP; rewrite -leqn0 leqNgt -has_count; apply/hasPn => m.
+  rewrite mem_iota add0n => /andP [_ Hm] /=.
+  apply/negP => /andP [Hi' _].
+  by have := leq_ltn_trans Hi' Hm; rewrite ltnn.
+rewrite add0n add0n.
+have HY : n.+1 - val i = (val j - val i) + (n.+1 - val j).
+  have HK : val j - val i + (n.+1 - val j) = n.+1 - val i.
+    apply/eqP; rewrite -(eqn_add2r (val i)) addnAC -addnA subnK //.
+    by rewrite addnA (subnK Hij) addnC (subnK Hj).
+  by rewrite -HK.
+rewrite HY iotaD count_cat.
+have -> : count (fun m : nat => val i <= m < val j)
+                (iota (val i + (val j - val i)) (n.+1 - val j)) = 0.
+  apply/eqP; rewrite -leqn0 leqNgt -has_count; apply/hasPn => m.
+  rewrite mem_iota subnKC // => /andP [Hm _] /=.
+  by apply/negP => /andP [_ Hm']; have := leq_ltn_trans Hm Hm'; rewrite ltnn.
+rewrite addn0.
+rewrite -[RHS](size_iota (val i) (val j - val i)) -[in RHS]count_predT.
+apply: eq_in_count => m.
+rewrite mem_iota => /andP [Hm Hm2] /=.
+rewrite subnKC // in Hm2.
+by rewrite Hm Hm2.
+Qed.
+
+End SlotInterval.
+
+Section InterTurn.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+(* §P.2.helper — slot_descent_const.  Under "no turn in slot range
+   [val i, val j)", consecutive slots are descent-equal, and so all
+   slots in that range have the same descent indicator. *)
+Lemma slot_descent_const s (i j : 'I_n.+2) :
+  (forall t : 'I_n, val i <= (val t).+1 < val j -> ~~ is_turn s t) ->
+  forall (k1 k2 : 'I_n.+1),
+    val i <= val k1 -> val k1 <= val k2 -> val k2 < val j ->
+    is_descent s k1 = is_descent s k2.
+Proof.
+move=> Hnoturn k1 k2 Hi1 H12 H2j.
+move: H12 Hi1.
+elim: (val k2 - val k1) {-2}k1 (refl_equal (val k2 - val k1)) =>
+      [|d IH] k1' Hd H12 Hi1.
+- move/eqP: Hd; rewrite subn_eq0 => Hk21.
+  have : val k1' = val k2 by apply/eqP; rewrite eqn_leq H12 Hk21.
+  by move=> /val_inj ->.
+- have Hk1lt : val k1' < val k2 by rewrite -subn_gt0 Hd.
+  have Hk1ord : val k1' < n.
+    by have := ltn_ord k2; rewrite ltnS => Hk2; rewrite (leq_trans Hk1lt).
+  pose t : 'I_n := Ordinal Hk1ord.
+  have Ht : val i <= (val t).+1 < val j.
+    apply/andP; split; first by rewrite (leq_trans Hi1).
+    by rewrite (leq_trans _ H2j).
+  have := Hnoturn t Ht.
+  rewrite /is_turn negb_add => /eqP Hd1.
+  have Hk1eq : (widen_ord (leqnSn n) t : 'I_n.+1) = k1' by apply: val_inj.
+  rewrite Hk1eq in Hd1; rewrite Hd1.
+  have HSk1 : val (lift ord0 t : 'I_n.+1) = (val k1').+1
+    by rewrite /= /bump /= add1n.
+  apply: (IH (lift ord0 t)).
+  - rewrite HSk1; apply: succn_inj.
+    by rewrite subnSK // Hd.
+  - by rewrite HSk1.
+  - by rewrite HSk1 (leq_trans Hi1).
+Qed.
+
+(* §P.2.helper — constant_descent_monotone.  If is_descent is constant
+   value `b` on all slots in [val p, val q), then s is monotone on
+   the position range [p, q]: ascending (b=false) or descending (b=true). *)
+Lemma constant_descent_monotone s (p q : 'I_n.+2) (b : bool) :
+  val p < val q ->
+  (forall k : 'I_n.+1, val p <= val k < val q -> is_descent s k = b) ->
+  if b then val (s q) < val (s p) else val (s p) < val (s q).
+Proof.
+move=> Hpq Hconst.
+move: q Hpq Hconst.
+elim: (n.+2 - val p) {-2}p (refl_equal (n.+2 - val p)) =>
+      [|d IH] p' Hd q Hpq Hconst.
+  have Hq2 : val q < n.+2 by exact: ltn_ord.
+  move/eqP: Hd; rewrite subn_eq0 => Hp'.
+  by have := leq_ltn_trans (leq_trans Hp' (ltnW Hpq)) Hq2; rewrite ltnn.
+have Hp'lt : val p' < n.+1.
+  by rewrite -ltnS; apply: leq_trans (ltn_ord q).
+pose k0 : 'I_n.+1 := Ordinal Hp'lt.
+have Hwidp : (widen_ord (leqnSn n.+1) k0 : 'I_n.+2) = p' by apply: val_inj.
+case: (eqVneq (val q) (val p').+1) => [Hpq1|Hne].
+- have Hkrange : val p' <= val k0 < val q by rewrite /= leqnn /= Hpq1.
+  have Hkdesc := Hconst k0 Hkrange.
+  rewrite /is_descent in Hkdesc.
+  have Hliftq : (lift ord0 k0 : 'I_n.+2) = q.
+    by apply: val_inj => /=; rewrite /bump /= add1n.
+  rewrite Hwidp Hliftq in Hkdesc.
+  have Hpqne : p' != q by rewrite -val_eqE neq_ltn Hpq.
+  have Hspqne : s p' != s q by apply: contra_neq Hpqne => /perm_inj.
+  have Hvspqne : val (s p') != val (s q) by rewrite val_eqE.
+  have Hsd : (val (s q) < val (s p'))%N = b by [].
+  case Eb : b Hsd => Hsd /=; first by [].
+  rewrite -[s p' < s q]/(val (s p') < val (s q))%N.
+  rewrite ltn_neqAle leqNgt Hsd /=.
+  by rewrite Hvspqne.
+- have HqGtSp : (val p').+1 < val q by rewrite ltn_neqAle eq_sym Hne /= Hpq.
+  pose pmid : 'I_n.+2 := lift ord0 k0.
+  have Hpmid : val pmid = (val p').+1 by rewrite /= /bump /= add1n.
+  have Hd' : n.+2 - val pmid = d.
+    rewrite Hpmid; apply: succn_inj.
+    have Hp'2 : val p' < n.+2 by exact: ltn_ord.
+    by rewrite subnSK // Hd.
+  have Hpmidq : val pmid < val q by rewrite Hpmid.
+  have Hslot1 : val p' <= val k0 < val q.
+    by rewrite /= leqnn (ltn_trans _ HqGtSp).
+  have Hd1 := Hconst k0 Hslot1.
+  rewrite /is_descent Hwidp in Hd1.
+  have Hliftpmid : (lift ord0 k0 : 'I_n.+2) = pmid by [].
+  rewrite Hliftpmid in Hd1.
+  have Hsubconst : forall k : 'I_n.+1,
+                     val pmid <= val k < val q -> is_descent s k = b.
+    move=> k /andP [Hk1 Hk2].
+    apply: Hconst.
+    rewrite Hk2 andbT.
+    by rewrite (leq_trans _ Hk1) // Hpmid leqnSn.
+  have IHmid := IH pmid Hd' q Hpmidq Hsubconst.
+  have Hpmidne : pmid != p'.
+    by rewrite -val_eqE Hpmid eqn_leq leqNgt ltnSn /=.
+  have Hspmidne : s pmid != s p' by apply: contra_neq Hpmidne => /perm_inj.
+  have Hvne1 : val (s pmid) != val (s p') by rewrite val_eqE.
+  case Eb : b Hd1 IHmid => Hd1 IHmid /=.
+  + have Hd1' : (val (s pmid) < val (s p'))%N by [].
+    have IHmid' : (val (s q) < val (s pmid))%N by [].
+    by apply: ltn_trans IHmid' Hd1'.
+  + have HX1 : ~~ (val (s pmid) < val (s p'))%N by rewrite Hd1.
+    have Hd1' : (val (s p') < val (s pmid))%N.
+      by rewrite ltn_neqAle leqNgt HX1 /=; rewrite eq_sym Hvne1.
+    have IHmid' : (val (s pmid) < val (s q))%N by [].
+    rewrite -[s p' < s q]/(val (s p') < val (s q))%N.
+    by apply: ltn_trans Hd1' IHmid'.
+Qed.
+
+(* §P.3 — inter_turn_monotone.  In the absence of turns in slot range
+   [val i, val j), the comparison direction at any sub-interval (p, q)
+   matches the boundary comparison (i, j). *)
+Lemma inter_turn_monotone s (i j : 'I_n.+2) :
+  val i < val j ->
+  (forall t : 'I_n, val i <= (val t).+1 < val j -> ~~ is_turn s t) ->
+  forall (p q : 'I_n.+2),
+    val i <= val p -> val p < val q -> val q <= val j ->
+    (val (s p) < val (s q))%N = (val (s i) < val (s j))%N.
+Proof.
+move=> Hij Hnoturn p q Hip Hpq Hqj.
+have Hjle : val i < n.+1.
+  by have := ltn_ord j; rewrite ltnS => Hj2; rewrite (leq_trans Hij).
+pose k0 : 'I_n.+1 := Ordinal Hjle.
+have Hk0range : val i <= val k0 < val j by rewrite /= leqnn /= Hij.
+pose b := is_descent s k0.
+have Hconst_ij : forall k : 'I_n.+1,
+                   val i <= val k < val j -> is_descent s k = b.
+  move=> k /andP [Hki Hkj].
+  case: (leqP (val k0) (val k)) => Hkk0.
+  - rewrite /b /=.
+    by apply: esym; apply: (slot_descent_const Hnoturn) => //=.
+  - apply: (slot_descent_const Hnoturn) => //=.
+    exact: ltnW.
+have Hconst_pq : forall k : 'I_n.+1,
+                   val p <= val k < val q -> is_descent s k = b.
+  move=> k /andP [Hkp Hkq].
+  apply: Hconst_ij.
+  by rewrite (leq_trans Hip Hkp) /= (leq_trans Hkq).
+have Hmono_ij := constant_descent_monotone Hij Hconst_ij.
+have Hmono_pq := constant_descent_monotone Hpq Hconst_pq.
+case Eb : b Hmono_ij Hmono_pq => Hmono_ij Hmono_pq /=.
+- rewrite ltnNge (ltnW Hmono_pq) /=.
+  by rewrite ltnNge (ltnW Hmono_ij) /=.
+- by rewrite Hmono_pq Hmono_ij.
+Qed.
+
+(* §P.4 — pick_flip_has_turn.  If three positions i < j < k have a
+   "flip" in their s-comparisons, there must be a turn in the slot
+   interval [val i, val k). *)
+Lemma pick_flip_has_turn s (i j k : 'I_n.+2) :
+  val i < val j < val k ->
+  (val (s i) < val (s j))%N <> (val (s j) < val (s k))%N ->
+  exists t : 'I_n, (val i <= (val t).+1 < val k) /\ is_turn s t.
+Proof.
+move=> /andP [Hij Hjk] Hflip.
+have Hik : val i < val k by apply: ltn_trans Hij Hjk.
+case Habs :
+    [exists t : 'I_n, (val i <= (val t).+1 < val k) && is_turn s t].
+  case/existsP: Habs => t /andP [Ht Htn].
+  by exists t; split.
+exfalso; apply: Hflip.
+have Habs' : forall t : 'I_n,
+               ~ ((val i <= (val t).+1 < val k) /\ is_turn s t).
+  move=> t [Ht Htn].
+  have Hcontra :
+      ~ [exists t0 : 'I_n,
+            (val i <= (val t0).+1 < val k) && is_turn s t0]
+    by rewrite Habs.
+  by apply: Hcontra; apply/existsP; exists t; rewrite Ht Htn.
+have Hno' : forall t : 'I_n,
+              val i <= (val t).+1 < val k -> ~~ is_turn s t.
+  move=> t Ht; apply/negP => Htn; by apply: (Habs' t).
+rewrite (inter_turn_monotone Hik Hno' (p := i) (q := j)) //; last exact: ltnW.
+by rewrite (inter_turn_monotone Hik Hno' (p := j) (q := k)) // ltnW.
+Qed.
+
+End InterTurn.
+
+(* ========================================================================= *)
 (* §O. Status of the headline equivalence (open)                              *)
 (* ========================================================================= *)
 
@@ -693,4 +944,223 @@ Qed.
    We have proven the special case `as_perm_max_full`: when perm_seq s
    itself is alternating, as_perm_max s = n+2 = (turn_count s).+2.
 *)
+
+(* ========================================================================= *)
+(* §Q. Upper bound: as_perm_max s <= (turn_count s).+2                       *)
+(* ========================================================================= *)
+
+(* Strategy:
+   - Define `turn_iv s a b` = set of turns t : 'I_n with (val t).+1 in [a, b).
+   - Key combinatorial lemma `flip_count_le_turn_iv`: for any sorted-strict
+     sequence xs of positions, the flip_count of (sign_seq (s applied to xs))
+     is bounded by #|turn_iv s a b| for appropriate boundaries [a, b).
+   - Combined with `is_alt_flip_count` (alt seq has flip_count = size - 2)
+     and `card_turn_iv_le`, this gives the upper bound.
+
+   Status: the key lemma `flip_count_le_turn_iv` is currently ADMITTED.
+   Session 3 should close this combinatorial step.  See the comment above
+   the Admitted lemma for the proof approach (Hall-style injection of
+   flips to leftmost witnessed turns).
+
+   The base infrastructure in §P (`slot_iv`, `inter_turn_monotone`,
+   `pick_flip_has_turn`) plus the new `turn_iv_split` provide all the
+   tools needed.
+*)
+
+Section UpperBound.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+(* Turn-interval: turns t such that (val t).+1 lies in [a, b) — i.e., the
+   "slot border" controlled by t falls between positions a and b. *)
+Definition turn_iv s (a b : nat) : {set 'I_n} :=
+  [set t : 'I_n | is_turn s t && (a <= (val t).+1 < b)].
+
+Lemma mem_turn_iv s a b (t : 'I_n) :
+  (t \in turn_iv s a b) = (is_turn s t && (a <= (val t).+1 < b)).
+Proof. by rewrite inE. Qed.
+
+Lemma turn_iv_subset s a b :
+  turn_iv s a b \subset [set t : 'I_n | is_turn s t].
+Proof. by apply/subsetP => t; rewrite !inE; case/andP => ->. Qed.
+
+Lemma card_turn_iv_le s a b :
+  #|turn_iv s a b| <= turn_count s.
+Proof. exact: subset_leq_card (turn_iv_subset s a b). Qed.
+
+Lemma turn_iv_split s (a b c : nat) :
+  a <= b -> b <= c ->
+  #|turn_iv s a c| = #|turn_iv s a b| + #|turn_iv s b c|.
+Proof.
+move=> Hab Hbc.
+have Heq : turn_iv s a c = turn_iv s a b :|: turn_iv s b c.
+  apply/setP => t; rewrite !inE.
+  apply/and3P/orP.
+    case=> Hturn Hat Htc.
+    case: (ltnP (val t).+1 b) => Htb.
+      by left; apply/and3P; split.
+    by right; apply/and3P; split.
+  case=> /and3P [Hturn H1 H2]; split=> //.
+    exact: leq_trans H2 Hbc.
+  exact: leq_trans Hab H1.
+rewrite Heq cardsU.
+have -> : turn_iv s a b :&: turn_iv s b c = set0.
+  apply/setP => t; rewrite !inE.
+  apply/negP => /andP [/and3P [_ _ Htb] /and3P [_ Hbt _]].
+  by have := leq_ltn_trans Hbt Htb; rewrite ltnn.
+by rewrite cards0 subn0.
+Qed.
+
+(* THE KEY COMBINATORIAL LEMMA — currently OPEN (session 3 task).
+
+   For a strictly sorted sequence xs of positions in 'I_n.+2,
+   the flip_count of the sign-seq of the picked perm-values is bounded
+   by the number of turns in the slot-interval covering xs.
+
+   PROOF STRATEGY (for session 3):
+
+   Use strong induction on size xs.  Base: size <= 2, flip_count = 0.
+
+   Inductive step (size k+1 >= 3, xs = x0 :: x1 :: x2 :: rest):
+
+   CASE 1: (s x0 < s x1) = (s x1 < s x2)  [no flip at position 0]
+     flip_count(xs) = flip_count(x1 :: rest).  Apply IH to (x1::rest)
+     with the bound [val x1, val j); use turn_iv monotonicity in left
+     endpoint to extend to [val i, val j).
+
+   CASE 2: (s x0 < s x1) ≠ (s x1 < s x2)  [flip at position 0]
+     SUBCASE 2A: ∃ turn t in [val x0, val x1).
+       Peel x0.  flip_count(xs) = 1 + flip_count(x1::rest).
+       Use turn t to absorb the +1 via `turn_iv_split`.
+     SUBCASE 2B: NO turn in [val x0, val x1).  By `pick_flip_has_turn`
+       and the empty first half, the witness for the flip lies in
+       [val x1, val x2).  THE HARD CASE — naive IH fails because
+       the witness gets "double-counted" by the IH's bound.
+
+       Resolution (Hall-style refinement): strengthen the IH to a
+       STRICT bound when the first slot interval [val xs[0], val xs[1])
+       has a turn, OR to track a "sign carry" that absorbs the
+       boundary case.  Equivalently, use the leftmost-witness
+       greedy assignment with a careful proof that consecutive
+       leftmost witnesses are distinct.
+
+   ALTERNATIVE: prove via `inter_turn_monotone` that fully
+   alternating flip patterns force ≥ k turns; this avoids case
+   analysis but requires a parity-counting lemma.
+
+   Estimated effort: 60-100 LOC.  The base infrastructure
+   (`turn_iv_split`, `inter_turn_monotone`, `pick_flip_has_turn`)
+   provides the necessary tools.
+*)
+(* Lemma flip_count_le_turn_iv s (xs : seq 'I_n.+2) :
+     sorted (fun a b : 'I_n.+2 => val a < val b) xs ->
+     forall (i j : 'I_n.+2),
+     val i <= val (head i xs) -> val (last i xs) <= val j ->
+     flip_count (sign_seq [seq val (s x) | x <- xs])
+       <= #|turn_iv s (val i) (val j)|.
+   STILL OPEN — needs strengthened induction tracking whether the
+   first slot interval contains a turn (a parity argument via
+   inter_turn_monotone).  Estimated 60-100 LOC.  *)
+
+End UpperBound.
+
+(* ========================================================================= *)
+(* §R. Seq-level: alternating seq has flip_count(sign_seq) = size - 2.       *)
+(* ========================================================================= *)
+
+(* Auxiliary: a boolean-list version of "fully alternating". *)
+Fixpoint is_alt_bool_aux (a : bool) (xs : seq bool) : bool :=
+  match xs with
+  | [::] => true
+  | b :: rest => (a (+) b) && is_alt_bool_aux b rest
+  end.
+
+Definition is_alt_bool (xs : seq bool) : bool :=
+  match xs with
+  | [::] => true
+  | a :: rest => is_alt_bool_aux a rest
+  end.
+
+Lemma flip_count_is_alt_bool xs :
+  is_alt_bool xs -> flip_count xs = (size xs).-1.
+Proof.
+case: xs => [|a xs] //=.
+elim: xs a => [|b xs IH] a //=.
+  by rewrite /flip_count /= big_nil.
+case/andP => Hab Halt.
+rewrite /flip_count /= big_cons Hab /=.
+have IHv := IH b Halt.
+rewrite /flip_count /= in IHv.
+by rewrite IHv add1n.
+Qed.
+
+(* sign_seq of an is_alt seq is itself alternating (every adjacent pair differs). *)
+Lemma sign_seq_is_alt xs :
+  is_alt xs -> 2 <= size xs -> is_alt_bool (sign_seq xs).
+Proof.
+case: xs => [|x [|y rest]] //=.
+move=> Halt _.
+move: x y Halt; elim: rest => [|z rest IH] x y //= Halt.
+case/orP: Halt => /andP [Hcmp Halt].
+- case/andP: Halt => Hzy Halt2.
+  rewrite Hcmp /=.
+  have Hyzn : ~~ (y < z) by rewrite -leqNgt ltnW.
+  rewrite (negbTE Hyzn) /=.
+  have Halt' : (y < z) && alt_aux false z rest || (z < y) && alt_aux true z rest.
+    by rewrite Hzy Halt2 /= orbT.
+  have IHv := IH y z Halt'.
+  by move: IHv; rewrite (negbTE Hyzn).
+- case/andP: Halt => Hyz Halt2.
+  have Hxyn : ~~ (x < y) by rewrite -leqNgt ltnW.
+  rewrite (negbTE Hxyn) Hyz /=.
+  have Halt' : (y < z) && alt_aux false z rest || (z < y) && alt_aux true z rest.
+    by rewrite Hyz Halt2 /=.
+  have IHv := IH y z Halt'.
+  by move: IHv; rewrite Hyz.
+Qed.
+
+Lemma is_alt_flip_count xs :
+  is_alt xs -> 2 <= size xs -> flip_count (sign_seq xs) = (size xs).-2.
+Proof.
+move=> Halt Hsz.
+have := flip_count_is_alt_bool (sign_seq_is_alt Halt Hsz).
+rewrite size_sign_seq.
+by case: xs Halt Hsz => [|x [|y [|z rest]]] //= _ _ ->.
+Qed.
+
+(* ========================================================================= *)
+(* §S. Final assembly: as_perm_max_upper                                      *)
+(* ========================================================================= *)
+
+Section UpperBoundAssembly.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+(* The sort by val produces a strict-sorted seq for {set 'I_n.+2}. *)
+Lemma sort_enum_strict_sorted (I : {set 'I_n.+2}) :
+  sorted (fun a b : 'I_n.+2 => val a < val b)
+         (sort (fun a b : 'I_n.+2 => val a <= val b) (enum I)).
+Proof.
+have Hsort := sort_sorted (T := 'I_n.+2)
+  (fun a b => leq_total (val a) (val b)) (enum I).
+have Huniq : uniq (sort (fun a b : 'I_n.+2 => val a <= val b) (enum I)).
+  by rewrite sort_uniq enum_uniq.
+move: Hsort Huniq.
+elim: (sort _ _) => [|a [|b xs] IH] //= /andP [Hab Hsorted] /andP [Han Hu].
+have Hab' : val a < val b.
+  rewrite ltn_neqAle Hab andbT.
+  apply/eqP => Hva.
+  have Hab2 : a = b by apply: val_inj.
+  by move: Han; rewrite Hab2 inE eq_refl.
+rewrite Hab' /=.
+exact: IH.
+Qed.
+
+(* THE HEADLINE THEOREM (UPPER BOUND) — pending flip_count_le_turn_iv.
+   Once that key combinatorial lemma lands, the assembly proof is
+   ~35 lines; the full text is preserved in the git history at the
+   commit just before this revert (session-2 attempt that introduced
+   an Admitted; reverted to keep the project axiom-free).  *)
+
+End UpperBoundAssembly.
 
