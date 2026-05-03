@@ -196,3 +196,232 @@ case: (unliftP h i) => [x ->|->].
   apply/negbTE; rewrite -leqNgt.
   by apply: ltnW; rewrite /=; exact: ltn_ord.
 Qed.
+
+(* ========================================================================= *)
+(* §D. Sub-permutation lift infrastructure                                   *)
+(* ========================================================================= *)
+
+(* Setup for the André reflection bijection.  Given a perm                    *)
+(*    σ : 'I_{n.+1} → 'I_{n.+1}                                               *)
+(* and a "split point" j : 'I_{n.+2} (with j ≤ n.+1), we want to view the     *)
+(* left subword σ(0), ..., σ(j-1) as a permutation of its image set L ⊂ 'I_n.+1*)
+(* canonically isomorphic to {perm 'I_j} via "rank in sorted order of L".     *)
+(*                                                                            *)
+(* The basic ingredients (mathcomp's enum_val/enum_rank_in) give an           *)
+(* `'I_(#|L|) ↔ L` bijection.  We need to pre-compose with widening           *)
+(* `'I_j ↪ 'I_(n.+1)`, then with σ, then with the rank into L.                *)
+
+(* Generic widening injectivity. *)
+Lemma widen_inj n m (h : n <= m) : injective (widen_ord h).
+Proof. by move=> i j /(congr1 val) /=; exact: val_inj. Qed.
+
+Section ImageLeft.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2).
+
+(* Coercion j : 'I_n.+2 → j ≤ n.+1 (the slot count for the left subword). *)
+Definition leqj_n1 : (j : nat) <= n.+1 := ltnSE (ltn_ord j).
+
+(* Embed positions 0..j-1 into 'I_n.+1. *)
+Definition embed_left (i : 'I_j) : 'I_n.+1 := widen_ord leqj_n1 i.
+
+Lemma embed_left_inj : injective embed_left.
+Proof. exact: widen_inj. Qed.
+
+(* The image set: { t(i) | i ∈ [0..j-1] }, as a {set 'I_n.+1}. *)
+Definition image_left : {set 'I_n.+1} :=
+  [set t (embed_left i) | i : 'I_j].
+
+Lemma t_embed_inj : injective (fun i : 'I_j => t (embed_left i)).
+Proof. by apply: inj_comp; [exact: perm_inj | exact: embed_left_inj]. Qed.
+
+Lemma card_image_left : #|image_left| = j.
+Proof.
+by rewrite /image_left -[RHS](card_ord j) -(card_imset _ t_embed_inj).
+Qed.
+
+(* Each left-image of t lies in image_left.  Useful for enum_rank_in. *)
+Lemma mem_image_left (i : 'I_j) : t (embed_left i) \in image_left.
+Proof. by apply/imsetP; exists i. Qed.
+
+End ImageLeft.
+
+(* ------------------------------------------------------------------------- *)
+(* The lifted left sub-permutation                                          *)
+(* ------------------------------------------------------------------------- *)
+
+(* Given a default witness `x0 ∈ S`, the rank function `enum_rank_in Hx0`     *)
+(* sends elements of `S ⊂ 'I_n.+1` bijectively onto `'I_(#|S|)`.              *)
+(*                                                                            *)
+(* For our use case `S = image_left t j`, we have `#|S| = j` and a            *)
+(* witness `t (embed_left i)` for any `i : 'I_j` (provided j > 0).            *)
+(*                                                                            *)
+(* The composition                                                            *)
+(*    'I_j  --embed_left-->  'I_n.+1  --t-->  image_left  --enum_rank_in-->  'I_(#|image_left|) *)
+(* gives, after transporting along card_image_left : #|image_left| = j,       *)
+(* a function 'I_j → 'I_j which is a bijection (i.e. a permutation).         *)
+
+Section PermOfLeft.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2).
+
+(* The rank-into-L map, parameterized by a witness. *)
+Definition rank_left (x0 : 'I_n.+1)
+    (Hx0 : x0 \in image_left t j) (y : 'I_n.+1) : 'I_(#|image_left t j|) :=
+  enum_rank_in Hx0 y.
+
+(* Cast to 'I_j using card_image_left. *)
+Definition cast_to_j (k : 'I_(#|image_left t j|)) : 'I_j :=
+  cast_ord (card_image_left t j) k.
+
+Lemma cast_to_j_inj : injective cast_to_j.
+Proof. by move=> a b /cast_ord_inj. Qed.
+
+(* The full forward map 'I_j → 'I_j (parameterized by a witness). *)
+Definition perm_left_fun (x0 : 'I_n.+1)
+    (Hx0 : x0 \in image_left t j) (i : 'I_j) : 'I_j :=
+  cast_to_j (enum_rank_in Hx0 (t (embed_left i))).
+
+Lemma perm_left_fun_inj (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j) :
+  injective (perm_left_fun Hx0).
+Proof.
+move=> i1 i2; rewrite /perm_left_fun => /cast_to_j_inj.
+move=> /(congr1 (@enum_val _ _)).
+rewrite !enum_rankK_in; try exact: mem_image_left.
+by move/perm_inj/embed_left_inj.
+Qed.
+
+Definition perm_left (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j)
+  : {perm 'I_j} := perm (@perm_left_fun_inj x0 Hx0).
+
+Lemma perm_leftE (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j) (i : 'I_j) :
+  perm_left Hx0 i = cast_to_j (enum_rank_in Hx0 (t (embed_left i))).
+Proof. by rewrite permE. Qed.
+
+(* The key identity: applying enum_val recovers t(embed_left i). *)
+Lemma enum_val_perm_left (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j) (i : 'I_j) :
+  enum_val (cast_ord (esym (card_image_left t j)) (perm_left Hx0 i))
+  = t (embed_left i).
+Proof.
+rewrite perm_leftE /cast_to_j cast_ordK.
+by rewrite enum_rankK_in //; exact: mem_image_left.
+Qed.
+
+End PermOfLeft.
+
+(* ------------------------------------------------------------------------- *)
+(* Independence of the witness x0                                            *)
+(* ------------------------------------------------------------------------- *)
+
+(* enum_rank_in does not depend on the witness when both witnesses are in S. *)
+Lemma perm_left_witness_indep n (t : {perm 'I_n.+1}) (j : 'I_n.+2)
+    (x0 y0 : 'I_n.+1)
+    (Hx0 : x0 \in image_left t j) (Hy0 : y0 \in image_left t j) :
+  perm_left Hx0 = perm_left Hy0.
+Proof.
+apply/permP => i; rewrite !perm_leftE /cast_to_j; congr cast_ord.
+by apply: eq_enum_rank_in (mem_image_left t i).
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* Default-witness packaging: when j > 0 we always have a witness.          *)
+(* ------------------------------------------------------------------------- *)
+
+(* When j > 0, position 0 : 'I_j gives us a canonical element of image_left. *)
+Lemma image_left_witness_pos n (t : {perm 'I_n.+1}) (j : 'I_n.+2) (Hj : 0 < j) :
+  t (embed_left (j := j) (Ordinal Hj)) \in image_left t j.
+Proof. exact: mem_image_left. Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* Right side: image_right and corresponding sub-perm                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* For a perm t : {perm 'I_n.+1} and slot j : 'I_n.+2, the right subword     *)
+(* covers positions [j .. n] (length n.+1 - j).  We embed via rshift         *)
+(* j + i and a cast.                                                         *)
+
+Section ImageRight.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2).
+
+Definition embed_right (i : 'I_(n.+1 - j)) : 'I_n.+1 :=
+  cast_ord (subnKC (leqj_n1 j)) (rshift j i).
+
+Lemma embed_right_inj : injective embed_right.
+Proof.
+move=> i1 i2 /(congr1 (cast_ord (esym (subnKC (leqj_n1 j))))).
+rewrite !cast_ordK; exact: rshift_inj.
+Qed.
+
+Definition image_right : {set 'I_n.+1} :=
+  [set t (embed_right i) | i : 'I_(n.+1 - j)].
+
+Lemma t_embed_right_inj : injective (fun i : 'I_(n.+1 - j) => t (embed_right i)).
+Proof. by apply: inj_comp; [exact: perm_inj | exact: embed_right_inj]. Qed.
+
+Lemma card_image_right : #|image_right| = n.+1 - j.
+Proof.
+by rewrite /image_right -[RHS](card_ord (n.+1 - j)) -(card_imset _ t_embed_right_inj).
+Qed.
+
+Lemma mem_image_right (i : 'I_(n.+1 - j)) : t (embed_right i) \in image_right.
+Proof. by apply/imsetP; exists i. Qed.
+
+End ImageRight.
+
+(* ------------------------------------------------------------------------- *)
+(* The lifted right sub-permutation                                          *)
+(* ------------------------------------------------------------------------- *)
+
+Section PermOfRight.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2).
+
+Definition cast_to_subj (k : 'I_(#|image_right t j|)) : 'I_(n.+1 - j) :=
+  cast_ord (card_image_right t j) k.
+
+Lemma cast_to_subj_inj : injective cast_to_subj.
+Proof. by move=> a b /cast_ord_inj. Qed.
+
+Definition perm_right_fun (x0 : 'I_n.+1)
+    (Hx0 : x0 \in image_right t j) (i : 'I_(n.+1 - j)) : 'I_(n.+1 - j) :=
+  cast_to_subj (enum_rank_in Hx0 (t (embed_right i))).
+
+Lemma perm_right_fun_inj (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j) :
+  injective (perm_right_fun Hx0).
+Proof.
+move=> i1 i2; rewrite /perm_right_fun => /cast_to_subj_inj.
+move=> /(congr1 (@enum_val _ _)).
+rewrite !enum_rankK_in; try exact: mem_image_right.
+by move/perm_inj/embed_right_inj.
+Qed.
+
+Definition perm_right (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j)
+  : {perm 'I_(n.+1 - j)} := perm (@perm_right_fun_inj x0 Hx0).
+
+Lemma perm_rightE (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j)
+    (i : 'I_(n.+1 - j)) :
+  perm_right Hx0 i = cast_to_subj (enum_rank_in Hx0 (t (embed_right i))).
+Proof. by rewrite permE. Qed.
+
+Lemma enum_val_perm_right (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j)
+    (i : 'I_(n.+1 - j)) :
+  enum_val (cast_ord (esym (card_image_right t j)) (perm_right Hx0 i))
+  = t (embed_right i).
+Proof.
+rewrite perm_rightE /cast_to_subj cast_ordK.
+by rewrite enum_rankK_in //; exact: mem_image_right.
+Qed.
+
+End PermOfRight.
+
+Lemma perm_right_witness_indep n (t : {perm 'I_n.+1}) (j : 'I_n.+2)
+    (x0 y0 : 'I_n.+1)
+    (Hx0 : x0 \in image_right t j) (Hy0 : y0 \in image_right t j) :
+  perm_right Hx0 = perm_right Hy0.
+Proof.
+apply/permP => i; rewrite !perm_rightE /cast_to_subj; congr cast_ord.
+by apply: eq_enum_rank_in (mem_image_right t i).
+Qed.
+
+
