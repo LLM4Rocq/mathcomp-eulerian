@@ -1244,6 +1244,101 @@ Qed.
 
    Total estimated: ~100 LOC. The HARD CASES are now CLOSED above. *)
 
+(* ========================================================================= *)
+(* §Q.2. Subseq monotonicity for flip_count (Session B-5, Step 1-2)          *)
+(* ========================================================================= *)
+
+(* Helper: if xs is a strict subseq of ys, we can drop one extra element from ys. *)
+Lemma subseq_drop_extra (xs ys : seq nat) :
+  subseq xs ys -> size xs < size ys ->
+  exists i, i < size ys /\
+    subseq xs (take i ys ++ drop i.+1 ys).
+Proof.
+elim: ys xs => [|y ys IH] xs //=.
+case: xs => [|x xs] /=.
+- move=> _ _.
+  exists 0; split => //=.
+  by rewrite drop0 sub0seq.
+- case Eeq : (x == y) => Hsub Hsz.
+  + have Hsz' : size xs < size ys by [].
+    have [i [Hi Hsubi]] := IH xs Hsub Hsz'.
+    exists i.+1; split => //=.
+    by rewrite Eeq.
+  + exists 0; split => //=.
+    by rewrite drop0.
+Qed.
+
+(* Helper: size of a sequence with one element removed at position i. *)
+Lemma size_take_drop_skip (i : nat) (ys : seq nat) :
+  i < size ys -> size (take i ys ++ drop i.+1 ys) = (size ys).-1.
+Proof.
+move=> Hi.
+rewrite size_cat size_take size_drop Hi.
+case Hsz : (size ys) Hi => [|m] Hi //=.
+rewrite subSS.
+have Him : i <= m by rewrite -ltnS.
+by rewrite subnKC.
+Qed.
+
+(* SUBSEQ MONOTONICITY of flip_count(pairmap _ a -). Key step (Session B-5). *)
+Lemma flip_count_pairmap_le_subseq (xs ys : seq nat) :
+  subseq xs ys ->
+  forall a : nat,
+  flip_count (pairmap (fun u : nat => [eta leq u.+1]) a xs) <=
+  flip_count (pairmap (fun u : nat => [eta leq u.+1]) a ys).
+Proof.
+move=> Hsub.
+have [k Hk] : exists k, size ys = size xs + k.
+  by exists (size ys - size xs); rewrite addnC subnK //; exact: size_subseq.
+move: xs ys Hsub Hk.
+elim: k => [|k IH] xs ys Hsub Hk a.
+- rewrite addn0 in Hk.
+  have HL := size_subseq_leqif Hsub.
+  have Heq : xs = ys.
+    by case: HL => _ Hiff; apply/eqP; rewrite -Hiff Hk.
+  by rewrite Heq.
+- have Hszlt : size xs < size ys by rewrite Hk addnS ltnS leq_addr.
+  have [i [Hi Hsubi]] := subseq_drop_extra Hsub Hszlt.
+  pose ys' := take i ys ++ drop i.+1 ys.
+  have Hsz' : size ys' = size xs + k.
+    have := size_take_drop_skip Hi.
+    rewrite -/ys' Hk addnS /=.
+    by case Hsz0: (size ys) => [|m] //= [->].
+  have IHv := IH xs ys' Hsubi Hsz' a.
+  apply: leq_trans IHv _.
+  have Hys_split : ys = take i ys ++ (nth 0 ys i :: drop i.+1 ys).
+    rewrite -[in LHS](cat_take_drop i ys).
+    congr (_ ++ _).
+    by rewrite (drop_nth 0 Hi).
+  rewrite [X in _ <= flip_count (pairmap _ _ X)]Hys_split.
+  exact: flip_count_pairmap_insert_anywhere.
+Qed.
+
+(* Specialized to sign_seq. *)
+Lemma flip_count_sign_seq_le_subseq (xs ys : seq nat) :
+  subseq xs ys ->
+  flip_count (sign_seq xs) <= flip_count (sign_seq ys).
+Proof.
+move=> Hsub.
+case: xs Hsub => [|x xs] Hsub /=.
+- by [].
+- case: ys Hsub => [|y ys] Hsub.
+  + by move: Hsub; rewrite /= => /eqP.
+  + rewrite /sign_seq /=.
+    case Eeq : (x == y) Hsub => Hsub.
+    * move/eqP: Eeq => Eeq; rewrite Eeq in Hsub *.
+      have Hsub' : subseq xs ys.
+        by move: Hsub; rewrite /= eq_refl.
+      exact: flip_count_pairmap_le_subseq Hsub' y.
+    * have Hsubys : subseq (x :: xs) ys.
+        by move: Hsub; rewrite /= Eeq.
+      have Hstep1 := flip_count_sign_seq_insert_front y (x :: xs).
+      rewrite /sign_seq /= in Hstep1.
+      have Hstep2 : flip_count (pairmap (fun u : nat => [eta leq u.+1]) y (x :: xs)) <=
+                    flip_count (pairmap (fun u : nat => [eta leq u.+1]) y ys).
+        exact: flip_count_pairmap_le_subseq Hsubys y.
+      exact: leq_trans Hstep1 Hstep2.
+Qed.
 
 (* ========================================================================= *)
 (* §R. Seq-level: alternating seq has flip_count(sign_seq) = size - 2.       *)
@@ -1898,4 +1993,131 @@ exact: (leq_bigmax_cond (turn_witness s) (is_alt_pick_turn_witness s)).
 Qed.
 
 End ExistenceLB.
+
+(* ========================================================================= *)
+(* §V. Upper bound: as_perm_max s <= (turn_count s).+2                        *)
+(* ========================================================================= *)
+
+(* Step 3: pick_seq is a subseq of perm_seq (as nat seqs).                    *)
+Section UpperBoundChain.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+(* Sort of enum I (I : {set 'I_n.+2}) is a subseq of enum 'I_n.+2. *)
+Lemma sort_enum_subseq_enum (I : {set 'I_n.+2}) :
+  subseq (sort (fun a b : 'I_n.+2 => val a <= val b) (enum I)) (enum 'I_n.+2).
+Proof.
+have Hle_total : total (fun a b : 'I_n.+2 => val a <= val b).
+  by move=> a b; apply: leq_total.
+have Hle_trans : transitive (fun a b : 'I_n.+2 => val a <= val b).
+  by move=> a b c; apply: leq_trans.
+have Hsub_enumI : subseq (enum I) (enum 'I_n.+2).
+  rewrite enumT /enum_mem.
+  exact: filter_subseq.
+have Hsorted : sorted (fun a b : 'I_n.+2 => val a <= val b) (enum 'I_n.+2).
+  exact: sorted_val_enum_ord.
+have Hsort_enum : sort (fun a b : 'I_n.+2 => val a <= val b) (enum 'I_n.+2) =
+                  enum 'I_n.+2.
+  exact: (sorted_sort Hle_trans Hsorted).
+rewrite -Hsort_enum.
+apply: (subseq_sort Hle_total Hle_trans).
+exact: Hsub_enumI.
+Qed.
+
+Lemma pick_seq_subseq_perm_seq s (I : {set 'I_n.+2}) :
+  subseq (pick_seq s I) (perm_seq s).
+Proof.
+rewrite /pick_seq /perm_seq.
+exact: map_subseq (sort_enum_subseq_enum I).
+Qed.
+
+Lemma flip_count_pick_le_perm s (I : {set 'I_n.+2}) :
+  flip_count (sign_seq (pick_seq s I)) <= flip_count (sign_seq (perm_seq s)).
+Proof.
+exact: flip_count_sign_seq_le_subseq (pick_seq_subseq_perm_seq s I).
+Qed.
+
+(* Step 4: flip_count of sign_seq of perm_seq equals turn_count.              *)
+
+(* Auxiliary: flip_count as a sum over consecutive XOR-pairs. *)
+Lemma flip_count_as_sum (xs : seq bool) :
+  flip_count xs = \sum_(0 <= i < (size xs).-1) (nth false xs i (+) nth false xs i.+1).
+Proof.
+case: xs => [|x xs] /=.
+  by rewrite /flip_count /= big_nil.
+rewrite /flip_count /=.
+rewrite (big_nth false) size_pairmap.
+apply: eq_big_nat => i Hi.
+have Hi' : i < size xs by case/andP: Hi.
+rewrite (nth_pairmap x) //.
+case: i Hi' {Hi} => [|i] Hi' //=.
+- by rewrite (@set_nth_default _ _ false x).
+- rewrite (@set_nth_default _ _ false x i (ltnW Hi')).
+  by rewrite (@set_nth_default _ _ false x i.+1 Hi').
+Qed.
+
+Lemma neg_add_neg (a b : bool) : ~~ a (+) ~~ b = a (+) b.
+Proof. by case: a; case: b. Qed.
+
+Lemma flip_count_perm_seq_eq_turn_count s :
+  flip_count (sign_seq (perm_seq s)) = turn_count s.
+Proof.
+rewrite sign_seq_perm_seq flip_count_as_sum.
+rewrite size_map size_enum_ord /=.
+under eq_big_nat => i Hi.
+  have Hi1 : i < n.+1 by case/andP: Hi => _; apply: ltnW.
+  have Hi2 : i.+1 < n.+1 by case/andP: Hi.
+  rewrite (nth_map ord0); last by rewrite size_enum_ord.
+  rewrite (nth_map ord0); last by rewrite size_enum_ord.
+  rewrite neg_add_neg.
+  over.
+rewrite big_mkord.
+have Hsum_eq : forall i : 'I_n,
+    is_descent s (nth ord0 (enum 'I_n.+1) i)
+      (+) is_descent s (nth ord0 (enum 'I_n.+1) i.+1) = is_turn s i.
+  move=> i.
+  have Heq1 : (nth ord0 (enum 'I_n.+1) i : 'I_n.+1) = widen_ord (leqnSn n) i.
+    by apply: val_inj => /=; rewrite nth_enum_ord //; apply: ltnW; apply: ltn_ord.
+  have Heq2 : (nth ord0 (enum 'I_n.+1) i.+1 : 'I_n.+1) = lift ord0 i.
+    apply: val_inj => /=.
+    rewrite nth_enum_ord /=. by rewrite /bump /= add1n.
+    by apply: ltn_ord.
+  by rewrite Heq1 Heq2.
+under eq_bigr => i _ do rewrite Hsum_eq.
+rewrite /turn_count -sum1_card.
+rewrite [in RHS]big_mkcond.
+apply: eq_bigr => i _.
+rewrite inE.
+by case: (is_turn s i).
+Qed.
+
+(* Step 5: as_perm_max_upper. *)
+Lemma as_perm_max_upper s : as_perm_max s <= (turn_count s).+2.
+Proof.
+rewrite /as_perm_max.
+apply/bigmax_leqP => I HI.
+case Hsize : (#|I| <= 1).
+  by rewrite (leq_trans Hsize).
+move/negbT: Hsize; rewrite -ltnNge => Hsize2.
+have Hps_size : size (pick_seq s I) = #|I|.
+  by rewrite /pick_seq size_map size_sort -cardE.
+have Hsz_ge2 : 2 <= size (pick_seq s I) by rewrite Hps_size.
+have Halt_fc := is_alt_flip_count HI Hsz_ge2.
+rewrite Hps_size in Halt_fc.
+have Hbound : (#|I|).-2 <= turn_count s.
+  rewrite -Halt_fc -flip_count_perm_seq_eq_turn_count.
+  exact: flip_count_pick_le_perm.
+by case Hcard : #|I| Hsize2 Hbound => [|[|m]] // _ _.
+Qed.
+
+(* Step 6: THE HEADLINE THEOREM. *)
+Theorem as_perm_max_eq s : as_perm_max s = (turn_count s).+2.
+Proof.
+apply: anti_leq.
+apply/andP; split.
+- exact: as_perm_max_upper.
+- exact: as_perm_max_lower.
+Qed.
+
+End UpperBoundChain.
 
