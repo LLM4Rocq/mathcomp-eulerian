@@ -44,6 +44,27 @@ apply/eqP; rewrite /inv cards_eq0; apply/eqP/setP=> [[i j]].
 by rewrite !inE /is_inv !perm1 ltnNge leq_eqVlt orbC; case: ltngtP.
 Qed.
 
+(* ----- A.1 Double-sum form of inv ----- *)
+(* Stepping stone: rewrite the cardinality of inv_set as a nested
+   sum over (j, i) with i < j, which matches the seq-level double-sum
+   form of inv_seq.  Used in foata.v to prove inv_eq_inv_seq.        *)
+Lemma inv_double_sum s :
+  inv s = \sum_(j : 'I_n.+1) \sum_(i : 'I_n.+1 | i < j) (s j < s i).
+Proof.
+rewrite /inv /inv_set.
+rewrite -sum1dep_card.
+rewrite (partition_big snd predT) //=.
+apply: eq_bigr => j _.
+rewrite (reindex (fun i : 'I_n.+1 => (i, j))) /=; last first.
+  exists (@fst _ _) => x; first by [].
+  rewrite inE => /andP[_ /eqP Hx2].
+  by case: x Hx2 => a b /= ->.
+under [in LHS]eq_bigl => i do rewrite eqxx andbT /is_inv.
+rewrite [in RHS]big_mkcond [in LHS]big_mkcond /=.
+apply: eq_bigr => i _.
+by case Hij: (i < j); rewrite //=; case: (s j < s i).
+Qed.
+
 End Inversions.
 
 (* ========================================================================= *)

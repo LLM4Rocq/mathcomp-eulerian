@@ -1130,14 +1130,66 @@ Proof. by rewrite /foata_perm perm_to_seq_seq_to_perm. Qed.
 
 End FoataPerm.
 
-(* NOTE: The seq-level result foata_inv_eq_maj is fully proved.  Lifting
-   to {perm 'I_n.+1} requires (1) inv_eq_inv_seq (analogous to maj_eq_maj_seq
-   but with the inversion-pair / cardinality argument), and (2) injectivity
-   of foata_perm to extract the equidistribution as a cardinality equality.
-   (1) is straightforward technical bookkeeping; (2) requires constructing
-   Stanley's inverse map psi.  Both are out of scope for this file.
-   The main mathematical content (foata_step_inv and foata_inv_eq_maj) is
-   complete.                                                                 *)
+(* Convert perm-level inv to seq-level inv_seq. *)
+Lemma inv_eq_inv_seq n (s : {perm 'I_n.+1}) :
+  inv s = inv_seq (perm_to_seq s).
+Proof.
+rewrite (inv_double_sum s).
+rewrite /inv_seq perm_to_seq_size.
+(* RHS: outer iota -> ord *)
+rewrite -[iota 0 n.+1]val_enum_ord big_map.
+rewrite -big_enum.
+apply: eq_bigr => j _.
+have Hjn : (j : nat) <= n.+1 by apply: ltnW; exact: ltn_ord.
+rewrite -(subn0 (val j)) -[iota 0 _]/(index_iota _ _).
+rewrite (big_nat_widen 0 (val j) n.+1 _ _ Hjn).
+rewrite -[index_iota 0 n.+1]/(iota 0 (n.+1 - 0)) subn0.
+rewrite -[iota 0 n.+1]val_enum_ord big_map.
+rewrite subn0.
+rewrite [in LHS]big_mkcond /=.
+rewrite [in RHS]big_seq_cond.
+under [in RHS]eq_bigl => i do rewrite mem_enum andTb.
+rewrite [in RHS]big_mkcond.
+have ->: enum 'I_n.+1 = index_enum (Finite.clone _ 'I_n.+1) by rewrite enumT.
+apply: eq_bigr => i _.
+have Hi : (i : nat) < n.+1 := ltn_ord i.
+have Hj' : (j : nat) < n.+1 := ltn_ord j.
+rewrite (nth_perm_to_seq s Hi) (nth_perm_to_seq s Hj').
+have ->: Ordinal Hi = i by apply: val_inj.
+have ->: Ordinal Hj' = j by apply: val_inj.
+by case Hij: (i < j); rewrite andbC //=.
+Qed.
+
+(* The interesting intermediate result: foata_perm preserves the bijection
+   between maj and inv at the perm level.
+
+   This says: the Foata bijection sends {s : maj s = k} into {s : inv s = k}
+   for every k.  To upgrade this to the equidistribution theorem
+       #|{s : inv s == k}| = #|{s : maj s == k}|
+   we need foata_perm to be injective (hence bijective on the finite group
+   Sym_{n+1}, by injective ⇒ surjective on finite sets).
+
+   The injectivity reduces (via perm_to_seq_inj) to: foata is injective on
+   uniq sequences of length n+1.  Sketch (see also Stanley EC1, §1.3.6 for
+   the standard inverse construction):
+     - foata (rcons w a) ends in a, so a = last (foata w).
+     - The remaining prefix r determines the predicate P (lt a or gt a)
+       via head r vs a, since after `cyc_last_to_front` each block
+       starts with a P-letter (cf. `wf_block_rcons`).
+     - Re-split r at P-elements (split_blocks_inv) to recover the
+       cyc-rotated blocks; apply cyc_first_to_back (the inverse of
+       cyc_last_to_front, see preliminary lemmas in foata.v history)
+       to each, flatten, recover w.
+   The construction is straightforward but the formalization (~150-200 LOC
+   of bookkeeping about wf_block / split_blocks_inv cancellation lemmas)
+   is left as future work.                                                  *)
+Lemma foata_perm_inv_maj n (s : {perm 'I_n.+1}) :
+  inv (foata_perm s) = maj s.
+Proof.
+rewrite inv_eq_inv_seq perm_to_seq_foata_perm.
+rewrite foata_inv_eq_maj; last exact: perm_to_seq_uniq.
+by rewrite -maj_eq_maj_seq.
+Qed.
 
 End Equidistribution.
 
