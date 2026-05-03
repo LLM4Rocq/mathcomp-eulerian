@@ -33,3 +33,4 @@ stirling_fiber.v
 inversions.v
 foata.v
 qfact.v
+qeul.v
