@@ -516,9 +516,181 @@ rewrite leq_eqVlt (negbTE Hvne) /=.
 by [].
 Qed.
 
-(* The connection lemma sign_seq (perm_seq s) =
-       [seq ~~ is_descent s i | i <- enum 'I_n.+1]
-   would directly identify slot-direction with ascent/descent.  See
-   the seq-level commentary in §K.  Not formalized in this file. *)
+(* The connection bridge: sign_seq of perm_seq is exactly the negated
+   descent indicator.  This identifies slot-direction with ascent/descent. *)
+Lemma sign_seq_perm_seq s :
+  sign_seq (perm_seq s) = [seq ~~ is_descent s i | i <- enum 'I_n.+1].
+Proof.
+apply: (@eq_from_nth _ true).
+  by rewrite size_sign_seq_perm size_map size_enum_ord.
+move=> i; rewrite size_sign_seq_perm => Hi.
+rewrite (nth_map ord0); last by rewrite size_enum_ord.
+rewrite /sign_seq /perm_seq.
+rewrite enum_ord_split map_cons -map_comp.
+rewrite (@nth_pairmap _ 0 _ true (fun a b : nat => a < b)); last first.
+  by rewrite size_map size_enum_ord.
+rewrite not_is_descentE.
+have Hidx : nth ord0 (enum 'I_n.+1) i = Ordinal Hi.
+  by apply: val_inj => /=; rewrite nth_enum_ord.
+case: i Hi Hidx => [|j] Hi Hidx /=.
+- rewrite (nth_map ord0); last by rewrite size_enum_ord.
+  rewrite Hidx /=. by congr (s _ < s _); apply: val_inj.
+- have Hj : j < n.+1 by apply: ltnW.
+  rewrite (nth_map ord0); last by rewrite size_enum_ord.
+  rewrite (nth_map ord0); last by rewrite size_enum_ord.
+  rewrite Hidx.
+  have -> : nth ord0 (enum 'I_n.+1) j = Ordinal Hj.
+    by apply: val_inj => /=; rewrite nth_enum_ord.
+  by rewrite /=; congr (s _ < s _); apply: val_inj => /=; rewrite /bump /= add1n.
+Qed.
 
 End SignPerm.
+
+(* ========================================================================= *)
+(* §M. Trivial bound and full-perm special case                              *)
+(* ========================================================================= *)
+
+(* The maximum size over alternating subsequence index sets is bounded by
+   the size of the underlying sequence, which is n+2. *)
+Section AsPermMaxBoundsM.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+Lemma as_perm_max_le_size s : as_perm_max s <= n.+2.
+Proof.
+rewrite /as_perm_max.
+apply/bigmax_leqP => I _.
+by rewrite (leq_trans (subset_leq_card (subsetT I))) // cardsT card_ord.
+Qed.
+
+End AsPermMaxBoundsM.
+
+(* When the picked positions are *all* of 'I_n.+2 (sorted by val), the
+   pick_seq is exactly perm_seq s. *)
+Section PickSeqFull.
+Variable n : nat.
+Implicit Types (s : {perm 'I_n.+2}).
+
+Lemma sorted_val_enum_ord m :
+  sorted (fun a b : 'I_m => val a <= val b) (enum 'I_m).
+Proof.
+have := iota_sorted 0 m.
+rewrite -val_enum_ord.
+elim: (enum 'I_m) => [|x [|y xs] IH] //=.
+move=> /andP [Hxy Hr].
+by rewrite Hxy; apply: IH; rewrite /= Hr.
+Qed.
+
+Lemma pick_seq_setT s : pick_seq s [set: 'I_n.+2] = perm_seq s.
+Proof.
+rewrite /pick_seq /perm_seq.
+congr [seq val (s _) | _ <- _].
+rewrite enum_setT -enumT.
+apply: sorted_sort.
+- by move=> a b c; apply: leq_trans.
+- exact: sorted_val_enum_ord.
+Qed.
+
+(* If perm_seq s itself is alternating, then as_perm_max s achieves its
+   maximum value n.+2. *)
+Lemma as_perm_max_full s :
+  is_alt (perm_seq s) -> as_perm_max s = n.+2.
+Proof.
+move=> Halt.
+apply/eqP; rewrite eqn_leq.
+apply/andP; split; first exact: as_perm_max_le_size.
+have <- : #|[set: 'I_n.+2]| = n.+2 by rewrite cardsT card_ord.
+rewrite /as_perm_max.
+apply: (leq_bigmax_cond [set: 'I_n.+2]).
+by rewrite pick_seq_setT.
+Qed.
+
+End PickSeqFull.
+
+(* ========================================================================= *)
+(* §N. Auxiliary alt-subseq lemmas (towards the upper bound)                  *)
+(* ========================================================================= *)
+
+(* Tiny seqs: any seq of size <= 1 is alternating. *)
+Lemma is_alt_size_le1 (xs : seq nat) : size xs <= 1 -> is_alt xs.
+Proof. by case: xs => [|x [|y xs]]. Qed.
+
+(* Three-element shape: an alt seq of length >= 3 cannot have its first three
+   elements strictly monotone (in either direction). *)
+Lemma is_alt_three x y z xs :
+  is_alt (x :: y :: z :: xs) ->
+  (x < y < z) = false /\ (z < y < x) = false.
+Proof.
+rewrite is_alt_cons2 /=.
+case/orP => /andP [Hxy].
+- case/andP => Hzy _.
+  split.
+  + by rewrite Hxy /= ltnNge ltnW.
+  + by rewrite Hzy /= ltnNge (ltnW Hxy).
+- case/andP => Hyz _.
+  split.
+  + by rewrite ltnNge (ltnW Hxy).
+  + apply/andP=> -[Hzy _].
+    by have := ltn_trans Hyz Hzy; rewrite ltnn.
+Qed.
+
+(* Strict-monotone case of the upper bound: any alt subseq of a strictly
+   ascending seq has length <= 2.  This handles the "single run" base case
+   for the general flip-count bound. *)
+Lemma is_alt_subseq_strictmono_le2 (xs sub : seq nat) :
+  subseq sub xs -> sorted ltn xs -> is_alt sub -> size sub <= 2.
+Proof.
+move=> Hsub Hxs Halt.
+case Hsz: (size sub <= 2) => //.
+move/negbT: Hsz; rewrite -ltnNge.
+move=> Hsz.
+case: sub Hsub Halt Hsz => [|a [|b [|c sub']]] // Hsub Halt _.
+have /(_ a b c sub' Halt) [Habs _] := is_alt_three.
+have Hsubmono : sorted ltn (a :: b :: c :: sub').
+  apply: subseq_sorted Hsub Hxs.
+  by move=> x y z; apply: ltn_trans.
+move/and3P: Hsubmono => [Hab Hbc _].
+have Hab' : a < b := Hab.
+have Hbc' : b < c := Hbc.
+by rewrite Hab' Hbc' in Habs.
+Qed.
+
+(* ========================================================================= *)
+(* §O. Status of the headline equivalence (open)                              *)
+(* ========================================================================= *)
+
+(* The headline equivalence
+       as_perm_max s = (turn_count s).+2
+   reduces, given the bridge `sign_seq_perm_seq` proven above and the
+   trivial bound `as_perm_max_le_size`, to:
+
+   (1) UPPER BOUND: an alternating pick_seq has length at most
+       (turn_count s).+2.
+
+       Sketch: a pick_seq of length k > 1 has sign_seq of length k-1.
+       If alternating, every adjacent pair in sign_seq differs, so
+       flip_count (sign_seq (pick_seq s I)) = k-2.  We need
+         flip_count (sign_seq (pick_seq s I)) <= turn_count s.
+       This follows from a "subseq monotonicity": each sign-flip in
+       the pick_seq corresponds to a turning point of s in the slot
+       interval [i_j, i_{j+1}-1].  An injective assignment of flips
+       to turning points (mapping flip j to its leftmost turning point)
+       gives the required bound.  Roughly 80-120 LOC of careful
+       slot-interval bookkeeping.
+
+   (2) EXISTENCE: there is a pick_seq of length (turn_count s).+2 that
+       is alternating.
+
+       Construction: I := {ord0; ord_max} ∪ {(val t).+1 | t turning of s}.
+       Cardinality: turn_count s + 2 (interior positions are distinct
+       from 0 and n+1 by construction).
+       Alternation: between consecutive picked positions, the slot
+       interval contains no turning point of s (by construction), so
+       s is monotone there; consecutive runs differ in direction (by
+       definition of turning), so the picked values alternate.
+       Roughly 100-180 LOC.
+
+   We have proven the special case `as_perm_max_full`: when perm_seq s
+   itself is alternating, as_perm_max s = n+2 = (turn_count s).+2.
+*)
+
