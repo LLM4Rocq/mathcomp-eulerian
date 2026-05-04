@@ -1319,6 +1319,131 @@ rewrite lom addnA addnAC.
 by [].
 Qed.
 
+(* ------------------------------------------------------------------------- *)
+(* §J.10.  Partition / reindex helpers for the (L, sL, sR) bijection         *)
+(* ------------------------------------------------------------------------- *)
+
+(* Partition the sum over t : {perm 'I_n.+1} by image_left t j (a set of    *)
+(* cardinality j).                                                            *)
+Lemma sum_partition_image_left n (j : 'I_n.+2) (R : Type) (idx : R)
+    (op : Monoid.com_law idx) (P : {perm 'I_n.+1} -> R) :
+  \big[op/idx]_(t : {perm 'I_n.+1}) P t
+  = \big[op/idx]_(L : {set 'I_n.+1} | #|L| == j)
+       \big[op/idx]_(t : {perm 'I_n.+1} | image_left t j == L) P t.
+Proof.
+rewrite (partition_big (fun t : {perm 'I_n.+1} => image_left t j)
+                       (fun L => #|L| == j)) //= => t _.
+by rewrite card_image_left.
+Qed.
+
+(* Proof-irrelevance for assemble_perm in the cardinality witness. *)
+Lemma assemble_perm_pirr n (j : 'I_n.+2) (L : {set 'I_n.+1})
+    (HL HL' : #|L| = j)
+    (sL : {perm 'I_j}) (sR : {perm 'I_(n.+1 - j)}) :
+  assemble_perm HL sL sR = assemble_perm HL' sL sR.
+Proof. by have -> : HL = HL' by exact: eq_irrelevance. Qed.
+
+(* Strengthened forward round-trip: any L with image_left t j = L works. *)
+Lemma assemble_decomp_inverse_gen n (t : {perm 'I_n.+1}) (j : 'I_n.+2)
+    (L : {set 'I_n.+1}) (HL : #|L| = j) (HeqL : image_left t j = L)
+    (xL : 'I_n.+1) (HxL : xL \in image_left t j)
+    (xR : 'I_n.+1) (HxR : xR \in image_right t j) :
+  assemble_perm HL (perm_left HxL) (perm_right HxR) = t.
+Proof.
+move: HL; rewrite -HeqL => HL'.
+have -> : HL' = card_image_left_eq t j by exact: eq_irrelevance.
+exact: assemble_decomp_inverse.
+Qed.
+
+(* Auxiliary: subtraction positivity. *)
+Lemma sub_gt0_n_j n (j : 'I_n.+2) (Hjn : j < n.+1) : 0 < n.+1 - j.
+Proof. by rewrite subn_gt0. Qed.
+
+(* The forward / backward maps for the inner bijection. *)
+Section InnerReindexBij.
+Variables (n : nat) (j : 'I_n.+2) (Hj : 0 < j) (Hjn : j < n.+1).
+Variables (L : {set 'I_n.+1}) (HL : #|L| = j).
+
+Let xLcan (t : {perm 'I_n.+1}) : 'I_n.+1 := t (embed_left (j := j) (Ordinal Hj)).
+Let xRcan (t : {perm 'I_n.+1}) : 'I_n.+1 :=
+  t (embed_right (j := j) (Ordinal (sub_gt0_n_j Hjn))).
+
+Let HxLcan t : xLcan t \in image_left t j := mem_image_left t (Ordinal Hj).
+Let HxRcan t : xRcan t \in image_right t j :=
+  mem_image_right t (Ordinal (sub_gt0_n_j Hjn)).
+
+Definition fwdAss (s : {perm 'I_j} * {perm 'I_(n.+1 - j)}) : {perm 'I_n.+1} :=
+  assemble_perm HL s.1 s.2.
+
+Definition bwdAss (t : {perm 'I_n.+1}) : {perm 'I_j} * {perm 'I_(n.+1 - j)} :=
+  (perm_left (HxLcan t), perm_right (HxRcan t)).
+
+Lemma bwd_fwd s : bwdAss (fwdAss s) = s.
+Proof.
+case: s => sL sR; rewrite /bwdAss /fwdAss /=.
+by congr pair; [exact: assemble_perm_left | exact: assemble_perm_right].
+Qed.
+
+Lemma fwd_bwd t : image_left t j = L -> fwdAss (bwdAss t) = t.
+Proof.
+move=> HeqL; rewrite /fwdAss /bwdAss /=.
+exact: assemble_decomp_inverse_gen.
+Qed.
+
+End InnerReindexBij.
+
+(* The clean inner reindex: sum over (sL,sR) pair via assemble_perm. *)
+Lemma sum_reindex_inner n (j : 'I_n.+2) (Hj : 0 < j) (Hjn : j < n.+1)
+    (L : {set 'I_n.+1}) (HL : #|L| = j) (R : Type) (idx : R)
+    (op : Monoid.com_law idx) (F : {perm 'I_n.+1} -> R) :
+  \big[op/idx]_(t : {perm 'I_n.+1} | image_left t j == L) F t
+  = \big[op/idx]_(s : {perm 'I_j} * {perm 'I_(n.+1 - j)})
+       F (assemble_perm HL s.1 s.2).
+Proof.
+rewrite (reindex (@fwdAss n j L HL)) /=.
+- apply: eq_bigl => s; rewrite /fwdAss /=.
+  by rewrite assemble_image_left eqxx.
+- exists (@bwdAss n j Hj Hjn) => /=.
+  + by move=> s _; rewrite (@bwd_fwd n j Hj Hjn).
+  + move=> t /eqP HeqL.
+    by rewrite (@fwd_bwd n j Hj Hjn L HL).
+Qed.
+
+(* When does [set lift h x | x in S] == D ?  *)
+(*   iff h ∉ D and S = preimage of D under lift h. *)
+Lemma imset_lift_eq n (h : 'I_n.+1) (S : {set 'I_n}) (D : {set 'I_n.+1}) :
+  ([set lift h x | x in S] == D)
+  = (h \notin D) && (S == [set x | lift h x \in D]).
+Proof.
+apply/eqP/andP => [<-|].
+- split.
+  + apply/imsetP => -[y _ /esym Hy].
+    by have := neq_lift h y; rewrite Hy eqxx.
+  + apply/eqP/setP => x; rewrite inE.
+    apply/idP/idP.
+    * by move=> Hx; apply/imsetP; exists x.
+    * by case/imsetP => y Hy /lift_inj ->.
+- case=> /negbTE Hh /eqP HS.
+  apply/setP => y; rewrite HS.
+  apply/imsetP/idP.
+  + by case=> x; rewrite inE => Hx ->.
+  + move=> HyD.
+    case: (eqVneq h y) => [Hyeq|hny]; first by rewrite -Hyeq Hh in HyD.
+    case/unlift_some : hny => x Hx _.
+    by exists x; rewrite ?inE -Hx.
+Qed.
+
+(* Convenient packaging: for interior j', the descent_set indicator      *)
+(* unwinds to a condition on descent_set t :|: [set j'].                 *)
+Lemma interior_descent_set_eq n (t : {perm 'I_n.+1}) (j' : 'I_n)
+    (D : {set 'I_n.+1}) :
+  let h := widen_ord (leqnSn n) j' in
+  (descent_set (insert_max_perm t (lift ord0 h)) == D)
+  = (h \notin D)
+    && (descent_set t :|: [set j']
+         == [set x | lift h x \in D]).
+Proof. by move=> h; rewrite descent_set_insert_max_interior imset_lift_eq. Qed.
+
 (* ========================================================================= *)
 (* §K.  STATUS NOTE — what remains for euler_rec (Session C-7+)              *)
 (* ========================================================================= *)
@@ -1408,18 +1533,64 @@ Qed.
 (*           k=0 and k=n.+1 terms of the sum, with binomials = 1 and          *)
 (*           one of the eulerA factors = 1).                                  *)
 (*                                                                            *)
-(* CONCRETE NEXT-LEMMA for Session C-7:                                       *)
-(*   Per-position (L, sL, sR) decomposition.  For a fixed j : 'I_n.+2 with    *)
-(*   0 < j < n.+1, partition the perms of 'I_n.+1 by image_left t j:           *)
+(* SESSION C-7 PROGRESS:                                                      *)
+(*   - LANDED §J.10 reindex helpers:                                           *)
+(*       * sum_partition_image_left: partition_big over image_left t j,        *)
+(*         restricted to L of cardinality j.                                   *)
+(*       * assemble_perm_pirr: proof-irrelevance of HL inside assemble_perm.   *)
+(*       * assemble_decomp_inverse_gen: forward round-trip strengthened to     *)
+(*         take ANY HL : #|L| = j with HeqL : image_left t j = L.              *)
+(*       * sub_gt0_n_j: subtraction positivity (j < n.+1 -> 0 < n.+1 - j).     *)
+(*       * Section InnerReindexBij: forward (assemble_perm) and backward       *)
+(*         (perm_left/perm_right at canonical witnesses) maps with both        *)
+(*         round-trips.                                                        *)
+(*       * sum_reindex_inner: the KEY inner reindex using `reindex` + the      *)
+(*         bijection above; converts                                            *)
+(*           \sum_(t | image_left t j == L) F t                                *)
+(*         into                                                                *)
+(*           \sum_(s : pair) F (assemble_perm HL s.1 s.2).                     *)
+(*   - LANDED §J.11 descent-set indicator factoring helpers:                   *)
+(*       * imset_lift_eq: ([set lift h x | x in S] == D) ↔                     *)
+(*           (h ∉ D) ∧ (S = preimage of D under lift h).                       *)
+(*       * interior_descent_set_eq: packaged version for                       *)
+(*         descent_set (insert_max_perm t (lift ord0 (widen_ord _ j'))) == D.  *)
 (*                                                                            *)
-(*   Lemma perms_split_by_imageL n (j : 'I_n.+2) (Hj1 : 0 < j) (Hjn : j < n.+1) *)
-(*       (D : {set 'I_n}) :                                                   *)
-(*     \sum_(t : {perm 'I_n.+1}) (descent_set t == D)                          *)
-(*     = \sum_(L : {set 'I_n.+1} | #|L| == j)                                 *)
-(*         \sum_(sL : {perm 'I_j}) \sum_(sR : {perm 'I_(n.+1 - j)})           *)
-(*           (descent_set (assemble_perm L_proof sL sR) == D).                *)
-(*   This needs reindex over the bijection (J.6 + J.7).                       *)
+(*   - DID NOT LAND euler_rec.  The remaining steps:                           *)
+(*       (i)   Phase A factoring of `descent_set (assemble_perm HL sL sR) == E`*)
+(*             into a (sL,sR)-decomposed condition (depending on the boundary).*)
+(*             [The boundary creates a (L, sL, sR)-coupled condition that does *)
+(*             NOT factor cleanly into "sL part * sR part" unless we sum over  *)
+(*             both alt and ~alt — this is what the factor of 2 buys.]         *)
+(*       (ii)  Once factored, use sum_reindex_inner + sum_partition_image_left *)
+(*             + pair_big to express                                            *)
+(*               \sum_(t : perms) [descent_set (insert_max_perm t p) ∈ {alt, ~alt}] *)
+(*             as \sum_L \sum_sL \sum_sR (alt-condition on sL alone) *         *)
+(*             (alt-condition on sR alone).                                    *)
+(*       (iii) Recognize \sum_L 1 = 'C(n.+1, k) (via card_draws); recognize    *)
+(*             \sum_(sL : alt) 1 = eulerA k (= beta(alt_desc_set k.-1) for     *)
+(*             k>0, else 1); similarly for sR.                                 *)
+(*       (iv)  Reconcile boundary terms (p = ord0 / p = ord_max) with the      *)
+(*             k = 0 / k = n.+1 cases.                                         *)
 (*                                                                            *)
-(* Estimated 150-200 LOC for Session C-7 to close euler_rec.                  *)
+(* HONEST GAP ASSESSMENT (C-7 final):                                          *)
+(*   The structural infrastructure is now COMPLETE — §J.10 lands the bigop    *)
+(*   manipulation primitives the C-6 plan called for.  The remaining work is  *)
+(*   step (i), the ALT-FLAVOUR decomposition, which is fundamentally where    *)
+(*   the André reflection trick interacts with mathcomp's bigops.  Concretely *)
+(*   what's needed for Session C-8:                                            *)
+(*                                                                            *)
+(*   * A "boundary cancellation" lemma:                                        *)
+(*       For fixed L (#|L|=k+1) and sR, the map sL → assemble_perm HL sL sR   *)
+(*       has the property that summing                                        *)
+(*         \sum_sL [descent_set (assemble_perm) ∈ {alt, ~alt}]                *)
+(*       equals                                                                *)
+(*         (number of alt-perms of 'I_(k+1)) * (number of alt-perms of 'I_(n-k)) *)
+(*       times some boundary-independent factor.                              *)
+(*   * Then identify this count with eulerA(k+1) * eulerA(n-k).                *)
+(*                                                                            *)
+(* TOTAL LOC after C-7: ~1550 (was ~1425).  ~125 LOC of new bigop infra.     *)
+(*                                                                            *)
+(* Estimated remaining for C-8: 100-200 LOC (boundary cancellation +          *)
+(* binomial recognition + final summation).                                   *)
 
 
