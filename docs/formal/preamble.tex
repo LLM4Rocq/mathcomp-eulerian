@@ -1,0 +1,144 @@
+% =====================================================================
+% Preamble for eulerian_formal.tex
+% A Stanley-style mathematical chapter with formal Rocq inline.
+% =====================================================================
+
+\documentclass[11pt,a4paper]{report}
+
+% --- Encoding & fonts ---
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- Math ---
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{stmaryrd}  % \llbracket \rrbracket
+
+% --- Page geometry ---
+\usepackage[margin=1in]{geometry}
+
+% --- Hyperlinks ---
+\usepackage[colorlinks=true,
+            linkcolor=blue!50!black,
+            citecolor=blue!50!black,
+            urlcolor=blue!50!black]{hyperref}
+\usepackage{bookmark}
+
+% --- Tables ---
+\usepackage{booktabs}
+
+% --- Code listings ---
+\usepackage{xcolor}
+\definecolor{rocqkw}{RGB}{120,30,150}
+\definecolor{rocqcom}{RGB}{0,128,0}
+\definecolor{rocqstr}{RGB}{200,30,30}
+\definecolor{rocqbg}{RGB}{248,248,248}
+\definecolor{rocqframe}{RGB}{220,220,230}
+
+\usepackage{listings}
+
+\lstdefinelanguage{Rocq}{
+  morekeywords={Definition, Theorem, Lemma, Corollary, Proposition,
+    Proof, Qed, Defined, Admitted, Fixpoint, Inductive, Variable,
+    Variables, Hypothesis, Section, End, Module, Notation, Implicit,
+    Types, Set, Unset, Arguments, From, Require, Import, Export,
+    forall, exists, fun, match, with, end, if, then, else, let, in,
+    return, as, structural, fix, cofix, struct, Type, Prop, Set,
+    bool, nat, true, false, Some, None, option, list, prod, sum,
+    Compute, Print, Check, Eval, Goal, Show, About, Reset, Open,
+    Scope, Local},
+  morekeywords=[2]{descent_set, des, asc, eulerian, beta, is_descent,
+    descent, perm, set, ord_max, ord0, widen_ord, lift, val,
+    insert_max_perm, insert_max_fun, extract_max_perm, ssreflect,
+    fingroup},
+  sensitive=true,
+  morecomment=[s]{(*}{*)},
+  morestring=[b]",
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{rocqkw}\bfseries,
+  keywordstyle=[2]\color{rocqkw}\bfseries,
+  commentstyle=\color{rocqcom}\itshape,
+  stringstyle=\color{rocqstr},
+  backgroundcolor=\color{rocqbg},
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{rocqframe},
+  framesep=4pt,
+  xleftmargin=10pt,
+  xrightmargin=10pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  showstringspaces=false,
+  literate={->}{{$\to$}}{1}
+           {=>}{{$\Rightarrow$}}{1}
+           {>=}{{$\geq$}}{1}
+           {<=}{{$\leq$}}{1}
+           {<>}{{$\neq$}}{1}
+           {forall}{{$\forall$}}{1}
+           {exists}{{$\exists$}}{1}
+}
+
+% --- (no lstnewenvironment wrapper; rocqbox uses lstlisting directly) ---
+
+% --- Math notation aligned with Stanley ---
+\newcommand{\Sn}[1]{\mathfrak{S}_{#1}}      % Stanley's S_n
+\newcommand{\Snp}[1]{\mathfrak{S}_{#1}}     % alias
+\newcommand{\des}{\mathrm{des}}
+\newcommand{\asc}{\mathrm{asc}}
+\newcommand{\maj}{\mathrm{maj}}
+\newcommand{\inv}{\mathrm{inv}}
+\newcommand{\descent}{\mathrm{D}}
+\newcommand{\ord}[1]{\mathtt{'I_{#1}}}      % 'I_n
+\newcommand{\Set}[1]{\mathtt{\{set\ #1\}}}
+\newcommand{\Perm}[1]{\mathtt{\{perm\ #1\}}}
+\newcommand{\eulerianA}{A}                  % Stanley's Eulerian A(n,k)
+\newcommand{\Eul}{E}                        % Euler numbers
+\newcommand{\beps}[2]{\beta_{#1}(#2)}       % Stanley's β_n(S)
+\newcommand{\stirling}[2]{c(#1, #2)}        % Stanley's c(n,k)
+
+% --- Theorem environments (Stanley-like) ---
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+
+% --- Custom: formal/informal pairing ---
+%
+% \rocqsource{file}{line}  — clickable [Rocq, file:line] link to GitHub.
+% Uses \GitHubBase and \GitHubBranch from below.
+
+\newcommand{\GitHubBase}{https://github.com/LLM4Rocq/mathcomp-eulerian/blob}
+\newcommand{\GitHubBranch}{main}
+
+\newcommand{\rocqsource}[2]{%
+  \href{\GitHubBase/\GitHubBranch/#1\#L#2}%
+       {\textsf{[\,Rocq, \texttt{#1:#2}\,]}}%
+}
+
+\newcommand{\rocqsourcerange}[3]{%
+  \href{\GitHubBase/\GitHubBranch/#1\#L#2-L#3}%
+       {\textsf{[\,Rocq, \texttt{#1:#2-#3}\,]}}%
+}
+
+% Usage pattern:
+%
+%   \rocqsource{file.v}{LINE}
+%   \begin{lstlisting}[language=Rocq]
+%   ...formal Rocq text verbatim...
+%   \end{lstlisting}
+%
+% (Wrapping listings in \newenvironment is fragile across multi-pass
+%  builds with hyperref, so we use the listing environment directly.)
+
+% --- Title ---
+\title{The mathcomp-eulerian formalization\\
+  \large A Stanley-style reading of permutation statistics in Rocq/MathComp}
+\author{}
+\date{}

@@ -27,3 +27,16 @@ __pycache__/
 # Generated artifacts (built from source files)
 PROOF_STATEMENTS.pdf
 .lia.cache
+
+# LaTeX build artifacts (the docs/formal/*.pdf is intentionally tracked)
+*.log
+*.toc
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.idx
+*.ind
+*.ilg
