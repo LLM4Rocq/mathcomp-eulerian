@@ -748,4 +748,445 @@ Qed.
 
 End DescentSplitRight.
 
+(* ========================================================================= *)
+(* §I.  PHASE A — descent-set decomposition (Session C-5)                    *)
+(* ========================================================================= *)
+
+(* For an interior split index `j = k.+1 : 'I_n.+2` (with `k.+1 ≤ n.+1`),    *)
+(* we partition the descent set of `t : {perm 'I_n.+1}` into three pieces:   *)
+(*   - left  : descents at positions < k                                     *)
+(*   - boundary : the single descent at position k (if any)                  *)
+(*   - right : descents at positions > k                                     *)
+(* The left  piece is the widen_ord-image of `descent_set (perm_left t j)`. *)
+(* The right piece is in bijection with `descent_set (perm_right t j)`.      *)
+
+Section PhaseA.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (k : nat) (Hk : k.+1 < n.+2).
+
+Let j : 'I_n.+2 := Ordinal Hk.
+Let Hkn : k <= n := Hk.
+
+Definition descent_left_part : {set 'I_n} :=
+  [set i : 'I_n | (val i < k) && is_descent t i].
+
+Definition descent_boundary_part : {set 'I_n} :=
+  [set i : 'I_n | (val i == k) && is_descent t i].
+
+Definition descent_right_part : {set 'I_n} :=
+  [set i : 'I_n | (val i > k) && is_descent t i].
+
+Lemma descent_set_decomp_partition :
+  descent_set t = descent_left_part :|: descent_boundary_part :|: descent_right_part.
+Proof.
+apply/setP => i; rewrite mem_descent_set !inE.
+case Hi : (is_descent t i); rewrite ?andbT ?andbF /=.
+- by case: (ltngtP (val i) k).
+- by [].
+Qed.
+
+Lemma descent_left_boundary_disjoint :
+  [disjoint descent_left_part & descent_boundary_part].
+Proof.
+rewrite -setI_eq0; apply/eqP/setP => i; rewrite !inE.
+apply/negbTE/negP => /andP[/andP[Hl _] /andP[/eqP Hb _]].
+by rewrite Hb ltnn in Hl.
+Qed.
+
+Lemma descent_left_right_disjoint :
+  [disjoint descent_left_part & descent_right_part].
+Proof.
+rewrite -setI_eq0; apply/eqP/setP => i; rewrite !inE.
+apply/negbTE/negP => /andP[/andP[Hl _] /andP[Hr _]].
+by have := ltn_trans Hl Hr; rewrite ltnn.
+Qed.
+
+Lemma descent_boundary_right_disjoint :
+  [disjoint descent_boundary_part & descent_right_part].
+Proof.
+rewrite -setI_eq0; apply/eqP/setP => i; rewrite !inE.
+apply/negbTE/negP => /andP[/andP[/eqP Hb _] /andP[Hr _]].
+by rewrite Hb ltnn in Hr.
+Qed.
+
+(* Left part = widen_ord-image of descent_set perm_left. *)
+Lemma descent_left_part_image (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j) :
+  descent_left_part = [set widen_ord Hkn i | i in descent_set (perm_left Hx0)].
+Proof.
+apply/setP => i; rewrite inE.
+apply/idP/imsetP.
+- case/andP => Hi_lt Hd.
+  exists (Ordinal Hi_lt); last by apply/val_inj.
+  rewrite mem_descent_set.
+  have := is_descent_perm_left (k := k) (Hk := Hk) Hx0 (Ordinal Hi_lt).
+  rewrite /embed_desc_left => ->.
+  by suff -> : widen_ord (Hk : k <= n) (Ordinal Hi_lt) = i by []; apply/val_inj.
+- case=> i' Hi' ->.
+  have Hlt : (val (widen_ord Hkn i') < k)%N = true by rewrite /= ltn_ord.
+  rewrite Hlt /=.
+  rewrite mem_descent_set in Hi'.
+  have Heq : widen_ord Hkn i' = embed_desc_left Hk i' :> 'I_n by apply: val_inj.
+  rewrite Heq.
+  by have := is_descent_perm_left (k := k) (Hk := Hk) Hx0 i'; move=> <-.
+Qed.
+
+End PhaseA.
+
+(* Right-side analog. *)
+
+Section PhaseARight.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2) (Hjn : j < n.+1).
+
+Definition descent_right_part_R : {set 'I_n} :=
+  [set i : 'I_n | (val j <= val i) && is_descent t i].
+
+Lemma descent_right_part_R_image (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j) :
+  descent_right_part_R =
+  [set Ordinal (@j_plus_lt_n n j i) |
+       i in descent_set (cast_perm (esym (sub_succ Hjn)) (perm_right Hx0))].
+Proof.
+apply/setP => i; rewrite inE.
+apply/idP/imsetP.
+- case/andP => Hji Hd.
+  have Hi_lt_n : val i < n by exact: ltn_ord.
+  have Hr_lt : val i - val j < n - val j.
+    by rewrite ltn_sub2r //; exact: leq_ltn_trans Hji Hi_lt_n.
+  pose r : 'I_(n - val j) := Ordinal Hr_lt.
+  exists r.
+  + rewrite mem_descent_set.
+    have := @is_descent_perm_right n t j Hjn x0 Hx0 r.
+    rewrite /embed_desc_right => ->.
+    suff -> : Ordinal (@j_plus_lt_n n j r) = i :> 'I_n by [].
+    by apply: val_inj => /=; rewrite addnC subnK.
+  + by apply: val_inj => /=; rewrite addnC subnK.
+- case=> r Hr ->.
+  have Hge : val j <= val (Ordinal (@j_plus_lt_n n j r)) by rewrite /= leq_addr.
+  rewrite Hge /=.
+  rewrite mem_descent_set in Hr.
+  have := @is_descent_perm_right n t j Hjn x0 Hx0 r.
+  move=> Heq.
+  rewrite /embed_desc_right in Heq.
+  by rewrite -Heq.
+Qed.
+
+End PhaseARight.
+
+(* ========================================================================= *)
+(* §J.  PHASE B — inverse construction (Session C-5)                         *)
+(* ========================================================================= *)
+
+(* Given:                                                                    *)
+(*   - L : {set 'I_n.+1} with #|L| = j (a chosen "left" subset of values),   *)
+(*   - sL : {perm 'I_j} (the left sub-permutation),                           *)
+(*   - sR : {perm 'I_(n.+1 - j)} (the right sub-permutation),                 *)
+(* construct  assemble_perm L sL sR : {perm 'I_n.+1}  whose left subword      *)
+(* (positions 0..j-1) lists the elements of L according to sL's order, and    *)
+(* right subword (positions j..n) lists the elements of ~:L according to sR. *)
+
+Section PhaseB.
+
+Variables (n : nat) (j : 'I_n.+2) (L : {set 'I_n.+1}) (HL : #|L| = j).
+
+Lemma cardCL_eq : #|~: L| = n.+1 - j.
+Proof. by rewrite cardsCs setCK card_ord HL. Qed.
+
+Variables (sL : {perm 'I_j}) (sR : {perm 'I_(n.+1 - j)}).
+
+Definition castL (i : 'I_j) : 'I_(#|L|) := cast_ord (esym HL) i.
+Definition castR (i : 'I_(n.+1 - j)) : 'I_(#|~: L|) :=
+  cast_ord (esym cardCL_eq) i.
+Definition leqj : (j : nat) <= n.+1 := ltnSE (ltn_ord j).
+
+(* Split a position i : 'I_n.+1 into a left or right index. *)
+Definition split_pos (i : 'I_n.+1) : ('I_j + 'I_(n.+1 - j))%type :=
+  match split (cast_ord (esym (subnKC leqj)) i) with
+  | inl ileft => inl ileft
+  | inr iright => inr iright
+  end.
+
+Definition assemble_fun (i : 'I_n.+1) : 'I_n.+1 :=
+  match split_pos i with
+  | inl iL => enum_val (castL (sL iL))
+  | inr iR => enum_val (castR (sR iR))
+  end.
+
+Lemma split_pos_inj : injective split_pos.
+Proof.
+move=> i1 i2; rewrite /split_pos.
+case: splitP => [u1 Hu1|u1 Hu1]; case: splitP => [u2 Hu2|u2 Hu2] //=.
+- case=> Heq.
+  apply: val_inj => /=.
+  move: Hu1 Hu2 => /=.
+  by move=> H1 H2; rewrite H1 H2 Heq.
+- case=> Heq.
+  move: Hu1 Hu2 => /= H1 H2.
+  apply: val_inj => /=.
+  by rewrite H1 H2 Heq.
+Qed.
+
+Lemma assemble_fun_inj : injective assemble_fun.
+Proof.
+move=> i1 i2; rewrite /assemble_fun.
+case E1: (split_pos i1) => [u1|u1]; case E2: (split_pos i2) => [u2|u2].
+- move/enum_val_inj/cast_ord_inj/perm_inj => Hu.
+  apply: split_pos_inj.
+  by rewrite E1 E2 Hu.
+- move=> Hcontra.
+  have HinL : enum_val (castL (sL u1)) \in L by exact: enum_valP.
+  have HinR : enum_val (castR (sR u2)) \in ~: L by exact: enum_valP.
+  rewrite Hcontra in HinL.
+  by rewrite inE HinL in HinR.
+- move=> Hcontra.
+  have HinR : enum_val (castR (sR u1)) \in ~: L by exact: enum_valP.
+  have HinL : enum_val (castL (sL u2)) \in L by exact: enum_valP.
+  rewrite Hcontra in HinR.
+  by rewrite inE HinL in HinR.
+- move/enum_val_inj/cast_ord_inj/perm_inj => Hu.
+  apply: split_pos_inj.
+  by rewrite E1 E2 Hu.
+Qed.
+
+Definition assemble_perm : {perm 'I_n.+1} := perm assemble_fun_inj.
+
+Lemma assemble_permE i : assemble_perm i = assemble_fun i.
+Proof. by rewrite permE. Qed.
+
+End PhaseB.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.1.  Round-trip lemmas for assemble_perm                                *)
+(* ------------------------------------------------------------------------- *)
+
+Section AssembleRoundTrip.
+
+Variables (n : nat) (j : 'I_n.+2) (L : {set 'I_n.+1}) (HL : #|L| = j).
+Variables (sL : {perm 'I_j}) (sR : {perm 'I_(n.+1 - j)}).
+
+Let t := assemble_perm HL sL sR.
+
+(* Action on left positions. *)
+Lemma assemble_left (i : 'I_j) :
+  t (embed_left (j := j) i) = enum_val (castL HL (sL i)).
+Proof.
+rewrite /t assemble_permE /assemble_fun /split_pos.
+case: splitP => [u Hu|u Hu] /=.
+- congr enum_val; congr castL; congr (sL _).
+  apply: val_inj => /=.
+  by move: Hu => /= ->.
+- exfalso.
+  move: Hu => /=.
+  rewrite /embed_left /=.
+  move=> Heq.
+  have Hi : (i : nat) < j by exact: ltn_ord.
+  have : j <= i by rewrite Heq leq_addr.
+  by rewrite leqNgt Hi.
+Qed.
+
+(* Action on right positions. *)
+Lemma assemble_right (i : 'I_(n.+1 - j)) :
+  t (embed_right (j := j) i) = enum_val (castR HL (sR i)).
+Proof.
+rewrite /t assemble_permE /assemble_fun /split_pos.
+case: splitP => [u Hu|u Hu] /=.
+- exfalso.
+  move: Hu => /=.
+  rewrite /embed_right /=.
+  move=> Heq.
+  have Hu' : (u : nat) < j by exact: ltn_ord.
+  have : j <= u by rewrite -Heq leq_addr.
+  by rewrite leqNgt Hu'.
+- congr enum_val; congr castR; congr (sR _).
+  apply: val_inj => /=.
+  move: Hu => /=.
+  rewrite /embed_right /= => Heq.
+  by have := addnI Heq.
+Qed.
+
+(* image_left of the assembled perm equals the chosen subset L. *)
+Lemma assemble_image_left : image_left t j = L.
+Proof.
+apply/setP => x.
+apply/imsetP/idP.
+- case=> i _ ->.
+  rewrite assemble_left.
+  exact: enum_valP.
+- move=> HxL.
+  pose i_card : 'I_(#|L|) := enum_rank_in HxL x.
+  pose i_jj : 'I_j := cast_ord HL i_card.
+  pose i_pre : 'I_j := (sL^-1)%g i_jj.
+  exists i_pre => //.
+  rewrite assemble_left.
+  by rewrite /castL /i_pre permKV /i_jj cast_ordK enum_rankK_in.
+Qed.
+
+(* Symmetric: image_right of the assembled perm equals ~: L. *)
+Lemma assemble_image_right : image_right t j = ~: L.
+Proof.
+apply/setP => x.
+apply/imsetP/idP.
+- case=> i _ ->.
+  rewrite assemble_right.
+  exact: enum_valP.
+- move=> HxNL.
+  pose i_card : 'I_(#|~: L|) := enum_rank_in HxNL x.
+  pose i_jj : 'I_(n.+1 - j) := cast_ord (cardCL_eq HL) i_card.
+  pose i_pre : 'I_(n.+1 - j) := (sR^-1)%g i_jj.
+  exists i_pre => //.
+  rewrite assemble_right.
+  by rewrite /castR /i_pre permKV /i_jj cast_ordK enum_rankK_in.
+Qed.
+
+End AssembleRoundTrip.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.2.  perm_left / perm_right round-trip                                  *)
+(* ------------------------------------------------------------------------- *)
+
+Section AssemblePermLeftRT.
+
+Variables (n : nat) (j : 'I_n.+2) (L : {set 'I_n.+1}) (HL : #|L| = j).
+Variables (sL : {perm 'I_j}) (sR : {perm 'I_(n.+1 - j)}).
+Let t := assemble_perm HL sL sR.
+
+(* Round-trip: perm_left of the assembled perm recovers sL. *)
+Lemma assemble_perm_left (x0 : 'I_n.+1) (Hx0 : x0 \in image_left t j) :
+  perm_left Hx0 = sL.
+Proof.
+apply/permP => i.
+rewrite perm_leftE.
+rewrite assemble_left.
+have HL' : image_left t j = L := assemble_image_left HL sL sR.
+have HmemImg : enum_val (castL HL (sL i)) \in image_left t j
+  by rewrite HL'; exact: enum_valP.
+apply: val_inj => /=.
+have Henum : enum (image_left t j) = enum L by rewrite HL'.
+have HuniqL : uniq (enum L) by exact: enum_uniq.
+pose v := enum_val (castL HL (sL i)).
+have Hv_in : v \in enum L by rewrite mem_enum; exact: enum_valP.
+have Hidx : index v (enum L) = sL i.
+  have Hv_nth : v = nth (enum_default (castL HL (sL i))) (enum L) (sL i).
+    by rewrite /v (enum_val_nth (enum_default (castL HL (sL i)))).
+  rewrite Hv_nth index_uniq //.
+  have : (sL i : nat) < #|L| by rewrite HL; exact: ltn_ord.
+  by rewrite cardE.
+rewrite (unlock unlockable_enum_rank_in) /=.
+rewrite Henum Hidx.
+have HsL_card : (sL i : nat) < #|image_left t j|
+  by rewrite card_image_left; exact: ltn_ord.
+rewrite insubdK; first by [].
+exact: HsL_card.
+Qed.
+
+(* Round-trip: perm_right of the assembled perm recovers sR. *)
+Lemma assemble_perm_right (x0 : 'I_n.+1) (Hx0 : x0 \in image_right t j) :
+  perm_right Hx0 = sR.
+Proof.
+apply/permP => i.
+rewrite perm_rightE.
+rewrite assemble_right.
+have HR' : image_right t j = ~: L := assemble_image_right HL sL sR.
+have HmemImg : enum_val (castR HL (sR i)) \in image_right t j
+  by rewrite HR'; exact: enum_valP.
+apply: val_inj => /=.
+have Henum : enum (image_right t j) = enum (~: L) by rewrite HR'.
+have HuniqR : uniq (enum (~: L)) by exact: enum_uniq.
+pose v := enum_val (castR HL (sR i)).
+have Hv_in : v \in enum (~: L) by rewrite mem_enum; exact: enum_valP.
+have Hidx : index v (enum (~: L)) = sR i.
+  have Hv_nth : v = nth (enum_default (castR HL (sR i))) (enum (~: L)) (sR i).
+    by rewrite /v (enum_val_nth (enum_default (castR HL (sR i)))).
+  rewrite Hv_nth index_uniq //.
+  have : (sR i : nat) < #|~: L| by rewrite (cardCL_eq HL); exact: ltn_ord.
+  by rewrite cardE.
+rewrite (unlock unlockable_enum_rank_in) /=.
+rewrite Henum Hidx.
+have HsR_card : (sR i : nat) < #|image_right t j|
+  by rewrite card_image_right; exact: ltn_ord.
+rewrite insubdK; first by [].
+exact: HsR_card.
+Qed.
+
+End AssemblePermLeftRT.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.3.  Forward round-trip: assemble ∘ decompose = id                       *)
+(* ------------------------------------------------------------------------- *)
+
+(* For the full bijection, we also need: starting from any t : {perm 'I_n.+1} *)
+(* and j : 'I_n.+2, decomposing into (image_left t j, perm_left t, perm_right *)
+(* t) and re-assembling recovers t.                                           *)
+(* The LEFT half of this is straightforward.  The RIGHT half requires showing *)
+(* image_right t j = ~: image_left t j (an obvious consequence of the         *)
+(* disjoint/cover lemmas) and then chasing casts between the two              *)
+(* cardinalities (n.+1 - j and #|~: image_left t j|).                         *)
+
+(* The cardinality of image_left t j is j (already proven).  Repackaged here  *)
+(* as the HL hypothesis assemble_perm needs:                                  *)
+Section AssembleForwardLeft.
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2).
+
+Definition card_image_left_eq : #|image_left t j| = j := card_image_left t j.
+
+Variables (x0L : 'I_n.+1) (Hx0L : x0L \in image_left t j).
+Variables (x0R : 'I_n.+1) (Hx0R : x0R \in image_right t j).
+
+(* On left positions, the assembled perm reproduces t. *)
+Lemma assemble_decomp_inverse_left (i : 'I_j) :
+  assemble_perm card_image_left_eq (perm_left Hx0L) (perm_right Hx0R)
+                (embed_left i) = t (embed_left i).
+Proof.
+rewrite assemble_left perm_leftE /cast_to_j /castL.
+rewrite cast_ord_comp.
+have Hetrans : etrans (card_image_left t j)
+                (esym card_image_left_eq) = erefl _.
+  exact: eq_irrelevance.
+rewrite Hetrans cast_ord_id.
+by rewrite enum_rankK_in //; exact: mem_image_left.
+Qed.
+
+End AssembleForwardLeft.
+
+(* ========================================================================= *)
+(* §K.  STATUS NOTE — what remains for euler_rec (Session C-6+)              *)
+(* ========================================================================= *)
+
+(* Phase A (descent-set decomposition): COMPLETE.                            *)
+(*   - descent_set_decomp_partition: descent_set t = L ∪ B ∪ R               *)
+(*   - descent_left/boundary/right_disjoint: pieces are pairwise disjoint    *)
+(*   - descent_left_part_image: L is widen_ord-image of descent_set perm_left *)
+(*   - descent_right_part_R_image: R is shifted-image of descent_set         *)
+(*       perm_right                                                          *)
+(*                                                                            *)
+(* Phase B (inverse construction): MOSTLY COMPLETE.                          *)
+(*   - assemble_perm L sL sR : {perm 'I_n.+1} defined and is a permutation.  *)
+(*   - assemble_left/right: action on left/right positions characterized.     *)
+(*   - assemble_image_left/right: image_left/right of assembled perm = L/~:L. *)
+(*   - assemble_perm_left/right: perm_left/right of assembled perm = sL/sR.   *)
+(*   - assemble_decomp_inverse_left: forward round-trip on left positions.    *)
+(*                                                                            *)
+(* MISSING for Phase B:                                                      *)
+(*   - assemble_decomp_inverse (full): assemble (image_left t j)              *)
+(*       (perm_left t j) (perm_right t j) = t.                                *)
+(*     The right-side case needs to chase a cast between #|image_right t j|   *)
+(*     and #|~: image_left t j| (these are equal but require image_right t j  *)
+(*     = ~: image_left t j to identify).  Estimated ~30 LOC.                  *)
+(*                                                                            *)
+(* Phase C (assembly into euler_rec): NOT STARTED.                            *)
+(*   The recurrence statement                                                 *)
+(*     2 * eulerA n.+2 = \sum_(k < n.+2)                                      *)
+(*                          'C(n.+1, k) * eulerA k * eulerA (n.+1 - k)        *)
+(*   requires:                                                                *)
+(*   (a) Express beta (alt_desc_set n.+2) as a sum over j of inserting        *)
+(*       ord_max at position j (using insert_max_perm_bij from eulerian.v).   *)
+(*   (b) Use descent_set_insert_max_* (from §C) to translate the alt_desc_set *)
+(*       n.+2 condition into conditions on the smaller perm t.                *)
+(*   (c) Use descent_set_decomp_partition (Phase A) and assemble_decomp       *)
+(*       (Phase B) to express the per-j count as a sum over (L, sL, sR).      *)
+(*   (d) Compute: choices for L are 'C(n.+1, k); valid sL are eulerA k;       *)
+(*       valid sR are eulerA (n.+1 - k); product gives the recurrence summand. *)
+(*   (e) The factor of 2 on LHS comes from beta_compl: beta (alt) =           *)
+(*       beta (~: alt), summing the two flavours.                             *)
+(*   Estimated 150-200 LOC.                                                   *)
+
 
