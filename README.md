@@ -47,14 +47,16 @@ echo 'From mathcomp_eulerian Require Import beta_swap. \
 
 ## Where to read
 
-A mathematician familiar with Stanley EC1 should start with these three
-documents:
+A mathematician familiar with Stanley EC1 should start with the
+mathematician-facing docs in this order:
 
 | Document | What it gives you |
 |----------|-------------------|
-| The **blueprint** at https://llm4rocq.github.io/mathcomp-eulerian/ (source: [`blueprint/`](blueprint/)) | Interactive paper-style document with a clickable dependency graph. Every theorem links back to its Rocq lemma. **Best starting point.** |
+| [`docs/READING_GUIDE.md`](docs/READING_GUIDE.md) | **Start here.** A 10-minute orientation: index conventions, type translations, a worked example walking through Stanley's `[3,1,4,2]` in our formal types. |
+| [`docs/DEFINITIONS_AUDIT.md`](docs/DEFINITIONS_AUDIT.md) | Side-by-side audit of every formal definition vs. Stanley's informal one, with file:line citations and a 1-line verdict per definition. **The trust artifact** — read top to bottom in ~1 hour. |
+| The **blueprint** at https://llm4rocq.github.io/mathcomp-eulerian/ (source: [`blueprint/`](blueprint/)) | Interactive paper-style document with a clickable dependency graph. Every theorem links back to its Rocq lemma. |
 | [`PROOF_STATEMENTS.md`](PROOF_STATEMENTS.md) | Per-result informal statement with verification status and Stanley page reference. The **table of contents** for the formal development (markdown counterpart of the blueprint). |
-| [`FORMAL_VS_STANLEY.md`](FORMAL_VS_STANLEY.md) | Maps each formal definition / theorem to its statement in Stanley EC1 Chapter 1. The **notation glossary**. |
+| [`FORMAL_VS_STANLEY.md`](FORMAL_VS_STANLEY.md) | Older theorem-by-theorem map (focused on §1.4 + §1.6.3 cd-index). Complements the audit, which covers the §1.3 / §1.4 / §1.6.2 extensions. |
 
 Historical milestone-by-milestone informal proof notes (`M2`–`M7_*_INFORMAL.md`) are kept in [`docs/internal/`](docs/internal/) for the record; their content is subsumed by the blueprint chapters above.
 
