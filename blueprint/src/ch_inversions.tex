@@ -4,11 +4,16 @@
 This chapter formalizes Stanley EC1 \S1.3 (cycles and inversions), the
 section that introduces the two foundational permutation statistics
 beyond descents: the \emph{cycle count} $c(w)$ and the two Mahonian
-statistics \emph{inv} and \emph{maj}.  The headline result of the
-section --- the classical \emph{inv-maj equidistribution} of MacMahon
---- is part of an in-progress extension; the present chapter covers the
-definitions and the easy identities, with explicit pointers to what
-remains.
+statistics \emph{inv} and \emph{maj}.  It then covers Foata's first
+fundamental bijection and MacMahon's \emph{inv-maj equidistribution},
+the $q$-factorial generating function and the bivariate $q$-Eulerian
+polynomial from \S1.4, and the longest alternating subsequence
+characterization from \S1.6.2.  A final section records the partial
+formalization of \S1.6.4 (André's reflection method): the headline
+recurrence
+$2 E_{n+2} = \sum_k \binom{n+1}{k} E_k E_{n+1-k}$ is proven modulo
+one named admit, in the out-of-build-chain file
+\code{experimental/reflection.v}.
 
 \medskip
 This chapter uses the same indexing convention as
@@ -449,3 +454,106 @@ become our $\{0, \dots, n-1\}$ via the index shift.
   turn-window.  Session B-4 pivoted from per-interval to a global
   bound via the subseq-monotonicity of $\mathrm{flip\_count}$.
 \end{corollary}
+
+% ============================================================
+\section{André's reflection method (Stanley \S1.6.4)}
+% ============================================================
+
+\emph{Status.}  This section records a \textbf{partial formalization}.
+The development lives in \code{experimental/reflection.v}, which is
+\textbf{not in the active build chain} (excluded from
+\code{\_CoqProject}).  The headline recurrence \texttt{euler\_rec} is
+proven from one named, precisely-stated \texttt{Admitted} lemma
+(\texttt{sum\_set\_is\_alt\_eq\_andre\_sum}).  The companion document
+\code{docs/internal/PHASE\_C\_RETROSPECTIVE.md} captures the eight
+sessions of work, the structural obstacle (a 4-to-1 boundary
+reduction, not the 2-to-1 fibration suggested by the classical English
+proof), and a concrete $\sim 510$ LOC discharge plan.
+
+\begin{definition}[Euler numbers]
+  \label{def:eulerA}
+  Let $\mathrm{alt\_desc\_set}\,n \subseteq \{0, \dots, n-1\}$ denote
+  the alternating descent pattern $\{0, 2, 4, \dots\}$.  Define
+  \[
+    E_{n+1}
+    \;:=\;
+    \beta(\mathrm{alt\_desc\_set}\,n),
+    \qquad
+    A_{n+1} := E_{n+1},
+    \qquad
+    A_0 := 1.
+  \]
+  $A_n$ is the number of alternating permutations of $\Snp{n}$.
+\end{definition}
+
+\begin{theorem}[The André recurrence — modulo one admit]
+  \label{thm:euler_rec}
+  \uses{def:eulerA}
+  For every $n \in \mathbb{N}$,
+  \[
+    2 \cdot A_{n+2}
+    \;=\;
+    \sum_{k=0}^{n+1} \binom{n+1}{k} \, A_k \, A_{n+1-k}.
+  \]
+
+  \emph{Proof status.}  Derived in one line from \texttt{two\_eulerA\_split}
+  (which uses \texttt{beta\_compl} from \texttt{beta\_swap.v}) and the
+  named admit:
+  \begin{equation}
+    \label{eq:andre-admit}
+    \sum_{t \in \Snp{n+1}} \sum_{p \in \{0,\dots,n+1\}}
+       \mathrm{set\_is\_alt}(\mathrm{descent\_set}(\mathrm{insert\_max\_perm}\,t\,p))
+    \;=\;
+    \sum_{k=0}^{n+1} \binom{n+1}{k} A_k A_{n+1-k}.
+  \end{equation}
+
+  \emph{Sanity.}  The base case $n = 0$ (i.e.\ $2 A_2 = 2$) is proven
+  unconditionally as \texttt{euler\_rec\_n0\_direct} (no admit used).
+  The cases $n = 1, 2$ are stated via \texttt{euler\_rec} and inherit
+  the admit transitively.
+\end{theorem}
+
+\begin{remark}[The structural obstacle]
+  The remaining admit \eqref{eq:andre-admit} is the combinatorial heart
+  of André's reflection.  After partitioning $\sigma \in \Snp{n+2}$ by
+  the position $p$ of the maximum and the value-set $L \subset [n+1]$
+  of size $p$ left of the maximum, the descent at the boundary slot
+  $p-1$ depends on $(L, s_L, s_R)$ \emph{jointly}: specifically, on
+  whether the largest left value (selected by $s_L$) exceeds the
+  smallest right value (selected by $s_R$).  This couples the three
+  decomposition components and prevents the $[\mathrm{descent\_set} = E]$
+  indicator from factoring as $[s_L\text{-cond}] \cdot [s_R\text{-cond}]$.
+
+  The classical proof absorbs this coupling via the factor of $2$ on
+  the LHS: summing over alternating-and-anti-alternating descent
+  patterns leaves the boundary parity free.  Formally, of the four
+  flavour pairs $(s_L\text{-flavour}, s_R\text{-flavour}) \in
+  \{\mathrm{alt}, \neg\mathrm{alt}\}^2$, exactly one is consistent
+  with the forced boundary value for each fixed $(L, s_L, s_R)$ — a
+  4-to-1 reduction whose formalization is estimated at $\sim 510$ LOC.
+  See \code{docs/internal/PHASE\_C\_RETROSPECTIVE.md} for the full
+  lemma list and discharge plan.
+\end{remark}
+
+\begin{remark}[Reusable infrastructure]
+  Although the headline is open, the file
+  \code{experimental/reflection.v} contains $\sim 1500$ LOC of
+  axiom-free, kernel-validated infrastructure for any future
+  position-of-max bijective decomposition of permutations:
+  \begin{itemize}
+    \item \texttt{descent\_set\_insert\_max\_*} — descent set under
+      max-insertion at the three position cases.
+    \item \texttt{embed\_left/right}, \texttt{perm\_left/right} —
+      standardisation of left/right sub-words to $\Snp{j}$ and
+      $\Snp{n+1-j}$.
+    \item \texttt{descent\_set\_decomp\_partition} — the L-part /
+      boundary / R-part decomposition.
+    \item \texttt{assemble\_perm} + \texttt{assemble\_decomp\_inverse}
+      — the full bijection $\Snp{n+1} \simeq \bigsqcup_j \{L : |L|=j\}
+      \times \Snp{j} \times \Snp{n+1-j}$, both directions.
+    \item \texttt{sum\_partition\_image\_left}, \texttt{sum\_reindex\_inner}
+      — bigop reindexing along the bijection.
+  \end{itemize}
+  These can be copied into a future formalization that needs the
+  position-of-max decomposition without inheriting the open admit.
+\end{remark}
