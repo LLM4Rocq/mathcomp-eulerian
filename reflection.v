@@ -1147,8 +1147,180 @@ Qed.
 
 End AssembleForwardLeft.
 
+(* ------------------------------------------------------------------------- *)
+(* §J.4.  image_right = ~: image_left                                         *)
+(* ------------------------------------------------------------------------- *)
+
+Lemma image_right_eq_compl n (t : {perm 'I_n.+1}) (j : 'I_n.+2) :
+  image_right t j = ~: image_left t j.
+Proof.
+have Hcov := image_left_right_cover t j.
+have Hdis := image_left_right_disjoint t j.
+apply/setP => x; rewrite inE.
+apply/idP/idP.
+- move=> HinR; apply/negP => HinL.
+  by have := disjointFr Hdis HinL; rewrite HinR.
+- move=> HninL.
+  have : x \in [set: 'I_n.+1] by rewrite inE.
+  by rewrite -Hcov inE (negbTE HninL) /=.
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.5.  Forward round-trip on RIGHT positions                               *)
+(* ------------------------------------------------------------------------- *)
+
+Section AssembleForwardRight.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2).
+Variables (x0L : 'I_n.+1) (Hx0L : x0L \in image_left t j).
+Variables (x0R : 'I_n.+1) (Hx0R : x0R \in image_right t j).
+
+Lemma assemble_decomp_inverse_right (i : 'I_(n.+1 - j)) :
+  assemble_perm (card_image_left_eq t j) (perm_left Hx0L) (perm_right Hx0R)
+                (embed_right i) = t (embed_right i).
+Proof.
+rewrite assemble_right.
+have HR : image_right t j = ~: image_left t j := image_right_eq_compl t j.
+rewrite -(enum_val_perm_right Hx0R i).
+pose d := enum_default
+            (cast_ord (esym (card_image_right t j)) (perm_right Hx0R i)).
+have HenumEq : enum (image_right t j) = enum (~: image_left t j) by rewrite HR.
+rewrite (enum_val_nth d (cast_ord _ (perm_right Hx0R i))) HenumEq.
+by rewrite (enum_val_nth d (castR (card_image_left_eq t j) (perm_right Hx0R i))).
+Qed.
+
+End AssembleForwardRight.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.6.  Full forward round-trip: assemble ∘ decompose = id                  *)
+(* ------------------------------------------------------------------------- *)
+
+Section AssembleDecompFull.
+
+Variables (n : nat) (t : {perm 'I_n.+1}) (j : 'I_n.+2).
+Variables (x0L : 'I_n.+1) (Hx0L : x0L \in image_left t j).
+Variables (x0R : 'I_n.+1) (Hx0R : x0R \in image_right t j).
+
+(* Every position y : 'I_n.+1 is either embed_left i (for some i : 'I_j) or
+   embed_right k (for some k : 'I_(n.+1 - j)). *)
+Lemma split_embed (y : 'I_n.+1) :
+  (exists i : 'I_j, y = embed_left i) \/
+  (exists k : 'I_(n.+1 - j), y = embed_right k).
+Proof.
+have Hjn : (j : nat) <= n.+1 by exact: leqj_n1.
+case: (ltnP y j) => Hyj.
+- by left; exists (Ordinal Hyj); apply/val_inj.
+- right.
+  have Hjn1 : j < n.+1 by exact: leq_ltn_trans Hyj (ltn_ord y).
+  have Hk : y - j < n.+1 - j by apply: ltn_sub2r => //; exact: ltn_ord.
+  exists (Ordinal Hk); apply/val_inj => /=.
+  by rewrite addnC subnK.
+Qed.
+
+Lemma assemble_decomp_inverse :
+  assemble_perm (card_image_left_eq t j) (perm_left Hx0L) (perm_right Hx0R)
+  = t.
+Proof.
+apply/permP => y.
+case: (split_embed y) => [[i ->]|[k ->]].
+- exact: assemble_decomp_inverse_left.
+- exact: assemble_decomp_inverse_right.
+Qed.
+
+End AssembleDecompFull.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.7.  Uniqueness of the (L, sL, sR) decomposition                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* Conversely: starting from (L, sL, sR), the assembled perm has        *)
+(*   perm_left = sL, perm_right = sR, image_left = L.                          *)
+(* So the maps assemble_perm and (image_left, perm_left, perm_right) are  *)
+(* inverse on the level of (data → perm), modulo the choice of witnesses.  *)
+
+Section AssembleUnique.
+Variables (n : nat) (j : 'I_n.+2) (L : {set 'I_n.+1}) (HL : #|L| = j).
+Variables (sL : {perm 'I_j}) (sR : {perm 'I_(n.+1 - j)}).
+Let t := assemble_perm HL sL sR.
+
+Lemma assemble_decomp_unique
+    (x0L : 'I_n.+1) (Hx0L : x0L \in image_left t j)
+    (x0R : 'I_n.+1) (Hx0R : x0R \in image_right t j) :
+  perm_left Hx0L = sL /\ perm_right Hx0R = sR /\ image_left t j = L.
+Proof.
+split; first by apply: assemble_perm_left.
+split; first by apply: assemble_perm_right.
+exact: assemble_image_left.
+Qed.
+
+End AssembleUnique.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.8.  Definitional unfold of eulerA and the factor-of-2 identity         *)
+(* ------------------------------------------------------------------------- *)
+
+Lemma eulerA_S2 n : eulerA n.+2 = beta (alt_desc_set n.+1).
+Proof. by []. Qed.
+
+(* The factor-of-2 on the LHS of the recurrence comes from beta_compl:        *)
+(* the alternating descent-set and its complement give the same beta count.   *)
+Lemma two_eulerA_split n :
+  2 * eulerA n.+2
+  = beta (alt_desc_set n.+1) + beta (~: alt_desc_set n.+1).
+Proof.
+rewrite eulerA_S2 mul2n -addnn.
+have <- := beta_compl (alt_desc_set n.+1).
+by [].
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* §J.9.  beta D as a sum over (t, p) via insert_max_perm_bij                *)
+(* ------------------------------------------------------------------------- *)
+
+(* Apply the insert_max_perm bijection (from eulerian.v) to express beta D    *)
+(* as a sum over pairs (t : {perm 'I_n.+1}, p : 'I_n.+2).                      *)
+
+Lemma beta_eq_pair_sum n (D : {set 'I_n.+1}) :
+  beta D
+  = \sum_(tp : {perm 'I_n.+1} * 'I_n.+2)
+      (descent_set (insert_max_perm tp.1 tp.2) == D).
+Proof.
+rewrite /beta -sum1dep_card.
+rewrite (reindex _ (onW_bij _ (insert_max_perm_bij n))) /=.
+by rewrite -big_mkcond /=.
+Qed.
+
+(* Split into a double sum over t and p. *)
+Lemma beta_eq_double_sum n (D : {set 'I_n.+1}) :
+  beta D
+  = \sum_(t : {perm 'I_n.+1}) \sum_(p : 'I_n.+2)
+      (descent_set (insert_max_perm t p) == D).
+Proof.
+rewrite beta_eq_pair_sum.
+by rewrite -(pair_bigA _ (fun t p => (descent_set (insert_max_perm t p) == D : nat))) /=.
+Qed.
+
+(* Split inner p-sum into the three cases of insert position:                *)
+(*   p = ord0, p = ord_max, or p = lift ord0 (widen_ord _ j) for j : 'I_n.   *)
+(* These align with descent_set_insert_max_ord0, _ord_max, _interior.        *)
+Lemma beta_eq_triple_split n (D : {set 'I_n.+1}) :
+  beta D
+  = \sum_(t : {perm 'I_n.+1})
+      ((descent_set (insert_max_perm t ord0) == D)
+       + (descent_set (insert_max_perm t ord_max) == D)
+       + \sum_(j : 'I_n)
+           (descent_set (insert_max_perm t (lift ord0 (widen_ord (leqnSn n) j))) == D)).
+Proof.
+rewrite beta_eq_double_sum.
+apply: eq_bigr => t _.
+rewrite big_ord_recl /= big_ord_recr /=.
+have lom : lift ord0 (ord_max : 'I_n.+1) = (ord_max : 'I_n.+2) by apply/val_inj.
+rewrite lom addnA addnAC.
+by [].
+Qed.
+
 (* ========================================================================= *)
-(* §K.  STATUS NOTE — what remains for euler_rec (Session C-6+)              *)
+(* §K.  STATUS NOTE — what remains for euler_rec (Session C-7+)              *)
 (* ========================================================================= *)
 
 (* Phase A (descent-set decomposition): COMPLETE.                            *)
@@ -1158,35 +1330,96 @@ End AssembleForwardLeft.
 (*   - descent_right_part_R_image: R is shifted-image of descent_set         *)
 (*       perm_right                                                          *)
 (*                                                                            *)
-(* Phase B (inverse construction): MOSTLY COMPLETE.                          *)
+(* Phase B (inverse construction): COMPLETE.                                  *)
 (*   - assemble_perm L sL sR : {perm 'I_n.+1} defined and is a permutation.  *)
 (*   - assemble_left/right: action on left/right positions characterized.     *)
 (*   - assemble_image_left/right: image_left/right of assembled perm = L/~:L. *)
 (*   - assemble_perm_left/right: perm_left/right of assembled perm = sL/sR.   *)
-(*   - assemble_decomp_inverse_left: forward round-trip on left positions.    *)
+(*   - assemble_decomp_inverse_left/right: forward round-trip per-position.   *)
+(*   - assemble_decomp_inverse (FULL):                                        *)
+(*       assemble (image_left t j) (perm_left t) (perm_right t) = t           *)
+(*     [proved via split_embed for any y : 'I_n.+1].                          *)
+(*   - assemble_decomp_unique: starting from (L, sL, sR), the data is         *)
+(*     recovered exactly by perm_left/perm_right/image_left.                  *)
+(*   - image_right_eq_compl: image_right t j = ~: image_left t j.             *)
 (*                                                                            *)
-(* MISSING for Phase B:                                                      *)
-(*   - assemble_decomp_inverse (full): assemble (image_left t j)              *)
-(*       (perm_left t j) (perm_right t j) = t.                                *)
-(*     The right-side case needs to chase a cast between #|image_right t j|   *)
-(*     and #|~: image_left t j| (these are equal but require image_right t j  *)
-(*     = ~: image_left t j to identify).  Estimated ~30 LOC.                  *)
+(* Phase C (assembly into euler_rec): IN PROGRESS (Session C-7+).             *)
 (*                                                                            *)
-(* Phase C (assembly into euler_rec): NOT STARTED.                            *)
-(*   The recurrence statement                                                 *)
+(* The recurrence statement                                                   *)
 (*     2 * eulerA n.+2 = \sum_(k < n.+2)                                      *)
 (*                          'C(n.+1, k) * eulerA k * eulerA (n.+1 - k)        *)
-(*   requires:                                                                *)
-(*   (a) Express beta (alt_desc_set n.+2) as a sum over j of inserting        *)
-(*       ord_max at position j (using insert_max_perm_bij from eulerian.v).   *)
-(*   (b) Use descent_set_insert_max_* (from §C) to translate the alt_desc_set *)
-(*       n.+2 condition into conditions on the smaller perm t.                *)
-(*   (c) Use descent_set_decomp_partition (Phase A) and assemble_decomp       *)
-(*       (Phase B) to express the per-j count as a sum over (L, sL, sR).      *)
-(*   (d) Compute: choices for L are 'C(n.+1, k); valid sL are eulerA k;       *)
-(*       valid sR are eulerA (n.+1 - k); product gives the recurrence summand. *)
-(*   (e) The factor of 2 on LHS comes from beta_compl: beta (alt) =           *)
-(*       beta (~: alt), summing the two flavours.                             *)
-(*   Estimated 150-200 LOC.                                                   *)
+(* requires the following (still-unwritten) chain:                            *)
+(*                                                                            *)
+(*   STEP-3.  Bridge to (L, sL, sR) bijection at the cardinality level.       *)
+(*     For an interior split index j : 'I_n.+2 with 0 < j < n.+1, the         *)
+(*     assemble_decomp_inverse + assemble_decomp_unique pair give a           *)
+(*     bijection between                                                      *)
+(*       { t : {perm 'I_n.+1} | image_left t j = L,                           *)
+(*                              perm_left t j = sL,                           *)
+(*                              perm_right t j = sR }                         *)
+(*     and singletons.  Summing then yields                                   *)
+(*       beta (D : {set 'I_n.+1}) = sum over (L, sL, sR) such that the        *)
+(*         resulting descent_set equals D.                                    *)
+(*     With Phase A (descent_set_decomp_partition + descent_left_part_image + *)
+(*     descent_right_part_R_image) the descent_set condition splits into      *)
+(*     three independent conditions on (L, sL, sR), giving a product form.    *)
+(*                                                                            *)
+(*   STEP-4.  Apply insert_max_perm_bij from eulerian.v to express            *)
+(*     beta (alt_desc_set n.+1) as a sum over (t : {perm 'I_n.+1}, p : 'I_n.+2). *)
+(*     Translate via descent_set_insert_max_* (from §C) to the conditions     *)
+(*     on t and p.  Use STEP-3 to convert each per-p sum to a binomial sum.   *)
+(*                                                                            *)
+(*   STEP-5.  beta_compl gives beta (alt_desc_set n.+1) =                     *)
+(*     beta (~: alt_desc_set n.+1).  Summing the two flavours yields the      *)
+(*     factor of 2 on the LHS.                                                *)
+(*                                                                            *)
+(* SESSION C-6 PROGRESS:                                                      *)
+(*   - LANDED Phase B closure:                                                *)
+(*       * image_right_eq_compl: image_right t j = ~: image_left t j          *)
+(*       * assemble_decomp_inverse_right: forward round-trip on right         *)
+(*         positions (handled the cast between #|image_right| and             *)
+(*         #|~: image_left| via enum_val_nth + setP).                         *)
+(*       * split_embed: every y : 'I_n.+1 is embed_left or embed_right.        *)
+(*       * assemble_decomp_inverse: full forward bijection                     *)
+(*           assemble (image_left t j) (perm_left t) (perm_right t) = t.       *)
+(*       * assemble_decomp_unique: starting from (L, sL, sR), the data is     *)
+(*         recovered exactly by perm_left/perm_right/image_left.              *)
+(*   - LANDED foundation lemmas for Phase C:                                   *)
+(*       * eulerA_S2: eulerA n.+2 = beta (alt_desc_set n.+1).                 *)
+(*       * two_eulerA_split: 2 * eulerA n.+2 = beta alt + beta (~: alt)       *)
+(*         [STEP-5 closed except for the LHS-as-sum-of-flavours step].         *)
+(*       * beta_eq_pair_sum: beta D = sum over (t,p) via insert_max_perm_bij.  *)
+(*       * beta_eq_double_sum: split into nested sums over t and p.           *)
+(*       * beta_eq_triple_split: split inner p-sum into                       *)
+(*           ord0 + ord_max + sum over interior 'I_n.                          *)
+(*                                                                            *)
+(*   - DID NOT LAND euler_rec.  The remaining steps require:                  *)
+(*       (a) For each interior j : 'I_n, translate                             *)
+(*             descent_set (insert_max_perm t (lift ord0 ...)) == D            *)
+(*           into an indicator on descent_set t (via                          *)
+(*           descent_set_insert_max_interior from §C).                         *)
+(*       (b) For the resulting "descent_set t == E_j" predicate, decompose    *)
+(*           via the assemble bijection (J.1-J.7) into a sum over             *)
+(*           (L, sL, sR) where sL has descent_set ⊆ alt_desc_set j-related,    *)
+(*           sR has descent_set ⊆ alt_desc_set (n.+1-j)-related.              *)
+(*       (c) Identify these counts with eulerA k * eulerA (n.+1-k) and        *)
+(*           the L-count with 'C(n.+1, k).                                    *)
+(*       (d) Combine the boundary terms (ord0 and ord_max contribute the      *)
+(*           k=0 and k=n.+1 terms of the sum, with binomials = 1 and          *)
+(*           one of the eulerA factors = 1).                                  *)
+(*                                                                            *)
+(* CONCRETE NEXT-LEMMA for Session C-7:                                       *)
+(*   Per-position (L, sL, sR) decomposition.  For a fixed j : 'I_n.+2 with    *)
+(*   0 < j < n.+1, partition the perms of 'I_n.+1 by image_left t j:           *)
+(*                                                                            *)
+(*   Lemma perms_split_by_imageL n (j : 'I_n.+2) (Hj1 : 0 < j) (Hjn : j < n.+1) *)
+(*       (D : {set 'I_n}) :                                                   *)
+(*     \sum_(t : {perm 'I_n.+1}) (descent_set t == D)                          *)
+(*     = \sum_(L : {set 'I_n.+1} | #|L| == j)                                 *)
+(*         \sum_(sL : {perm 'I_j}) \sum_(sR : {perm 'I_(n.+1 - j)})           *)
+(*           (descent_set (assemble_perm L_proof sL sR) == D).                *)
+(*   This needs reindex over the bijection (J.6 + J.7).                       *)
+(*                                                                            *)
+(* Estimated 150-200 LOC for Session C-7 to close euler_rec.                  *)
 
 
