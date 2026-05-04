@@ -27,7 +27,11 @@ beta_omega.v
 beta_bridge.v
 perm_seq_bridge.v
 beta_swap.v
-reflection.v
+# reflection.v moved to experimental/ — contains 1 named admit
+# (sum_set_is_alt_eq_andre_sum, the André recurrence inner form).
+# Out of the active build chain to preserve the project-wide
+# "0 admits, 0 axioms" invariant.  Build manually via:
+#   coqc -R . mathcomp_eulerian experimental/reflection.v
 cycles.v
 cycles_rec.v
 stirling_fiber.v

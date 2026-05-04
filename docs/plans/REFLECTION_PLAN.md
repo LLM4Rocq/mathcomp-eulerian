@@ -1,8 +1,16 @@
 # Plan: `reflection.v` — André's reflection method
 
-> **Forward-looking design document.** Phase C of the Stanley §1.6
-> extension.  Builds on `beta_swap.v` (alternating descent set work)
-> and `beta.v` (the `beta` count).
+> **Status (after Session C-8).**  `experimental/reflection.v` (1751
+> LOC) proves `euler_rec` end-to-end behind ONE precisely-stated
+> `Admitted`: `sum_set_is_alt_eq_andre_sum` (the André recurrence in
+> inner form, ~250-400 LOC to discharge).  The file is moved out of
+> the active build chain (`_CoqProject` excludes it) to preserve the
+> project-wide "0 axioms, 0 Admitted" invariant.  Build manually:
+>     coqc -R . mathcomp_eulerian experimental/reflection.v
+>
+> **Forward-looking design document below.** Phase C of the Stanley
+> §1.6 extension.  Builds on `beta_swap.v` (alternating descent set
+> work) and `beta.v` (the `beta` count).
 
 ## 1. Goal
 
