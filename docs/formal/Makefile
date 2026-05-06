@@ -20,17 +20,25 @@ ENGINE   := pdflatex
 LUAENGINE := lualatex
 FLAGS    := -interaction=nonstopmode -file-line-error
 
-.PHONY: all pdf lua clean distclean
+.PHONY: all pdf lua catalog clean distclean
 
 all: pdf
 
 pdf: $(MAIN).pdf
 
-$(MAIN).pdf: $(MAIN).tex preamble.tex
+# The lemma catalog (Appendix A) is auto-generated from the .v files
+# by extract_catalog.py.  Regenerated whenever any .v file changes.
+VFILES := $(wildcard ../../*.v)
+lemma_catalog.tex: extract_catalog.py $(VFILES)
+	python3 extract_catalog.py
+
+catalog: lemma_catalog.tex
+
+$(MAIN).pdf: $(MAIN).tex preamble.tex lemma_catalog.tex
 	$(ENGINE) $(FLAGS) $(MAIN).tex
 	$(ENGINE) $(FLAGS) $(MAIN).tex   # second pass for refs/TOC
 
-lua:
+lua: lemma_catalog.tex
 	$(LUAENGINE) $(FLAGS) $(MAIN).tex
 	$(LUAENGINE) $(FLAGS) $(MAIN).tex
 
@@ -42,4 +50,4 @@ clean:
 	      $(MAIN).snm
 
 distclean: clean
-	rm -f $(MAIN).pdf
+	rm -f $(MAIN).pdf lemma_catalog.tex

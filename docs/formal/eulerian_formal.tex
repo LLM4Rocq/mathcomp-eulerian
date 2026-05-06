@@ -34,11 +34,23 @@ active build chain. See that chapter for details and pointers to
 the retrospective document.
 
 \paragraph{First-time readers.} Read Chapter~\ref{ch:primer} once,
-then Chapter~\ref{ch:descents} top to bottom. Use
-Appendix~\ref{app:glossary} as a quick reference on second reading.
-The primer and glossary together contain everything a Stanley reader
-needs to know about mathcomp to verify the formal statements; you do
-not need to install Rocq.
+then Chapters~\ref{ch:cycles}--\ref{ch:reflection} top to bottom.
+Use Appendix~\ref{app:glossary} as a quick reference on second
+reading. The primer and glossary together contain everything a
+Stanley reader needs to know about mathcomp to verify the formal
+statements; you do not need to install Rocq.
+
+\paragraph{Auxiliary lemmas.} The narrative chapters cover the
+$\sim$70 most-cited results in the formalization. The full library
+contains $\sim$830 named results
+(Definition/Lemma/Theorem/Corollary), all of which are listed in
+Appendix~\ref{app:catalog} with their \texttt{coqdoc} docstrings
+and clickable links to GitHub. Auxiliary lemmas (those not
+narrated in a chapter) are flagged \textsf{[aux]}; narrated entries
+carry a \textsf{[Ch~$X$ §$X.Y$]} badge pointing back to where they
+appear in the body. The catalog is auto-generated from the
+\texttt{.v} files; adding a docstring to a result automatically
+enriches both the catalog and the deployed coqdoc HTML.
 
 \paragraph{Conventions.} The single recurring shift is 0-indexing.
 Stanley writes $w \in \Sn{n}$ for permutations of $\{1, \dots, n\}$
@@ -1961,6 +1973,10 @@ underran by a factor of $\sim$2--3.
 \end{remark}
 
 \appendix
+
+\input{lemma_catalog.tex}
+
+\clearpage
 
 % =====================================================================
 \chapter{Glossary of mathcomp primitives}
