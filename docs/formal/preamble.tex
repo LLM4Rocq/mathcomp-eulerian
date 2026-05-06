@@ -121,14 +121,18 @@
 \newcommand{\GitHubBase}{https://github.com/LLM4Rocq/mathcomp-eulerian/blob}
 \newcommand{\GitHubBranch}{main}
 
+% \rocqsource takes a filename which may contain underscores.
+% \detokenize keeps the underscores literal in BOTH the URL argument
+% of \href AND the visible text (otherwise `_` is the subscript catcode
+% in body text and triggers a math-mode error).
 \newcommand{\rocqsource}[2]{%
-  \href{\GitHubBase/\GitHubBranch/#1\#L#2}%
-       {\textsf{[\,Rocq, \texttt{#1:#2}\,]}}%
+  \href{\GitHubBase/\GitHubBranch/\detokenize{#1}\#L#2}%
+       {\textsf{[\,Rocq, \texttt{\detokenize{#1}:#2}\,]}}%
 }
 
 \newcommand{\rocqsourcerange}[3]{%
-  \href{\GitHubBase/\GitHubBranch/#1\#L#2-L#3}%
-       {\textsf{[\,Rocq, \texttt{#1:#2-#3}\,]}}%
+  \href{\GitHubBase/\GitHubBranch/\detokenize{#1}\#L#2-L#3}%
+       {\textsf{[\,Rocq, \texttt{\detokenize{#1}:#2-#3}\,]}}%
 }
 
 % Usage pattern:

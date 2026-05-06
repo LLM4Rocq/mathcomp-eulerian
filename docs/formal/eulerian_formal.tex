@@ -22,14 +22,16 @@ repository on GitHub. The intention is that a mathematician can read
 top to bottom like a textbook and at any point click through to
 verify the formal statement.
 
-\paragraph{Status of this prototype.} This first edition covers
-Stanley \S1.4 (descents, Eulerian numbers, and the set-refined
-count $\beps{n}{S}$), as Chapter~\ref{ch:descents}. It is preceded
-by a short mathcomp primer (Chapter~\ref{ch:primer}) and followed
-by a glossary appendix. Chapters covering \S1.3 (cycles, inversions,
-Foata), the $q$-analogues, \S1.6.2 (longest alternating
-subsequence), and \S1.6.3 (toggle action and the headline corollary)
-are planned but not yet written.
+\paragraph{Status.} This edition covers Stanley \S1.3.1--\S1.3.4
+(cycles, Stirling numbers, inversions, major index, Foata's
+bijection, MacMahon's equidistribution) and \S1.4 (descents,
+Eulerian numbers, set-refined count $\beps{n}{S}$).
+Chapter~\ref{ch:primer} is a mathcomp primer; chapters
+\ref{ch:cycles}--\ref{ch:foata} cover \S1.3; Chapter~\ref{ch:descents}
+covers \S1.4; Appendix~\ref{app:glossary} is a quick-reference
+glossary. Chapters covering the $q$-analogues, \S1.6.2 (longest
+alternating subsequence), and \S1.6.3 (toggle action and the
+headline corollary) are planned but not yet written.
 
 \paragraph{First-time readers.} Read Chapter~\ref{ch:primer} once,
 then Chapter~\ref{ch:descents} top to bottom. Use
@@ -318,6 +320,453 @@ Chapter~\ref{ch:descents} read directly. Each formal block is
 followed by a one-line \emph{Decoded} reading that mechanically
 substitutes the mathcomp casts for their mathematical meaning, so
 the reader has both forms side by side.
+
+\clearpage
+
+% =====================================================================
+\chapter{Cycles and Stirling numbers}
+\label{ch:cycles}
+% =====================================================================
+
+This chapter formalizes Stanley \S1.3.1 (cycle representation of
+permutations) and \S1.3.2 (Stirling numbers of the first kind). The
+two main objects are the cycle count $c(w)$ and the (signless)
+Stirling cycle number $\stirling{n}{k}$ that counts permutations by
+$c(w)$. They are the cycle-side analogues of $\des(w)$ and
+$\eulerianA(n, k)$ from Chapter~\ref{ch:descents}.
+
+% =====================================================================
+\section{Cycle count}
+% =====================================================================
+
+\begin{definition}[Cycle decomposition, cycle count]
+  \label{def:cycle_count}
+  Every $w \in \Sn{n}$ admits a unique decomposition into a set of
+  \emph{disjoint cycles}; let $c(w)$ denote the number of such
+  cycles.
+\end{definition}
+
+\rocqsource{cycles.v}{24}
+\begin{lstlisting}[language=Rocq]
+Definition cycle_count {T : finType} (s : {perm T}) : nat := #|porbits s|.
+\end{lstlisting}
+
+\decoded{$c(s) = $ number of orbits of the action of the cyclic
+group $\langle s \rangle$ on the underlying set --- that is, the
+number of cycles in the disjoint-cycle decomposition.}
+
+\begin{sidebar}{why \texttt{porbits}, not a manual cycle decomposition?}
+A naive formalization would build the cycle decomposition by hand:
+pick an element, follow the orbit, mark seen, repeat. Mathcomp's
+\texttt{porbits} (in \texttt{perm.v}) does this once and exposes the
+result as a \texttt{\{set \{set T\}\}} --- a set of orbits ---
+together with all the lemmas one would want
+(\texttt{porbits\_partition}, \texttt{cover\_porbits}, etc.). Reusing
+it costs nothing and gives proofs like \texttt{cycle\_count\_id}
+in three lines instead of thirty. The cardinality of the orbit set
+is exactly the cycle count.
+\end{sidebar}
+
+\begin{lemma}[Cycle count bound]
+  \label{lem:cycle_count_le}
+  $c(w) \leq |T|$ for every $w \in \Sn{T}$, with equality iff $w$
+  is the identity.
+\end{lemma}
+
+\rocqsource{cycles.v}{44}
+\begin{lstlisting}[language=Rocq]
+Lemma cycle_count_le {T : finType} (s : {perm T}) :
+  cycle_count s <= #|T|.
+\end{lstlisting}
+
+\decoded{The number of cycles is at most the number of elements
+(each cycle has at least one element).}
+
+\rocqsource{cycles.v}{64}
+\begin{lstlisting}[language=Rocq]
+Lemma cycle_count_id (T : finType) :
+  cycle_count (1 : {perm T}) = #|T|.
+\end{lstlisting}
+
+\decoded{The identity has every element as a fixed point, i.e.\ a
+1-cycle; the cycle count equals $|T|$.}
+
+% =====================================================================
+\section{Stirling cycle numbers}
+% =====================================================================
+
+\begin{definition}[Signless Stirling cycle numbers]
+  \label{def:stirling_c}
+  The number $\stirling{n}{k}$ is the count of permutations of
+  $[n] = \{1, \dots, n\}$ with exactly $k$ cycles.
+\end{definition}
+
+\rocqsource{cycles.v}{33}
+\begin{lstlisting}[language=Rocq]
+Definition stirling_c (n k : nat) : nat :=
+  #|[set s : {perm 'I_n} | cycle_count s == k]|.
+\end{lstlisting}
+
+\decoded{$\stirling{n}{k} = |\{s \in \Sn{n} : c(s) = k\}|$, the
+number of perms of length $n$ with $k$ cycles. \emph{Direct match
+to Stanley} (no off-by-one): we use \texttt{\{perm 'I\_n\}}, of
+size $n$, exactly mirroring Stanley's $S_n$.}
+
+\begin{lemma}[Row sum recovers $n!$]
+  \label{lem:stirling_c_row_sum_fact}
+  $\sum_{k=0}^{n} \stirling{n}{k} = n!$
+\end{lemma}
+
+\rocqsource{cycles.v}{98}
+\begin{lstlisting}[language=Rocq]
+Lemma stirling_c_row_sum_fact n :
+  \sum_(k < n.+1) stirling_c n k = n`!.
+\end{lstlisting}
+
+\decoded{Sum over $k \in \{0, \dots, n\}$ of $\stirling{n}{k}$
+equals $n!$, since the sets partition $\Sn{n}$ by cycle count.}
+
+\noindent
+\emph{Proof sketch.} The sets $\{s : c(s) = k\}$ for $k$ ranging
+over all possible cycle counts partition $\Sn{n}$. Total
+cardinality is $|\Sn{n}| = n!$. \qed
+
+\begin{theorem}[Stirling cycle recurrence]
+  \label{thm:stirling_c_rec}
+  For $n, k \geq 0$,
+  \[
+    \stirling{n+1}{k+1} \;=\; n \cdot \stirling{n}{k+1} \;+\; \stirling{n}{k}.
+  \]
+\end{theorem}
+
+\rocqsource{stirling_fiber.v}{341}
+\begin{lstlisting}[language=Rocq]
+Lemma stirling_c_rec n k :
+  stirling_c n.+1 k.+1 = n * stirling_c n k.+1 + stirling_c n k.
+\end{lstlisting}
+
+\decoded{Stanley's recurrence for the signless Stirling cycle
+numbers: a permutation of $[n+1]$ with $k+1$ cycles either inserts
+the element $n+1$ into one of the existing $n$ cycle-positions of
+a perm of $[n]$ with $k+1$ cycles ($n$ choices), or sits as a
+new fixed point in a perm of $[n]$ with $k$ cycles.}
+
+\noindent
+\emph{Proof sketch.} Partition perms of $[n+1]$ with $k+1$ cycles
+by whether $n+1$ is a fixed point. If yes, the rest is a perm of
+$[n]$ with $k$ cycles (giving $\stirling{n}{k}$). If no, $n+1$
+sits inside an existing cycle; there are $n$ positions to insert
+it, giving $n \cdot \stirling{n}{k+1}$.
+
+The formal proof uses an auxiliary construction
+\texttt{insert\_after} (in \texttt{stirling\_fiber.v}) that
+realises the bijection
+$[n] \times \{s \in \Sn{n} : c(s) = k+1\} \to
+\{\sigma \in \Sn{n+1} : \sigma(n+1) \neq n+1,\ c(\sigma) = k+1\}$. \qed
+
+\clearpage
+
+% =====================================================================
+\chapter{Inversions and the major index}
+\label{ch:inversions}
+% =====================================================================
+
+This chapter formalizes Stanley \S1.3.3 (the inversion count $\inv$
+and the major index $\maj$, the two classical Mahonian statistics)
+and the basic identities each satisfies. The headline result
+--- their equidistribution over $\Sn{n}$ --- requires the Foata
+bijection and is the subject of Chapter~\ref{ch:foata}.
+
+% =====================================================================
+\section{Inversions}
+% =====================================================================
+
+\begin{definition}[Inversion]
+  \label{def:is_inv}
+  A pair $(i, j)$ with $1 \leq i < j \leq n$ is an
+  \emph{inversion} of $w \in \Sn{n}$ if $w_i > w_j$.
+\end{definition}
+
+\rocqsource{inversions.v}{26}
+\begin{lstlisting}[language=Rocq]
+Definition is_inv s (i j : 'I_n.+1) : bool :=
+  (i < j) && (s j < s i).
+\end{lstlisting}
+
+\decoded{$(i, j)$ is an inversion of $s$ iff $i < j$ and $s(j) < s(i)$
+(i.e.\ $s(i) > s(j)$).}
+
+\begin{definition}[Inversion set, inversion count]
+  \label{def:inv}
+  $\mathrm{Inv}(w) = \{(i, j) : i < j,\ w_i > w_j\}$, and
+  $\inv(w) = |\mathrm{Inv}(w)|$.
+\end{definition}
+
+\rocqsource{inversions.v}{30}
+\begin{lstlisting}[language=Rocq]
+Definition inv_set s : {set 'I_n.+1 * 'I_n.+1} :=
+  [set ij | is_inv s ij.1 ij.2].
+\end{lstlisting}
+\decoded{The set of inversion pairs.}
+
+\rocqsource{inversions.v}{34}
+\begin{lstlisting}[language=Rocq]
+Definition inv s : nat := #|inv_set s|.
+\end{lstlisting}
+\decoded{$\inv(s)$ is the cardinality of the inversion set.}
+
+\begin{lemma}[Identity has no inversions]
+  $\inv(\mathrm{id}) = 0$.
+\end{lemma}
+
+\rocqsource{inversions.v}{41}
+\begin{lstlisting}[language=Rocq]
+Lemma inv_id : inv (1 : {perm 'I_n.+1}) = 0.
+\end{lstlisting}
+
+\decoded{The identity permutation has no $(i, j)$ with $s(i) > s(j)$,
+hence no inversions.}
+
+\begin{lemma}[Inversion bound]
+  $\inv(w) \leq \binom{n}{2}$ for every $w \in \Sn{n}$.
+\end{lemma}
+
+\rocqsource{inversions.v}{136}
+\begin{lstlisting}[language=Rocq]
+Lemma inv_le s : inv s <= 'C(n.+1, 2).
+\end{lstlisting}
+
+\decoded{$\inv(s) \leq \binom{n+1}{2}$, the number of pairs
+$(i, j)$ with $i < j$ in $\Sn{n+1}$.}
+
+\begin{lemma}[Reversal identity for $\inv$]
+  \label{lem:inv_rev_perm}
+  $\inv(w^{\mathrm{rev}}) = \binom{n}{2} - \inv(w)$.
+\end{lemma}
+
+\rocqsource{inversions.v}{219}
+\begin{lstlisting}[language=Rocq]
+Lemma inv_rev_perm s :
+  inv (rev_perm s) = 'C(n.+1, 2) - inv s.
+\end{lstlisting}
+
+\decoded{The reverse permutation has the ``opposite'' inversion
+count: each pair $(i, j)$ with $i < j$ is either an inversion of
+$s$ or of its reverse, but not both. Hence the two counts sum to
+$\binom{n+1}{2}$.}
+
+% =====================================================================
+\section{The major index}
+% =====================================================================
+
+\begin{definition}[Major index]
+  \label{def:maj}
+  The \emph{major index} of $w \in \Sn{n}$ is the sum of (1-indexed)
+  descent positions:
+  \[
+    \maj(w) \;=\; \sum_{i \in \descent(w)} i.
+  \]
+\end{definition}
+
+\rocqsource{inversions.v}{81}
+\begin{lstlisting}[language=Rocq]
+Definition maj s : nat := \sum_(i in descent_set s) (val i).+1.
+\end{lstlisting}
+
+\decoded{$\maj(s) = \sum_{i \in \descent(s)} (i+1)$. The
+\texttt{(val i).+1} adds 1 to recover Stanley's 1-indexing from
+our 0-indexed descent positions.}
+
+\begin{sidebar}{why \texttt{(val i).+1} inside the sum, not in the descent set?}
+We could ``correct'' the indexing once for all by storing
+1-indexed positions in the descent set. We don't, because the
+descent set type \texttt{\{set 'I\_n\}} would no longer fit the
+ambient type system: 1-indexed positions in $\{1, \dots, n-1\}$
+would need \texttt{\{set 'I\_n.-1\}} with values shifted by 1, and
+every set-level lemma (complement, partition, big-op) would carry
+a translation. Doing the index shift inside \texttt{maj} keeps the
+descent-set machinery clean and isolates the translation to the
+one definition that needs it. The price is a single
+\texttt{(val i).+1} in the formula; the benefit is that
+\texttt{descent\_set}, \texttt{beta}, and \texttt{set\_is\_alt}
+all live in the same type without conversion casts.
+\end{sidebar}
+
+\begin{lemma}[Major-index bound]
+  $\maj(w) \leq \binom{n}{2}$ for every $w \in \Sn{n}$.
+\end{lemma}
+
+\rocqsource{inversions.v}{158}
+\begin{lstlisting}[language=Rocq]
+Lemma maj_le s : maj s <= 'C(n.+1, 2).
+\end{lstlisting}
+
+\decoded{$\maj(s) \leq \binom{n+1}{2}$, attained by the reverse
+identity.}
+
+\begin{example}[{Stanley's $w = [3,1,4,2]$, statistics}]
+  Take $w = [3,1,4,2] \in \Sn{4}$ as in Example~\ref{ex:s3142}.
+  Pairs $(i, j)$ with $w_i > w_j$: $(1,2)$ since $3 > 1$, $(1,4)$
+  since $3 > 2$, $(3,4)$ since $4 > 2$. Hence $\inv(w) = 3$.
+  Descent positions: $\descent(w) = \{1, 3\}$, so
+  $\maj(w) = 1 + 3 = 4$. In our types,
+  $\inv(s) = 3$ and $\maj(s) = (0+1) + (2+1) = 4$, matching.
+\end{example}
+
+\clearpage
+
+% =====================================================================
+\chapter{Foata's bijection and MacMahon's equidistribution}
+\label{ch:foata}
+% =====================================================================
+
+This chapter formalizes Stanley \S1.3.4: Foata's first fundamental
+bijection on $\Sn{n}$, which sends permutations of major index $k$
+bijectively to permutations of inversion count $k$. The corollary is
+MacMahon's equidistribution theorem.
+
+% =====================================================================
+\section{The Foata transformation on words}
+% =====================================================================
+
+The bijection is built from a recursive construction on words. Given
+a word $u$ and a new letter $a$, classify the previous letters of
+$u$ according to whether they are $< a$ or $> a$ (depending on the
+last letter of $u$), split $u$ into blocks at the classifying
+letters, and cyclically rotate each block (last $\to$ front). Then
+append $a$.
+
+\rocqsourcerange{foata.v}{70}{77}
+\begin{lstlisting}[language=Rocq]
+Definition foata_step (a : nat) (u : seq nat) : seq nat :=
+  match u with
+  | [::] => [:: a]
+  | _ :: _ =>
+      let x := last 0 u in
+      let P := if x < a then (fun y : nat => y < a) else (fun y => a < y) in
+      flatten (map cyc_last_to_front (split_blocks P u)) ++ [:: a]
+  end.
+\end{lstlisting}
+
+\decoded{Empty word: just $[a]$. Otherwise: pick the predicate $P$
+(``$<a$'' or ``$>a$'' depending on the sign of $\mathrm{last}(u)$
+vs $a$), \texttt{split\_blocks P u} cuts $u$ into blocks ending at
+$P$-letters, \texttt{cyc\_last\_to\_front} rotates each block (last
+letter to front), \texttt{flatten} concatenates, then append $a$.}
+
+\rocqsource{foata.v}{80}
+\begin{lstlisting}[language=Rocq]
+Definition foata (w : seq nat) : seq nat :=
+  foldl (fun u a => foata_step a u) [::] w.
+\end{lstlisting}
+
+\decoded{Process $w$ left-to-right, applying \texttt{foata\_step} at
+each new letter starting from the empty word.}
+
+\begin{example}[Stanley's running example]
+  $w = [3,1,4,5,9,2,6]$. Then:
+  \[
+    \mathrm{foata}(w) \;=\; [3, 4, 1, 5, 2, 9, 6].
+  \]
+  Verified inside \texttt{foata.v} (lemma \texttt{sanity\_inv\_eq\_maj}
+  at line 125 confirms by \texttt{Compute}). Stanley's hand
+  computation on p.~24 gives the same value.
+\end{example}
+
+% =====================================================================
+\section{Lifting to permutations}
+% =====================================================================
+
+The seq-level bijection is wrapped into a permutation via
+\texttt{seq\_to\_perm}, which packages a uniqueness-and-bound
+proof obligation into a \texttt{\{perm 'I\_n.+1\}}.
+
+\rocqsource{foata.v}{1529}
+\begin{lstlisting}[language=Rocq]
+Definition foata_perm (s : {perm 'I_n.+1}) : {perm 'I_n.+1} :=
+  seq_to_perm (foata_perm_to_seq_size s) (foata_perm_to_seq_uniq s)
+              (foata_perm_to_seq_bnd s).
+\end{lstlisting}
+
+\decoded{$\mathtt{foata\_perm}\,s$ is the permutation whose one-line
+sequence is $\mathrm{foata}$ applied to the one-line sequence of $s$.
+The three named lemmas discharge the side-conditions
+(size, distinctness, bound) needed to package a \texttt{seq nat}
+back into a \texttt{\{perm\}}.}
+
+\begin{sidebar}{why a seq-level bijection lifted to perms?}
+Foata's bijection is defined inductively on the word (seq), not on
+the permutation as a function. Trying to define it directly on
+\texttt{\{perm 'I\_n.+1\}} would force every step to re-establish
+``the result is a permutation,'' an obligation that the seq-level
+construction discharges once at the end. We pay for the wrapping
+once (in \texttt{seq\_to\_perm}); in exchange the bijection itself
+has the natural, recursive form Stanley describes.
+\end{sidebar}
+
+% =====================================================================
+\section{The equidistribution theorem}
+% =====================================================================
+
+\begin{theorem}[$\inv(\mathrm{foata}\,w) = \maj(w)$]
+  \label{thm:foata_perm_inv_maj}
+  For every $w \in \Sn{n}$,
+  \[
+    \inv(\mathrm{foata}(w)) \;=\; \maj(w).
+  \]
+\end{theorem}
+
+\rocqsource{foata.v}{1576}
+\begin{lstlisting}[language=Rocq]
+Lemma foata_perm_inv_maj n (s : {perm 'I_n.+1}) :
+  inv (foata_perm s) = maj s.
+\end{lstlisting}
+
+\decoded{The Foata transformation converts $\maj$-statistics to
+$\inv$-statistics: for every $s$, the inversion count of
+$\mathrm{foata}(s)$ equals the major index of $s$.}
+
+\begin{lemma}[$\mathtt{foata\_perm}$ is injective]
+  The map $s \mapsto \mathrm{foata\_perm}\,s$ is injective on
+  $\Sn{n+1}$.
+\end{lemma}
+
+\rocqsource{foata.v}{1586}
+\begin{lstlisting}[language=Rocq]
+Lemma foata_perm_inj n : injective (@foata_perm n).
+\end{lstlisting}
+
+\decoded{Different inputs give different outputs (proven by
+constructing an explicit inverse \texttt{foata\_inv} at the seq
+level).}
+
+\begin{theorem}[MacMahon's equidistribution]
+  \label{thm:inv_maj_equidistr}
+  For every $n, k$, the number of permutations of $\Sn{n}$ with
+  $\inv = k$ equals the number with $\maj = k$:
+  \[
+    \#\{w \in \Sn{n} : \inv(w) = k\}
+    \;=\;
+    \#\{w \in \Sn{n} : \maj(w) = k\}.
+  \]
+\end{theorem}
+
+\rocqsource{foata.v}{1598}
+\begin{lstlisting}[language=Rocq]
+Theorem inv_maj_equidistr n k :
+  #|[set s : {perm 'I_n.+1} | inv s == k]|
+  = #|[set s : {perm 'I_n.+1} | maj s == k]|.
+\end{lstlisting}
+
+\decoded{The two count functions $\inv$ and $\maj$ have the same
+distribution over $\Sn{n+1}$.}
+
+\noindent
+\emph{Proof sketch.} The map $s \mapsto \mathrm{foata\_perm}\,s$
+sends $\{s : \maj(s) = k\}$ \emph{into} $\{t : \inv(t) = k\}$
+(Theorem~\ref{thm:foata_perm_inv_maj}); it is injective; on a
+finite set, injective implies surjective. So the two sets are in
+bijection, hence have equal cardinality. \qed
 
 \clearpage
 
@@ -1019,11 +1468,14 @@ repository. Files covered (or planned) by this document, in Stanley
 reading order:
 
 \begin{description}
+  \item[\texttt{cycles.v}, \texttt{stirling\_fiber.v}]
+    Stanley \S1.3.1--2 (Chapter~\ref{ch:cycles}).
+  \item[\texttt{inversions.v}] Stanley \S1.3.3
+    (Chapter~\ref{ch:inversions}).
+  \item[\texttt{foata.v}] Stanley \S1.3.4
+    (Chapter~\ref{ch:foata}).
   \item[\texttt{descent.v}, \texttt{eulerian.v}, \texttt{beta.v}]
-    Stanley \S1.4 (this chapter).
-  \item[\texttt{inversions.v}] Stanley \S1.3.3 (planned).
-  \item[\texttt{cycles.v}] Stanley \S1.3.1--2 (planned).
-  \item[\texttt{foata.v}] Stanley \S1.3.4 (planned).
+    Stanley \S1.4 (Chapter~\ref{ch:descents}).
   \item[\texttt{qfact.v}, \texttt{qeul.v}] Stanley \S1.4 $q$-analogues
     (planned).
   \item[\texttt{altsub.v}] Stanley \S1.6.2 (planned).
