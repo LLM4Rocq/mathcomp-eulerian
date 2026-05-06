@@ -22,16 +22,16 @@ repository on GitHub. The intention is that a mathematician can read
 top to bottom like a textbook and at any point click through to
 verify the formal statement.
 
-\paragraph{Status.} This edition covers Stanley \S1.3.1--\S1.3.4
-(cycles, Stirling numbers, inversions, major index, Foata's
-bijection, MacMahon's equidistribution) and \S1.4 (descents,
-Eulerian numbers, set-refined count $\beps{n}{S}$).
-Chapter~\ref{ch:primer} is a mathcomp primer; chapters
-\ref{ch:cycles}--\ref{ch:foata} cover \S1.3; Chapter~\ref{ch:descents}
-covers \S1.4; Appendix~\ref{app:glossary} is a quick-reference
-glossary. Chapters covering the $q$-analogues, \S1.6.2 (longest
-alternating subsequence), and \S1.6.3 (toggle action and the
-headline corollary) are planned but not yet written.
+\paragraph{Status.} This edition covers all of Stanley
+\S1.3 (cycles, Stirling numbers, inversions, major index, Foata),
+\S1.4 (descents, Eulerian numbers, $\beps{n}{S}$, $q$-analogues),
+\S1.6.2 (longest alternating subsequence), and \S1.6.3 (toggle
+action, $\omega$-map, and the headline Corollary~1.6.5). Stanley
+\S1.6.4 (Andr\'e's reflection method) is included as
+Chapter~\ref{ch:reflection} but is \emph{partial}: the headline
+recurrence is proven modulo one named admit, in a file out of the
+active build chain. See that chapter for details and pointers to
+the retrospective document.
 
 \paragraph{First-time readers.} Read Chapter~\ref{ch:primer} once,
 then Chapter~\ref{ch:descents} top to bottom. Use
@@ -1353,6 +1353,613 @@ of the formalization,
 requires the toggle-action machinery of \S1.6.3 and is the subject
 of a future chapter.
 
+\clearpage
+
+% =====================================================================
+\chapter{The $q$-analogues}
+\label{ch:qanalogues}
+% =====================================================================
+
+This chapter formalizes the $q$-extensions of \S1.4: the
+$q$-factorial $[n]_q!$ as the inversion generating function over
+$\Sn{n}$, and the bivariate $q$-Eulerian polynomial
+$\eulerianA_n(q, t)$ as the joint generating function for
+$(\maj, \des)$. The two specializations $t = 1$ and $q = 1$ recover
+$[n]_q!$ and the classical Eulerian polynomial respectively.
+
+% =====================================================================
+\section{$q$-integers and the $q$-factorial}
+% =====================================================================
+
+\begin{definition}[$q$-integer]
+  $[n]_q = 1 + q + q^2 + \cdots + q^{n-1}$.
+\end{definition}
+
+\rocqsource{qfact.v}{25}
+\begin{lstlisting}[language=Rocq]
+Definition q_int (n : nat) : {poly int} := \sum_(i < n) 'X^i.
+\end{lstlisting}
+
+\decoded{$[n]_q$ as a polynomial in the formal indeterminate
+\texttt{'X}, with integer coefficients. \texttt{\textbackslash sum\_(i\,<\,n)\,'X\textasciicircum i}
+sums $X^i$ for $i \in \{0, \dots, n-1\}$.}
+
+\begin{definition}[$q$-factorial]
+  $[n]_q! = [1]_q \cdot [2]_q \cdots [n]_q$.
+\end{definition}
+
+\rocqsource{qfact.v}{26}
+\begin{lstlisting}[language=Rocq]
+Definition q_fact (n : nat) : {poly int} := \prod_(k < n.+1) q_int k.+1.
+\end{lstlisting}
+
+\decoded{$\texttt{q\_fact}\,n = [1]_q \cdot [2]_q \cdots [n+1]_q
+= [n+1]_q!$. The off-by-one is the same as in
+\texttt{eulerian}: our parameter is ``size minus one,'' so
+$\texttt{q\_fact}\,n = [n+1]_q!$ in Stanley's notation.}
+
+\begin{theorem}[$\inv$-generating function for $\Sn{n}$]
+  $\sum_{w \in \Sn{n}} q^{\inv(w)} = [n]_q!$
+\end{theorem}
+
+\rocqsource{qfact.v}{188}
+\begin{lstlisting}[language=Rocq]
+Theorem inv_q_fact n :
+  \sum_(σ : {perm 'I_n.+1}) 'X^(inv σ) = q_fact n :> {poly int}.
+\end{lstlisting}
+
+\decoded{The polynomial $\sum_{\sigma \in \Sn{n+1}} X^{\inv(\sigma)}$
+is exactly $[n+1]_q!$.}
+
+\noindent
+\emph{Proof sketch.} Induction on $n$: at each step, classify
+permutations of $\Sn{n+2}$ by where the maximum was inserted (using
+\texttt{insert\_max\_perm\_bij}); inserting at position $p$ adds
+exactly $n+1 - p$ inversions, so the sum factors as
+$[n+1]_q! \cdot [n+2]_q$. \qed
+
+\begin{theorem}[$\maj$-generating function via Foata]
+  $\sum_{w \in \Sn{n}} q^{\maj(w)} = [n]_q!$
+\end{theorem}
+
+\rocqsource{qfact.v}{218}
+\begin{lstlisting}[language=Rocq]
+Theorem maj_q_fact n :
+  \sum_(σ : {perm 'I_n.+1}) 'X^(maj σ) = q_fact n :> {poly int}.
+\end{lstlisting}
+
+\decoded{Same identity as \texttt{inv\_q\_fact} but for $\maj$
+instead of $\inv$ --- a direct corollary of MacMahon's
+equidistribution.}
+
+\noindent
+\emph{Proof sketch.} Reindex the $\maj$-sum along Foata's bijection:
+$\sum_\sigma X^{\maj(\sigma)} = \sum_\sigma X^{\inv(\mathrm{foata}(\sigma))}$
+which equals $[n+1]_q!$ by the previous theorem. \qed
+
+% =====================================================================
+\section{The bivariate $q$-Eulerian polynomial}
+% =====================================================================
+
+\begin{definition}[$q$-Eulerian polynomial]
+  $\eulerianA_n(q, t) = \sum_{w \in \Sn{n}} q^{\maj(w)} \cdot t^{\des(w)}$.
+\end{definition}
+
+\rocqsource{qeul.v}{37}
+\begin{lstlisting}[language=Rocq]
+Definition q_eul_pol (n : nat) : {poly {poly int}} :=
+  \sum_(σ : {perm 'I_n.+1}) qpow (maj σ) * 'X^(des σ).
+\end{lstlisting}
+
+\decoded{$\eulerianA_{n+1}(q, t) = \sum_{\sigma \in \Sn{n+1}}
+q^{\maj(\sigma)} t^{\des(\sigma)}$. Bivariate: outer indeterminate
+\texttt{'X} is $t$, inner (under \texttt{qpow}) is $q$.}
+
+\begin{sidebar}{why bivariate \texttt{\{poly \{poly int\}\}}?}
+The natural type for ``polynomial in $t$ with coefficients
+polynomials in $q$'' is the iterated polynomial ring
+\texttt{\{poly \{poly int\}\}}. Mathcomp's polynomial library is
+fully composable: \texttt{\{poly R\}} is itself a ring (in fact a
+commutative ring if $R$ is), so \texttt{\{poly \{poly int\}\}}
+inherits all the algebra. The trade-off is that the syntax is
+heavier --- the constant-poly embedding \texttt{\_\%:P}, the
+notation \texttt{qpow k} (for the inner $q^k$ embedded as an outer
+constant), and \texttt{horner\_eval} for substitution all need to
+be juggled. We name them in advance to keep the recurrence
+readable.
+\end{sidebar}
+
+\begin{theorem}[Specialize $t := 1$]
+  $\eulerianA_n(q, 1) = [n]_q!$
+\end{theorem}
+
+\rocqsource{qeul.v}{44}
+\begin{lstlisting}[language=Rocq]
+Theorem q_eul_pol_t1 n :
+  (q_eul_pol n).[1] = q_fact n.
+\end{lstlisting}
+
+\decoded{Evaluating $\eulerianA_{n+1}(q, t)$ at $t = 1$ gives
+$\sum_\sigma q^{\maj(\sigma)} \cdot 1^{\des(\sigma)} =
+\sum_\sigma q^{\maj(\sigma)} = [n+1]_q!$ (the previous theorem).}
+
+\begin{definition}[Classical Eulerian polynomial]
+  $\eulerianA_n(t) = \sum_{k \geq 0} \eulerianA(n, k) \cdot t^k$.
+\end{definition}
+
+\rocqsource{qeul.v}{58}
+\begin{lstlisting}[language=Rocq]
+Definition eul_pol (n : nat) : {poly int} :=
+  \sum_(k < n.+1) (eulerian n k)%:R * 'X^k.
+\end{lstlisting}
+
+\decoded{$\texttt{eul\_pol}\,n = \sum_{k=0}^{n} \eulerianA(n+1, k) \cdot t^k$
+(the off-by-one inherited from \texttt{eulerian}).}
+
+\begin{theorem}[Specialize $q := 1$]
+  $\eulerianA_n(1, t) = \eulerianA_n(t)$, the classical Eulerian
+  polynomial.
+\end{theorem}
+
+\rocqsource{qeul.v}{84}
+\begin{lstlisting}[language=Rocq]
+Theorem q_eul_pol_q1 n :
+  q1_subst (q_eul_pol n) = eul_pol n.
+\end{lstlisting}
+
+\decoded{Substituting $q = 1$ in each coefficient of $\eulerianA_{n+1}(q, t)$
+recovers the classical Eulerian polynomial. The substitution is
+implemented by \texttt{q1\_subst} = \texttt{map\_poly (horner\_eval 1)},
+which evaluates each inner $q$-polynomial at $q = 1$.}
+
+\clearpage
+
+% =====================================================================
+\chapter{Longest alternating subsequence}
+\label{ch:altsub}
+% =====================================================================
+
+This chapter formalizes Stanley \S1.6.2: the longest alternating
+subsequence statistic $\mathrm{as}(w)$, with the closed-form
+characterization
+\[
+  \mathrm{as}(w) \;=\; \mathrm{turn\_count}(w) + 2,
+\]
+where the right-hand side is two more than the number of
+``turning points'' (positions where the direction of $w$ changes).
+
+% =====================================================================
+\section{Turning points}
+% =====================================================================
+
+\begin{definition}[Turning point]
+  Position $i$ is a \emph{turning point} of $w$ if the direction at
+  position $i$ differs from the direction at position $i+1$:
+  exactly one of $\{i, i+1\}$ is a descent position.
+\end{definition}
+
+\rocqsource{altsub.v}{41}
+\begin{lstlisting}[language=Rocq]
+Definition is_turn s (i : 'I_n) : bool :=
+  is_descent s (widen_ord (leqnSn _) i) (+) is_descent s (lift ord0 i).
+\end{lstlisting}
+
+\decoded{$\mathrm{is\_turn}\,s\,i$ is the boolean XOR of two adjacent
+\texttt{is\_descent} indicators. For
+$s : \Perm{\ord{n+2}}$ and $i : \ord{n}$, the two arguments
+of XOR are descent slots $i$ and $i+1$ (both in $\ord{n+1}$, via
+the same widen+lift idiom as Chapter~\ref{ch:descents}).}
+
+\rocqsource{altsub.v}{44}
+\begin{lstlisting}[language=Rocq]
+Definition turn_count s : nat :=
+  #|[set i : 'I_n | is_turn s i]|.
+\end{lstlisting}
+
+\decoded{$\mathrm{turn\_count}(s) = $ number of turning positions.}
+
+% =====================================================================
+\section{Alternating subsequences}
+% =====================================================================
+
+\begin{definition}[Alternating sequence of naturals]
+  A seq $x_1, x_2, \dots, x_k$ is \emph{alternating} if
+  $x_1 < x_2 > x_3 < \cdots$ or $x_1 > x_2 < x_3 > \cdots$.
+\end{definition}
+
+\rocqsource{altsub.v}{71}
+\begin{lstlisting}[language=Rocq]
+Definition is_alt (xs : seq nat) : bool :=
+  match xs with
+  | [::] => true
+  | [:: _] => true
+  | x :: y :: xs' =>
+      ((x < y) && alt_aux false y xs') || ((y < x) && alt_aux true y xs')
+  end.
+\end{lstlisting}
+
+\decoded{Empty and singleton seqs are alternating. Otherwise we try
+both starting directions: ``up first'' (\texttt{x < y} then
+\texttt{alt\_aux false}) or ``down first'' (\texttt{y < x} then
+\texttt{alt\_aux true}); $\mathrm{is\_alt}$ holds iff either branch
+succeeds. The auxiliary \texttt{alt\_aux} alternates the boolean
+parity at each step.}
+
+\begin{definition}[Permutation as a seq, subseq at chosen positions]
+\end{definition}
+
+\rocqsource{altsub.v}{84}
+\begin{lstlisting}[language=Rocq]
+Definition perm_seq n (s : {perm 'I_n.+2}) : seq nat :=
+  [seq val (s i) | i <- enum 'I_n.+2].
+\end{lstlisting}
+
+\decoded{The one-line form of $s$: the seq $[s(0); s(1); \ldots; s(n+1)]$
+of natural numbers.}
+
+\rocqsource{altsub.v}{97}
+\begin{lstlisting}[language=Rocq]
+Definition pick_seq n (s : {perm 'I_n.+2}) (I : {set 'I_n.+2}) : seq nat :=
+  [seq val (s j) | j <- sort (fun a b => val a <= val b) (enum I)].
+\end{lstlisting}
+
+\decoded{For an index set $I \subseteq \{0, \dots, n+1\}$, sort the
+positions in $I$ in increasing order and pick the corresponding
+values from $s$. This is ``the subsequence of $s$ at positions $I$,
+in order.''}
+
+% =====================================================================
+\section{The two definitions of \texorpdfstring{$\mathrm{as}$}{as}}
+% =====================================================================
+
+\begin{definition}[Bijective form: $\mathrm{as\_perm\_max}$]
+  $\mathrm{as\_perm\_max}(s) = \max \{ |I| : \mathrm{pick\_seq}(s, I) \text{ is alternating}\}$.
+\end{definition}
+
+\rocqsource{altsub.v}{105}
+\begin{lstlisting}[language=Rocq]
+Definition as_perm_max n (s : {perm 'I_n.+2}) : nat :=
+  \max_(I : {set 'I_n.+2} | is_alt (pick_seq s I)) #|I|.
+\end{lstlisting}
+
+\decoded{The maximum cardinality over all index sets $I$ whose
+sorted-value picked subseq is alternating. This is the geometric
+``length of the longest alternating subseq'' definition.}
+
+\begin{definition}[Closed-form: $\mathrm{as\_perm}$]
+  $\mathrm{as\_perm}(s) = \mathrm{turn\_count}(s) + 2$.
+\end{definition}
+
+\rocqsource{altsub.v}{109}
+\begin{lstlisting}[language=Rocq]
+Definition as_perm n (s : {perm 'I_n.+2}) : nat := (turn_count s).+2.
+\end{lstlisting}
+
+\decoded{Two more than the number of turning positions. This is
+Stanley's \emph{closed-form} characterization, taken here as a
+definition; the equivalence with the bijective form is the
+headline theorem below.}
+
+% =====================================================================
+\section{The headline equivalence}
+% =====================================================================
+
+\begin{theorem}[Stanley's characterization, \S1.6.2]
+  \label{thm:as_perm_max_eq}
+  For every $s \in \Sn{n+2}$,
+  $\mathrm{as\_perm\_max}(s) = \mathrm{turn\_count}(s) + 2$.
+\end{theorem}
+
+\rocqsource{altsub.v}{2114}
+\begin{lstlisting}[language=Rocq]
+Theorem as_perm_max_eq s : as_perm_max s = (turn_count s).+2.
+\end{lstlisting}
+
+\decoded{The longest alternating subsequence of $s$ has length
+exactly $\mathrm{turn\_count}(s) + 2$.}
+
+\begin{sidebar}{why this took five sessions}
+The proof has two halves --- $\geq$ (existence of a long alt
+subseq) and $\leq$ (no longer one exists). The lower bound is
+constructive: pick the boundary endpoints plus one position per
+turning point. The upper bound is where the difficulty was: the
+naive ``leftmost turn in $[\sigma_i, \sigma_{i+2})$'' injection
+from sign-flips of the picked subseq to turning positions of $s$
+\emph{is not injective} --- adjacent sign-flips can share a single
+turning window. The proof in \texttt{altsub.v} pivots to a global
+bound via the seq-level statistic
+\texttt{flip\_count}, which is monotone under taking subseqs:
+$\texttt{flip\_count}(\texttt{sign\_seq}(\texttt{pick\_seq}\,s\,I))
+\leq \texttt{flip\_count}(\texttt{sign\_seq}(\texttt{perm\_seq}\,s))
+= \texttt{turn\_count}(s)$. The detour is recorded in
+\texttt{docs/plans/ALTSUB\_PLAN.md}.
+\end{sidebar}
+
+\clearpage
+
+% =====================================================================
+\chapter{Toggle action and Stanley's Corollary 1.6.5}
+\label{ch:toggle}
+% =====================================================================
+
+This chapter formalizes Stanley \S1.6.3: the toggle action on
+descent sets, the $\omega$-map, and the headline corollary that
+the alternating descent set strictly maximizes $\beps{n}{S}$ ---
+the central theorem of this project.
+
+% =====================================================================
+\section{Symmetric difference and single-position toggle}
+% =====================================================================
+
+\begin{definition}[Symmetric difference, single-position toggle]
+\end{definition}
+
+\rocqsource{beta_omega.v}{25}
+\begin{lstlisting}[language=Rocq]
+Definition sym_diff (n : nat) (D E : {set 'I_n}) : {set 'I_n} :=
+  (D :\: E) :|: (E :\: D).
+\end{lstlisting}
+
+\decoded{Standard set-theoretic symmetric difference $D \triangle E$.}
+
+\rocqsource{beta_omega.v}{28}
+\begin{lstlisting}[language=Rocq]
+Definition toggle_at (n : nat) (D : {set 'I_n}) (i : 'I_n) : {set 'I_n} :=
+  sym_diff D [set i].
+\end{lstlisting}
+
+\decoded{$\mathrm{toggle\_at}(D, i) = D \triangle \{i\}$. Adds $i$
+if absent, removes it if present.}
+
+% =====================================================================
+\section{The $\omega$-map}
+% =====================================================================
+
+For a descent set $D \subseteq \{1, \dots, n-1\}$ in Stanley's
+$\Sn{n}$, $\omega(D)$ records the positions where adjacent
+membership in $D$ changes.
+
+\rocqsource{beta_omega.v}{57}
+\begin{lstlisting}[language=Rocq]
+Definition omega_set (n : nat) (D : {set 'I_n.+1}) : {set 'I_n} :=
+  [set k : 'I_n | (widen_ord (leqnSn n) k \in D) != (lift ord0 k \in D)].
+\end{lstlisting}
+
+\decoded{$k \in \omega(D)$ iff membership of position $k$ in $D$
+\emph{differs} from membership of position $k+1$ in $D$. The two
+membership tests use the now-familiar widen+lift idiom to view $k$
+and $k+1$ inside the larger type.}
+
+% =====================================================================
+\section{The alternating descent set}
+% =====================================================================
+
+\begin{definition}[Alternating descent pattern]
+  $D_{\mathrm{alt}}^n = \{1, 3, 5, \dots\} \cap \{1, \dots, n-1\}$
+  (Stanley's 1-indexed odd positions).
+\end{definition}
+
+\rocqsource{beta_swap.v}{31}
+\begin{lstlisting}[language=Rocq]
+Definition alt_desc_set (n : nat) : {set 'I_n} :=
+  [set i : 'I_n | ~~ odd i].
+\end{lstlisting}
+
+\decoded{The set of \emph{even-indexed} positions $\{0, 2, 4, \dots\}$
+of $\ord{n}$. Under our 0-indexing, this matches Stanley's
+1-indexed odd positions $\{1, 3, 5, \dots\}$.}
+
+\rocqsource{beta_swap.v}{40}
+\begin{lstlisting}[language=Rocq]
+Definition set_is_alt (n : nat) (D : {set 'I_n}) : bool :=
+  [forall i : 'I_n, [forall j : 'I_n,
+     (val j == (val i).+1) ==> ((i \in D) != (j \in D))]].
+\end{lstlisting}
+
+\decoded{$\mathrm{set\_is\_alt}(D)$: every consecutive pair
+$(i, i+1)$ in $\ord{n}$ has differing membership in $D$.
+Equivalently, $D$ is either $D_{\mathrm{alt}}^n$ or its complement
+(lemma \texttt{set\_is\_alt\_classify} below).}
+
+% =====================================================================
+\section{Value-complement and \texorpdfstring{$\beta$}{β} symmetry}
+% =====================================================================
+
+\rocqsource{beta_swap.v}{128}
+\begin{lstlisting}[language=Rocq]
+Definition compl_perm n (s : {perm 'I_n.+1}) : {perm 'I_n.+1} :=
+  s * rev_perm_ord n.
+\end{lstlisting}
+
+\decoded{The value-complement of $s$: $\mathrm{compl\_perm}(s)\,i = n - s(i)$.
+Defined by post-composition with the value-reversal involution.}
+
+\begin{lemma}[Descent set under value-complement]
+  $\descent(\mathrm{compl\_perm}(s)) = \overline{\descent(s)}$
+  (the complement in $\ord{n}$).
+\end{lemma}
+
+\rocqsource{beta_swap.v}{160}
+\begin{lstlisting}[language=Rocq]
+Lemma descent_set_compl n (s : {perm 'I_n.+1}) :
+  descent_set (compl_perm s) = ~: descent_set s.
+\end{lstlisting}
+
+\decoded{Value-complementing every value flips ascents into
+descents and vice-versa, so the descent set goes to its complement.}
+
+\begin{lemma}[$\beta$ is complement-invariant]
+  \label{lem:beta_compl}
+  $\beps{n}{D} = \beps{n}{\overline{D}}$.
+\end{lemma}
+
+\rocqsource{beta_swap.v}{166}
+\begin{lstlisting}[language=Rocq]
+Lemma beta_compl n (D : {set 'I_n}) : beta D = beta (~: D).
+\end{lstlisting}
+
+\decoded{The number of perms with descent set $D$ equals the number
+with descent set $\overline{D}$, by the bijection
+$s \mapsto \mathrm{compl\_perm}(s)$.}
+
+\begin{lemma}[Set-alt classification]
+  $\mathrm{set\_is\_alt}(D)$ holds iff $D = D_{\mathrm{alt}}^n$ or
+  $D = \overline{D_{\mathrm{alt}}^n}$.
+\end{lemma}
+
+\rocqsource{beta_swap.v}{182}
+\begin{lstlisting}[language=Rocq]
+Lemma set_is_alt_classify n (D : {set 'I_n}) :
+  set_is_alt D = (D == alt_desc_set n) || (D == ~: alt_desc_set n).
+\end{lstlisting}
+
+\decoded{Exactly two sets in $\ord{n}$ are set-alternating: the
+alternating pattern itself and its complement. This justifies
+``\emph{the} alternating descent set'' modulo the two-flavour
+ambiguity.}
+
+% =====================================================================
+\section{Stanley's Proposition 1.6.4}
+% =====================================================================
+
+\begin{proposition}[$\omega$-strictness, Stanley Prop 1.6.4]
+  \label{prop:omega_proper_beta_lt}
+  If $\omega(D) \subsetneq \omega(E)$ then $\beps{n}{D} < \beps{n}{E}$.
+\end{proposition}
+
+\rocqsource{perm_seq_bridge.v}{540}
+\begin{lstlisting}[language=Rocq]
+Lemma omega_proper_beta_lt : forall m (D E : {set 'I_m.+1}),
+  omega_set D \proper omega_set E ->
+  beta D < beta E.
+\end{lstlisting}
+
+\decoded{Strictly enlarging the $\omega$-image strictly increases
+$\beta$. The proof goes through a deep ``cd-index'' machinery
+(min-max trees, $\psi_i$ operators) developed in Stanley's
+chapter and formalized in this project's \texttt{psi\_*.v} files;
+that material is not reproduced here.}
+
+% =====================================================================
+\section{The headline: Stanley's Corollary 1.6.5}
+% =====================================================================
+
+\begin{corollary}[Alternating set strictly maximizes $\beta$, Stanley Cor 1.6.5]
+  \label{cor:beta_alt_max}
+  For every set $D \subseteq \{1, \dots, n-1\}$ that is \emph{not}
+  alternating,
+  \[
+    \beps{n}{D} \;<\; \Eul_n,
+  \]
+  where $\Eul_n = \beps{n}{D_{\mathrm{alt}}^n}$ is the Euler number.
+\end{corollary}
+
+\rocqsource{beta_swap.v}{273}
+\begin{lstlisting}[language=Rocq]
+Lemma beta_alt_max n (D : {set 'I_n}) :
+  ~~ set_is_alt D -> beta D < beta (alt_desc_set n).
+\end{lstlisting}
+
+\decoded{If $D$ is not set-alternating, then $\beta(D)$ is strictly
+smaller than $\beta(D_{\mathrm{alt}}^n)$ --- the alternating
+descent set is the \emph{unique} (up to complement) maximizer of
+$\beta$.}
+
+\noindent
+\emph{Proof sketch.} If $D$ is not alternating then there exist
+adjacent positions $i, i+1$ both in $D$ or both not. Toggling at
+$i$ (or at a fitting nearby position) strictly enlarges
+$\omega(D)$, and Proposition~\ref{prop:omega_proper_beta_lt}
+gives a chain of strict $\beta$-increases that terminates at
+$D_{\mathrm{alt}}^n$. (The full chain construction uses
+\texttt{block\_left}/\texttt{block\_right} from
+\texttt{beta\_omega.v}.) \qed
+
+\noindent This is the headline theorem of the entire project. To
+verify axiom-freeness:
+
+\begin{verbatim}
+echo 'From mathcomp_eulerian Require Import beta_swap.
+      Print Assumptions beta_alt_max.' \
+  | rocq top -R . mathcomp_eulerian
+\end{verbatim}
+
+\noindent prints \texttt{Closed under the global context}.
+
+\clearpage
+
+% =====================================================================
+\chapter{Andr\'e's reflection method (partial)}
+\label{ch:reflection}
+% =====================================================================
+
+\paragraph{Status.} This chapter records a \emph{partial}
+formalization. The headline recurrence $2 \Eul_{n+2} = \sum_k
+\binom{n+1}{k} \Eul_k \Eul_{n+1-k}$ is proven modulo one named
+\texttt{Admitted} lemma, in the file
+\texttt{experimental/reflection.v} which is \emph{out of the active
+build chain} (excluded from \texttt{\_CoqProject}). The companion
+document \texttt{docs/internal/PHASE\_C\_RETROSPECTIVE.md} captures
+the eight sessions of work, the structural obstacle, and a concrete
+$\sim$510 LOC discharge plan for any future contributor.
+
+% =====================================================================
+\section{Euler numbers}
+% =====================================================================
+
+\begin{definition}[Euler numbers]
+  $\Eul_{n+1} = \beps{n+1}{D_{\mathrm{alt}}^n}$ (the count of
+  alternating permutations of $\Sn{n+1}$). Set $\Eul_0 = 1$.
+\end{definition}
+
+\noindent (No \texttt{rocqsource} block since the file is out of the
+build chain.)
+
+% =====================================================================
+\section{The headline recurrence}
+% =====================================================================
+
+\begin{theorem}[Andr\'e recurrence, modulo one admit]
+  For every $n \geq 0$,
+  \[
+    2 \Eul_{n+2} \;=\; \sum_{k=0}^{n+1} \binom{n+1}{k} \, \Eul_k \, \Eul_{n+1-k}.
+  \]
+\end{theorem}
+
+\noindent The formal statement \texttt{euler\_rec} in
+\texttt{experimental/reflection.v} (line 1705) is derived in one
+line from \texttt{two\_eulerA\_split} (already proven) and an
+admitted lemma:
+
+\[
+  \texttt{sum\_set\_is\_alt\_eq\_andre\_sum} \;:\;
+  \sum_{t} \sum_{p} \mathrm{set\_is\_alt}(\descent(\mathrm{insert\_max}(t, p)))
+  \;=\; \sum_{k} \binom{n+1}{k} \Eul_k \Eul_{n+1-k}.
+\]
+
+\noindent The base case $n = 0$ ($2\Eul_2 = 2$) is proven
+unconditionally in the same file
+(\texttt{euler\_rec\_n0\_direct}); cases $n = 1, 2$ inherit the
+admit transitively.
+
+\begin{remark}[The structural obstacle]
+The combinatorial heart of the admit is the boundary descent at
+the position of the inserted maximum. After partitioning
+$\sigma \in \Sn{n+2}$ by the position $p$ of the max and the value
+set $L$ left of it, the descent at slot $p-1$ depends on
+$(L, s_L, s_R)$ \emph{jointly}: specifically on whether the
+largest left value (selected by $s_L$) exceeds the smallest right
+value (selected by $s_R$). This couples the three components, so
+$[\descent(\sigma) = E]$ does not factor into independent
+$s_L$- and $s_R$-conditions. The classical proof absorbs the
+coupling via the factor of $2$ on the LHS (sum over
+\texttt{alt} and \texttt{\textasciitilde:alt}), but the formal
+counterpart turns out to be a 4-to-1 reduction, not the 2-to-1
+fibration suggested by the English proof. The retrospective
+explains in detail why estimates for this discharge consistently
+underran by a factor of $\sim$2--3.
+\end{remark}
+
 \appendix
 
 % =====================================================================
@@ -1477,12 +2084,17 @@ reading order:
   \item[\texttt{descent.v}, \texttt{eulerian.v}, \texttt{beta.v}]
     Stanley \S1.4 (Chapter~\ref{ch:descents}).
   \item[\texttt{qfact.v}, \texttt{qeul.v}] Stanley \S1.4 $q$-analogues
-    (planned).
-  \item[\texttt{altsub.v}] Stanley \S1.6.2 (planned).
-  \item[\texttt{beta\_omega.v}, \texttt{beta\_swap.v}] Stanley \S1.6.3
-    (planned).
+    (Chapter~\ref{ch:qanalogues}).
+  \item[\texttt{altsub.v}] Stanley \S1.6.2
+    (Chapter~\ref{ch:altsub}).
+  \item[\texttt{beta\_omega.v}, \texttt{beta\_swap.v}, \texttt{perm\_seq\_bridge.v}]
+    Stanley \S1.6.3 (Chapter~\ref{ch:toggle}); the
+    \texttt{psi\_*.v} files are project-internal scaffolding for
+    the cd-index machinery underlying
+    \texttt{omega\_proper\_beta\_lt}.
   \item[\texttt{experimental/reflection.v}] Stanley \S1.6.4
-    (planned, contains 1 named admit).
+    (Chapter~\ref{ch:reflection}); contains 1 named admit, out of
+    the active build chain.
 \end{description}
 
 \end{document}
