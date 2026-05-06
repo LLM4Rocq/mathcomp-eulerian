@@ -290,10 +290,46 @@ def file_to_chapter_label(path: str, narration_hits: list[str]) -> str | None:
     return None  # not used currently
 
 
+UNICODE_MAP = {
+    "§": r"\S{}",
+    "σ": r"$\sigma$",
+    "τ": r"$\tau$",
+    "α": r"$\alpha$",
+    "β": r"$\beta$",
+    "γ": r"$\gamma$",
+    "δ": r"$\delta$",
+    "ε": r"$\varepsilon$",
+    "π": r"$\pi$",
+    "ω": r"$\omega$",
+    "Σ": r"$\Sigma$",
+    "ψ": r"$\psi$",
+    "φ": r"$\phi$",
+    "∪": r"$\cup$",
+    "∩": r"$\cap$",
+    "⊆": r"$\subseteq$",
+    "⊂": r"$\subset$",
+    "≠": r"$\neq$",
+    "≤": r"$\leq$",
+    "≥": r"$\geq$",
+    "→": r"$\to$",
+    "←": r"$\leftarrow$",
+    "⇒": r"$\Rightarrow$",
+    "∈": r"$\in$",
+    "∉": r"$\notin$",
+    "∀": r"$\forall$",
+    "∃": r"$\exists$",
+    "—": r"---",
+    "–": r"--",
+}
+
+
 def latex_escape(s: str) -> str:
     """Escape LaTeX special characters in the docstring text."""
     if not s:
         return ""
+    # Map Unicode characters to LaTeX equivalents first.
+    for u, repl in UNICODE_MAP.items():
+        s = s.replace(u, repl)
     # Coqdoc [bracketed] code becomes \texttt{...}.
     # Apply that first, before generic escaping (so that %, _ etc inside
     # [brackets] go into texttt unescaped — \texttt protects them).
@@ -302,14 +338,30 @@ def latex_escape(s: str) -> str:
     n = len(s)
     while i < n:
         if s[i] == "[":
-            # Find matching close bracket on the same logical scope.
-            j = s.find("]", i + 1)
+            # Find the matching ] respecting nested [[...]] (coqdoc's
+            # literal-bracket escape).
+            depth = 1
+            j = i + 1
+            while j < n and depth > 0:
+                if s[j] == "[":
+                    depth += 1
+                elif s[j] == "]":
+                    depth -= 1
+                if depth == 0:
+                    break
+                j += 1
+            if j >= n:
+                j = -1
             if j > 0 and j - i < 120:
                 code = s[i+1:j]
                 # Wrap in \texttt + \detokenize so underscores, #, etc.
                 # survive without catcode interpretation.  We still escape
                 # closing brace which would terminate \detokenize itself.
-                if "}" in code or "{" in code:
+                # We also bail out of the \detokenize fast path when the
+                # content has a `%` (TeX comment char swallowed at token
+                # collection time) or `\` (would be \\textbackslash{} in
+                # the output, but breaks inside \detokenize).
+                if "}" in code or "{" in code or "%" in code or "\\" in code:
                     # Fall back to manual escaping (rare).
                     code = code.replace("\\", r"\textbackslash{}")
                     code = code.replace("_", r"\_")
@@ -390,10 +442,13 @@ def emit_latex(by_file: dict[str, list[dict]]) -> str:
             # URL needs \detokenize to survive both # and _.  The visible
             # \texttt{...} body uses \detokenize{name} to print underscores
             # safely (see preamble's \rocqsource for the same pattern).
-            url_path = f"{filename}#L{r['line']}"
+            # Build the URL piece-by-piece so \detokenize protects the
+            # filename's underscores but the literal '#' in '#L<line>'
+            # stays as TeX's parameter character (escaped via \#).
             href = (
                 r"\href{" + GITHUB_BASE + "/"
-                + r"\detokenize{" + url_path + r"}"
+                + r"\detokenize{" + filename + r"}"
+                + r"\#L" + str(r["line"])
                 + r"}{\texttt{\detokenize{" + r["name"] + r"}}}"
             )
             badge = NARRATION.get(r["name"], None)

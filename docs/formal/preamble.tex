@@ -74,6 +74,11 @@
   breaklines=true,
   breakatwhitespace=true,
   showstringspaces=false,
+  % UTF-8 chars that genuinely appear in our .v files (e.g. sigma in
+  % qfact.v / qeul.v).  Without these, listings' default 8-bit handler
+  % rejects the bytes with "Invalid UTF-8" errors.
+  extendedchars=true,
+  inputencoding=utf8,
   literate={->}{{$\to$}}{1}
            {=>}{{$\Rightarrow$}}{1}
            {>=}{{$\geq$}}{1}
@@ -81,6 +86,18 @@
            {<>}{{$\neq$}}{1}
            {forall}{{$\forall$}}{1}
            {exists}{{$\exists$}}{1}
+           {σ}{{$\sigma$}}{1}
+           {τ}{{$\tau$}}{1}
+           {α}{{$\alpha$}}{1}
+           {β}{{$\beta$}}{1}
+           {γ}{{$\gamma$}}{1}
+           {δ}{{$\delta$}}{1}
+           {ε}{{$\varepsilon$}}{1}
+           {π}{{$\pi$}}{1}
+           {ω}{{$\omega$}}{1}
+           {Σ}{{$\Sigma$}}{1}
+           {ψ}{{$\psi$}}{1}
+           {φ}{{$\phi$}}{1}
 }
 
 % --- (no lstnewenvironment wrapper; rocqbox uses lstlisting directly) ---

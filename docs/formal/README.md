@@ -5,25 +5,33 @@ A self-contained LaTeX document that reads like a chapter of Stanley
 with the verbatim Rocq text, with clickable links to the GitHub
 source.
 
-## Status (Session 1, prototype)
+**Deployed:** https://llm4rocq.github.io/mathcomp-eulerian/eulerian_formal.pdf
+(rebuilt by CI on every push to `main`).
 
-Only **Chapter 1: Descents and Eulerian numbers** is currently
-written. Future chapters cover:
+## Contents
 
-| Chapter | Stanley | Status |
-|---------|---------|--------|
-| 1. Descents and Eulerian numbers | §1.4 | ✅ written |
-| 2. Cycles and Stirling numbers | §1.3.1-2 | planned |
-| 3. Inversions and the major index | §1.3.3 | planned |
-| 4. The Foata bijection | §1.3.4 | planned |
-| 5. $q$-analogues | §1.4 | planned |
-| 6. Longest alternating subsequence | §1.6.2 | planned |
-| 7. Toggle action and Cor 1.6.5 | §1.6.3 | planned |
-| 8. André's reflection method | §1.6.4 | planned (1 admit) |
+The PDF is 80 pages, structured as:
 
-The first chapter is intended as a proof-of-concept for the format:
-each definition and statement appears twice (informal + formal),
-with the formal block clickable through to GitHub.
+| Chapter / Appendix | Stanley | Pages |
+|---|---|---|
+| 1. A combinatorialist's mathcomp primer | — | 5-6 |
+| 2. Cycles and Stirling numbers | §1.3.1-2 | 7-9 |
+| 3. Inversions and the major index | §1.3.3 | 10-11 |
+| 4. Foata's bijection and MacMahon's equidistribution | §1.3.4 | 12-13 |
+| 5. Descents and Eulerian numbers | §1.4 | 14-20 |
+| 6. The $q$-analogues | §1.4 | 21-22 |
+| 7. Longest alternating subsequence | §1.6.2 | 23-25 |
+| 8. Toggle action and Stanley's Corollary 1.6.5 (project headline) | §1.6.3 | 26-28 |
+| 9. André's reflection method (partial) | §1.6.4 | 29 |
+| **A. Comprehensive lemma catalog (831 entries, auto-generated)** | — | 30-76 |
+| B. Glossary of mathcomp primitives | — | 77-78 |
+| C. Source map | — | 79 |
+
+Every named result in the active build chain appears in Appendix A
+with its `coqdoc` docstring and a clickable GitHub link. The
+narrative chapters (2-9) cover the ~70 most-cited results in
+expository form, with a "Decoded:" line under every formal block
+restating it in plain math.
 
 ## Build
 

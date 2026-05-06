@@ -52,11 +52,12 @@ mathematician-facing docs in this order:
 
 | Document | What it gives you |
 |----------|-------------------|
-| [`docs/READING_GUIDE.md`](docs/READING_GUIDE.md) | **Start here.** A 10-minute orientation: index conventions, type translations, a worked example walking through Stanley's `[3,1,4,2]` in our formal types. |
-| [`docs/DEFINITIONS_AUDIT.md`](docs/DEFINITIONS_AUDIT.md) | Side-by-side audit of every formal definition vs. Stanley's informal one, with file:line citations and a 1-line verdict per definition. **The trust artifact** — read top to bottom in ~1 hour. |
+| **The formal companion PDF** at https://llm4rocq.github.io/mathcomp-eulerian/eulerian_formal.pdf (source: [`docs/formal/`](docs/formal/)) | An 80-page Stanley-style reading. 9 narrative chapters covering all of §1.3, §1.4, §1.6.2, §1.6.3 (the project headline), and §1.6.4 (partial). Every formal block carries a clickable GitHub link and a "Decoded" line in plain math. Appendix A is an auto-generated catalog of all 831 named results in the build chain. **Best single artifact for a Stanley reader.** |
+| [`docs/READING_GUIDE.md`](docs/READING_GUIDE.md) | A shorter 10-minute orientation: index conventions, type translations, a worked example walking through Stanley's `[3,1,4,2]` in our formal types. Also a markdown alternative if you'd rather not read the PDF. |
+| [`docs/DEFINITIONS_AUDIT.md`](docs/DEFINITIONS_AUDIT.md) | Side-by-side audit of every formal definition vs. Stanley's informal one, with file:line citations and a 1-line verdict per definition. The trust artifact in markdown form. |
 | The **blueprint** at https://llm4rocq.github.io/mathcomp-eulerian/ (source: [`blueprint/`](blueprint/)) | Interactive paper-style document with a clickable dependency graph. Every theorem links back to its Rocq lemma. |
-| [`PROOF_STATEMENTS.md`](PROOF_STATEMENTS.md) | Per-result informal statement with verification status and Stanley page reference. The **table of contents** for the formal development (markdown counterpart of the blueprint). |
-| [`FORMAL_VS_STANLEY.md`](FORMAL_VS_STANLEY.md) | Older theorem-by-theorem map (focused on §1.4 + §1.6.3 cd-index). Complements the audit, which covers the §1.3 / §1.4 / §1.6.2 extensions. |
+| [`PROOF_STATEMENTS.md`](PROOF_STATEMENTS.md) | Per-result informal statement with verification status and Stanley page reference. |
+| [`FORMAL_VS_STANLEY.md`](FORMAL_VS_STANLEY.md) | Older theorem-by-theorem map (focused on §1.4 + §1.6.3 cd-index). |
 
 Historical milestone-by-milestone informal proof notes (`M2`–`M7_*_INFORMAL.md`) are kept in [`docs/internal/`](docs/internal/) for the record; their content is subsumed by the blueprint chapters above.
 
