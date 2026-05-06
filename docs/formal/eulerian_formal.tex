@@ -22,12 +22,21 @@ repository on GitHub. The intention is that a mathematician can read
 top to bottom like a textbook and at any point click through to
 verify the formal statement.
 
-\paragraph{Status of this prototype.} This first edition contains
-only Chapter~\ref{ch:descents} (Stanley \S1.4: descents, Eulerian
-numbers, and the set-refined count $\beps{n}{S}$). Chapters covering
-\S1.3 (cycles, inversions, Foata), the $q$-analogues, \S1.6.2
-(longest alternating subsequence), and \S1.6.3 (toggle action and
-the headline corollary) are planned but not yet written.
+\paragraph{Status of this prototype.} This first edition covers
+Stanley \S1.4 (descents, Eulerian numbers, and the set-refined
+count $\beps{n}{S}$), as Chapter~\ref{ch:descents}. It is preceded
+by a short mathcomp primer (Chapter~\ref{ch:primer}) and followed
+by a glossary appendix. Chapters covering \S1.3 (cycles, inversions,
+Foata), the $q$-analogues, \S1.6.2 (longest alternating
+subsequence), and \S1.6.3 (toggle action and the headline corollary)
+are planned but not yet written.
+
+\paragraph{First-time readers.} Read Chapter~\ref{ch:primer} once,
+then Chapter~\ref{ch:descents} top to bottom. Use
+Appendix~\ref{app:glossary} as a quick reference on second reading.
+The primer and glossary together contain everything a Stanley reader
+needs to know about mathcomp to verify the formal statements; you do
+not need to install Rocq.
 
 \paragraph{Conventions.} The single recurring shift is 0-indexing.
 Stanley writes $w \in \Sn{n}$ for permutations of $\{1, \dots, n\}$
@@ -49,13 +58,21 @@ this:
 \begin{lstlisting}[language=Rocq]
 Definition descent_set s : {set 'I_n} := [set i | is_descent s i].
 \end{lstlisting}
+\decoded{$\descent(s) = \{\,i \in \{0, \dots, n-1\} : s(i) > s(i+1)\,\}$.}
 
 \noindent The bracketed link at the top is clickable and opens the
-exact line on GitHub. The body is the Rocq source verbatim;
-identifiers and keywords are highlighted but no mathematical
-substitution has been performed. If the formal block looks different
-from what you expected from the informal statement above it, that is
-exactly the kind of discrepancy worth flagging.
+exact line on GitHub. The Rocq body is verbatim; identifiers and
+keywords are highlighted but no mathematical substitution has been
+performed. The shaded \emph{Decoded} line below the block restates
+the formal text in plain mathematics, mechanically substituting
+mathcomp casts for their meaning. Side by side, the two should say
+the same thing; if they do not, that is exactly the kind of
+discrepancy worth flagging.
+
+\noindent Some definitions also carry a \textsf{Design choice}
+sidebar that explains why a particular formalization was chosen
+when a more natural-looking alternative exists. These boxes are
+for first reading and can be skipped on a re-read.
 
 \paragraph{What is \emph{not} included here.}
 Full proofs are not included; only the formal \emph{statements} are
@@ -76,6 +93,231 @@ echo 'From mathcomp_eulerian Require Import beta_swap.
 
 \noindent prints \texttt{Closed under the global context}, meaning no
 axiom is used anywhere in its transitive dependencies.
+
+\clearpage
+
+% =====================================================================
+\chapter{A combinatorialist's mathcomp primer}
+\label{ch:primer}
+% =====================================================================
+
+This chapter is a focused reference for the few mathcomp primitives
+that appear in Chapter~\ref{ch:descents}. It is not a tutorial; it
+gives just enough vocabulary to read the formal blocks and recognise
+that they say what the informal text claims. Skim it once on first
+read; come back to it as a glossary when re-reading.
+
+% =====================================================================
+\section{Ordinals: the type \texttt{'I\_n}}
+% =====================================================================
+
+The type \texttt{'I\_n} (read ``I-sub-n'') is mathcomp's
+\emph{finite type} of natural numbers strictly less than $n$. An
+inhabitant is a pair: a natural number \texttt{i : nat} and a
+\emph{proof} \texttt{i\,<\,n}. The two together are written
+\texttt{Ordinal i (proof : i\,<\,n)} but a reader normally never
+constructs ordinals by hand --- the type appears as the index of a
+sum or a permutation domain, and inhabitants come from the typing
+context.
+
+\begin{description}
+  \item[\texttt{ord0 : 'I\_n.+1}] the value $0$, with its proof
+    $0 < n+1$. Always available when the bound is at least $1$.
+  \item[\texttt{ord\_max : 'I\_n.+1}] the value $n$, with its proof.
+    The largest element of \texttt{'I\_n.+1}.
+  \item[\texttt{val i : nat}] strips an ordinal back to its
+    underlying natural number, forgetting the proof.
+\end{description}
+
+\noindent The \emph{cardinality} of \texttt{'I\_n} is exactly $n$
+(lemma \texttt{card\_ord} in \texttt{fintype.v}). So
+\texttt{\#|'I\_4|\,=\,4}.
+
+% =====================================================================
+\section{Casts: \texttt{widen\_ord}, \texttt{lift}, \texttt{unlift}}
+\label{sec:casts}
+% =====================================================================
+
+There are exactly two natural maps $\ord{n} \to \ord{n+1}$:
+
+\begin{description}
+  \item[\texttt{widen\_ord (h : n \,\textbackslash leq\, n+1) i}]
+    sends \texttt{i : 'I\_n} to the same numerical value, viewed
+    inside the bigger type. Diagrammatically:
+    \begin{center}
+      $i : \ord{n} \quad\xrightarrow{\;\texttt{widen\_ord}\;}\quad i : \ord{n+1}.$
+    \end{center}
+    The $h$ argument is a proof that $n \leq n+1$, supplied by
+    \texttt{leqnSn n}. Mathcomp users write
+    \texttt{widen\_ord (leqnSn n) i} reflexively.
+
+  \item[\texttt{lift (p : 'I\_n.+1) i}]
+    sends \texttt{i : 'I\_n} to a value in \texttt{'I\_n.+1}
+    \emph{skipping} the value $p$. With $p = \texttt{ord0}$, this
+    shifts every value up by one:
+    \begin{center}
+      $i : \ord{n} \quad\xrightarrow{\;\texttt{lift ord0}\;}\quad i+1 : \ord{n+1}.$
+    \end{center}
+    The general \texttt{lift p i} skips $p$, which is exactly what
+    one needs when removing one position from a permutation.
+\end{description}
+
+\noindent The two casts together name two specific elements of
+\texttt{'I\_n.+1} from the same source $i : \ord{n}$: the value $i$
+itself, and the value $i+1$. This is the idiom that lets us write
+``the comparison between consecutive positions $i$ and $i+1$''
+without ever leaving the well-typed world of finite ordinals.
+
+The partial inverse of \texttt{lift p} is \texttt{unlift p}, of
+type \texttt{'I\_n.+1\,\textbackslash to\,option 'I\_n}. Concretely:
+\texttt{unlift p i = None} if \texttt{i = p}, and
+\texttt{unlift p i = Some j} otherwise, with $j$ the unique witness
+of \texttt{i = lift p j}. This is the canonical Rocq idiom for the
+case-split ``is the input the special index $p$, or one of the
+others?'' --- it appears in every inductive bijection on ordinals.
+
+% =====================================================================
+\section{Finite sets: \texttt{\{set T\}}}
+% =====================================================================
+
+For \texttt{T} a finite type (such as \texttt{'I\_n}),
+\texttt{\{set T\}} is the type of \emph{finite subsets of T}, with
+\emph{extensional} equality: two sets are equal iff they have the
+same elements.
+
+\begin{description}
+  \item[\texttt{[set i : T\ |\ P i]}] set comprehension --- the set
+    of \texttt{i : T} satisfying the boolean predicate $P$. The
+    vertical bar reads as ``such that'', as in mathematical notation.
+  \item[\texttt{\#|S|}] the cardinality of \texttt{S} as a natural
+    number.
+  \item[\texttt{i \textbackslash in S}] membership test, returning
+    a \texttt{bool}.
+  \item[\texttt{\textasciitilde:\,S}] complement, \texttt{S\,:|:\,T}
+    union, \texttt{S\,:\&:\,T} intersection, \texttt{S\,:\textbackslash:\,T}
+    difference.
+\end{description}
+
+\noindent \texttt{\{set T\}} is itself a finite type, which means
+big operators (sums, products) can be indexed by sets. This matters
+for the Eulerian recurrence and for the partition-by-descent-set
+identity \texttt{beta\_eulerian}.
+
+% =====================================================================
+\section{Permutations: \texttt{\{perm T\}}}
+% =====================================================================
+
+\texttt{\{perm T\}} is the type of \emph{bijections} \texttt{T \textbackslash to T}
+for \texttt{T} a finite type. An inhabitant is a function
+together with a proof of bijectivity, packaged so that:
+
+\begin{description}
+  \item[\texttt{s i}] applies the permutation \texttt{s} to
+    \texttt{i : T} as a function. (No special syntax is needed:
+    \texttt{\{perm T\}} \emph{coerces} to a function.)
+  \item[\texttt{1\%g}] is the identity permutation. The \texttt{\%g}
+    selects mathcomp's group scope.
+  \item[\texttt{(s * t)\%g i}] is composition. Mathcomp's convention
+    is that \texttt{(s * t) i = t (s i)} (right-to-left for the
+    \emph{action}; the lemma is \texttt{permM}).
+  \item[\texttt{perm (h : injective f)}] constructs a permutation
+    from an injective function \texttt{f : T \textbackslash to T} (on a finite
+    type, injective implies bijective).
+\end{description}
+
+\noindent The cardinality of \texttt{\{perm 'I\_n\}} is $n!$
+(Stanley's $|\Sn{n}|$); this is the lemma \texttt{card\_perm} or
+\texttt{card\_Sn} in mathcomp.
+
+% =====================================================================
+\section{Big operators: \texttt{\textbackslash sum}, \texttt{\textbackslash prod}}
+% =====================================================================
+
+Mathcomp's \texttt{bigop.v} provides indexed sums and products with
+a uniform syntax:
+
+\begin{description}
+  \item[\texttt{\textbackslash sum\_(i\ :\ T) f i}] sums \texttt{f i}
+    over every \texttt{i : T} (\texttt{T} a finite type).
+  \item[\texttt{\textbackslash sum\_(i\ <\ n) f i}] same, with
+    \texttt{i : 'I\_n}.
+  \item[\texttt{\textbackslash sum\_(i\ \textbackslash in\ S) f i}]
+    sums over an explicit set \texttt{S}.
+  \item[\texttt{\textbackslash sum\_(i\ |\ P i) f i}] sums over
+    indices satisfying the boolean filter \texttt{P}.
+\end{description}
+
+\noindent The vertical bar in \texttt{\textbackslash sum\_(i\ |\ P i)}
+is a \emph{filter}, not the disjunction symbol. Replace
+\texttt{\textbackslash sum} by \texttt{\textbackslash prod} for
+products. Several recurring \emph{moves} appear in the proofs:
+
+\begin{description}
+  \item[\texttt{partition\_big f xpredT}] rewrite
+    \texttt{\textbackslash sum\_x g x} as
+    \texttt{\textbackslash sum\_y \textbackslash sum\_(x\ |\ f x = y) g x}
+    --- partition by the value of $f$.
+  \item[\texttt{bigID p}] split a sum into the part where the
+    predicate $p$ holds and the part where it does not.
+  \item[\texttt{reindex \ldots}] change of summation variable along
+    a bijection.
+\end{description}
+
+\noindent These names appear in the proofs we will not reprint in
+this document, but they are worth recognising if you click through
+to a \texttt{.v} file.
+
+% =====================================================================
+\section{Sections and section variables}
+% =====================================================================
+
+Every formalization file in this project opens with
+
+\begin{lstlisting}[language=Rocq]
+Section X.
+Variable n : nat.
+Definition foo := ...    (* implicitly takes n *)
+Lemma bar : ...          (* implicitly takes n *)
+End X.
+\end{lstlisting}
+
+\noindent Inside the section, definitions and lemmas may use
+\texttt{n} as if it were globally fixed. At \texttt{End X}, every
+definition and lemma is automatically generalised to take \texttt{n}
+as an explicit argument. This is why \texttt{descent.v} reads
+\texttt{Variable n : nat} once at the top and then
+\texttt{Definition is\_descent s i := ...} without an explicit
+\texttt{n}, but outside the file \texttt{is\_descent} is invoked as
+\texttt{is\_descent n s i}. (For the mathematician: think of
+\texttt{Variable} as ``Let \texttt{n} be a natural number'' at the
+start of a chapter.)
+
+% =====================================================================
+\section{The takeaway}
+% =====================================================================
+
+Three points are enough to read Chapter~\ref{ch:descents}:
+
+\begin{enumerate}
+  \item \texttt{\{perm 'I\_n.+1\}} is mathcomp's $\Sn{n+1}$. Apply
+    a permutation to a position by writing \texttt{s i}; the descent
+    set is a \texttt{\{set 'I\_n\}} (positions, not values).
+  \item The two casts \texttt{widen\_ord (leqnSn n) i} and
+    \texttt{lift ord0 i} pick out positions $i$ and $i+1$ inside
+    \texttt{'I\_n.+1} from a single $i : \ord{n}$. The reader does
+    not need to verify cast arithmetic by hand --- the kernel
+    rejects the file unless every cast is the unique one of its
+    type.
+  \item Big operators \texttt{\textbackslash sum\_(\ldots)} are
+    just sums; the syntax variants control the index range. The
+    vertical bar is a filter.
+\end{enumerate}
+
+\noindent With these in hand, the formal blocks in
+Chapter~\ref{ch:descents} read directly. Each formal block is
+followed by a one-line \emph{Decoded} reading that mechanically
+substitutes the mathcomp casts for their mathematical meaning, so
+the reader has both forms side by side.
 
 \clearpage
 
@@ -109,13 +351,29 @@ Definition is_descent s i : bool :=
   s (widen_ord (leqnSn n) i) > s (lift ord0 i).
 \end{lstlisting}
 
-\noindent
-Here $s$ has type $\Perm{\ord{n+1}}$ and $i$ has type $\ord{n}$.
-The cast \texttt{widen\_ord (leqnSn n) i} sends $i : \ord{n}$ to
-the same numerical value in $\ord{n+1}$ (the position $i$ itself);
-the cast \texttt{lift ord0 i} sends $i$ to $i+1 : \ord{n+1}$. Hence
-the formal definition reads $s(i) > s(i+1)$, matching
-Definition~\ref{def:is_descent} modulo 0-indexing.
+\decoded{$s(i) > s(i+1)$ for $i \in \{0, \dots, n-1\}$ and
+$s : \{0, \dots, n\} \to \{0, \dots, n\}$ a bijection.}
+
+\begin{sidebar}{why \texttt{widen\_ord} and \texttt{lift}, not \texttt{s i > s i.+1}?}
+The naive form \texttt{s i > s i.+1} does not type-check. The
+permutation \texttt{s : \{perm 'I\_n.+1\}} expects an argument of
+type \texttt{'I\_n.+1}, but a descent slot $i$ lives in
+\texttt{'I\_n} (there are $n$ adjacencies for $n+1$ positions).
+The two casts \texttt{widen\_ord (leqnSn n) i} and
+\texttt{lift ord0 i} are the canonical maps that ship $i$ into the
+larger type \texttt{'I\_n.+1} as the values $i$ and $i+1$
+respectively (Primer~\ref{sec:casts}). There is no way to ``just
+cast'' --- the two casts encode \emph{which} element of
+\texttt{'I\_n.+1} we mean. The verbosity is what makes the
+formalization correct by typing.
+\end{sidebar}
+
+\noindent The result type \texttt{bool} (rather than \texttt{Prop})
+makes \texttt{is\_descent} computable: \texttt{Compute is\_descent s i}
+returns \texttt{true} or \texttt{false} for any concrete \texttt{s}
+and \texttt{i}. Mathcomp's small-scale reflection bridges
+\texttt{is\_descent\,s\,i\,=\,true} with the corresponding
+proposition on demand.
 
 \begin{definition}[Descent set]
   \label{def:descent_set}
@@ -130,19 +388,50 @@ Definition~\ref{def:is_descent} modulo 0-indexing.
 Definition descent_set s : {set 'I_n} := [set i | is_descent s i].
 \end{lstlisting}
 
+\decoded{$\descent(s) = \{\,i \in \{0, \dots, n-1\} : s(i) > s(i+1)\,\}$.}
+
+\begin{sidebar}{why \texttt{\{set 'I\_n\}}, not \texttt{pred 'I\_n} or \texttt{seq 'I\_n}?}
+Three options exist for representing a finite collection of
+positions: a boolean predicate (\texttt{pred T}), a list
+(\texttt{seq T}), or a set (\texttt{\{set T\}}).
+\texttt{\{set\,'I\_n\}} is the right choice here for two reasons.
+First, it has \emph{extensional equality}: two sets are equal iff
+they have the same elements, so \texttt{descent\_set s = D} is the
+condition we want, with no axiom of function extensionality
+required. Second, \texttt{\{set 'I\_n\}} is itself a finite type,
+which means we can sum over it with mathcomp's big operators ---
+the lemma \texttt{beta\_eulerian} below uses
+\texttt{\textbackslash sum\_(D : \{set 'I\_n\}\,|\,\#|D|\,==\,k)}
+exactly because \texttt{\{set\}} supports this.
+\texttt{pred 'I\_n} fails the first test (extensional equality of
+predicates needs \texttt{funext}); \texttt{seq 'I\_n} carries
+spurious order and multiplicity.
+\end{sidebar}
+
 \noindent
 $\descent(w)$ is a subset of $\{1, \dots, n-1\}$ in Stanley; in our
 types it is a subset of $\{0, \dots, n-1\} = \ord{n}$. The
 correspondence is $\text{Stanley's } i \leftrightarrow \text{our } (i-1)$.
 
-\begin{example}
+\begin{example}[{Stanley's $w = [3,1,4,2]$, both ways}]
   \label{ex:s3142}
   Take $w = [3, 1, 4, 2] \in \Sn{4}$. Then
   $\descent(w) = \{1, 3\}$ since $w_1 = 3 > 1 = w_2$ and
-  $w_3 = 4 > 2 = w_4$. In our types, the corresponding $s :
-  \Perm{\ord{4}}$ has $s\,0 = 2$, $s\,1 = 0$, $s\,2 = 3$, $s\,3 = 1$
-  (values shifted to $\{0,1,2,3\}$), and $\mathtt{descent\_set\ s} =
-  \{0, 2\} : \Set{\ord{3}}$.
+  $w_3 = 4 > 2 = w_4$. In our types, the corresponding
+  $s : \Perm{\ord{4}}$ has $s\,0 = 2$, $s\,1 = 0$, $s\,2 = 3$,
+  $s\,3 = 1$ (values shifted to $\{0,1,2,3\}$). Then:
+  \begin{computestrip}
+Compute is_descent s 0.    (* = true, since s 0 = 2 > 0 = s 1 *)
+Compute is_descent s 1.    (* = false, since s 1 = 0 < 3 = s 2 *)
+Compute is_descent s 2.    (* = true, since s 2 = 3 > 1 = s 3 *)
+Compute descent_set s.     (* = [set 0; 2] : {set 'I_3} *)
+Compute des s.             (* = 2 *)
+  \end{computestrip}
+  \noindent After the index shift our $\{0, 2\}$ corresponds to
+  Stanley's $\{1, 3\}$, and $\des(s) = 2 = \des(w)$. The
+  computation is what the kernel does on the elaborated term ---
+  the formal definition matches the informal one not by editorial
+  promise but by the test running here on the page.
 \end{example}
 
 \begin{definition}[Descent number, ascent number]
@@ -155,15 +444,32 @@ correspondence is $\text{Stanley's } i \leftrightarrow \text{our } (i-1)$.
 Definition des s : nat := #|descent_set s|.
 \end{lstlisting}
 
+\decoded{$\des(s) = |\descent(s)|$, the number of descent positions.}
+
 \rocqsource{descent.v}{29}
 \begin{lstlisting}[language=Rocq]
 Definition asc s : nat := n - des s.
 \end{lstlisting}
 
-\noindent
-In the formal definition, $n$ is the number of descent positions
-(Stanley's $n - 1$). So our $\mathtt{asc\ s} = n - \mathtt{des\ s}$
-matches Stanley's $(n-1) - \des(w)$.
+\decoded{$\asc(s) = n - \des(s)$, the number of ascent positions
+(here $n$ is the number of descent slots, i.e.\ Stanley's $n-1$).}
+
+\begin{sidebar}{why is the parameter \texttt{n} ``perm size minus one''?}
+A permutation of $n+1$ elements has $n$ adjacencies, so the
+descent set lives in $\{0, \dots, n-1\}$ regardless of how we
+parameterise. Two choices: name the parameter after the perm size
+(forcing every descent-set type to be \texttt{\{set 'I\_n.-1\}}
+with a \texttt{.-1}), or name it after the descent slot count
+(forcing the perm type to be \texttt{\{perm 'I\_n.+1\}} with a
+\texttt{.+1}). We picked the latter because it removes a
+\texttt{.-1} from every theorem about descent sets and from every
+\texttt{eulerian n k} statement. The cost is a single conversion:
+\textbf{our parameter \texttt{n} is Stanley's $n-1$}, and our
+\texttt{eulerian\,n\,k} is Stanley's $\eulerianA(n+1, k)$. This
+is a project convention, not a mathcomp requirement; mathcomp
+itself uses both styles in different files. We flag the off-by-one
+explicitly at every theorem statement that crosses it.
+\end{sidebar}
 
 \begin{lemma}[Descent count is bounded]
   \label{lem:des_le}
@@ -174,6 +480,9 @@ matches Stanley's $(n-1) - \des(w)$.
 \begin{lstlisting}[language=Rocq]
 Lemma des_le s : des s <= n.
 \end{lstlisting}
+
+\decoded{$\des(s) \leq n$ for every $s : \Perm{\ord{n+1}}$
+(equivalently $\des(w) \leq |w| - 1$).}
 
 \noindent
 \emph{Proof sketch.} $\descent(w) \subseteq \{0, \dots, n-1\}$ which
@@ -188,6 +497,9 @@ has $n$ elements; the cardinality is at most $n$. \qed
 \begin{lstlisting}[language=Rocq]
 Lemma des_id : des (1 : {perm 'I_n.+1}) = 0.
 \end{lstlisting}
+
+\decoded{$\des(\mathrm{id}) = 0$, where \texttt{1\%g} is the group
+identity, i.e.\ the identity permutation.}
 
 \noindent
 \emph{Proof sketch.} For the identity, $s\,i = i$ at every position,
@@ -212,15 +524,29 @@ descents at corresponding positions.
 Definition rev_perm_ord : {perm 'I_n.+1} := perm (@rev_ord_inj n.+1).
 \end{lstlisting}
 
+\decoded{The position-reversal involution $i \mapsto n - i$,
+packaged as a permutation. \texttt{perm (h : injective f)} is the
+constructor that turns an injective function into a
+\texttt{\{perm T\}}.}
+
 \rocqsource{descent.v}{85}
 \begin{lstlisting}[language=Rocq]
 Definition rev_perm s : {perm 'I_n.+1} := rev_perm_ord * s.
 \end{lstlisting}
 
-\noindent
-\texttt{rev\_perm\_ord} is the position-reversal involution
-$i \mapsto n - i$; \texttt{rev\_perm s} pre-composes $s$ with it,
-giving Stanley's $w^{\mathrm{rev}}$.
+\decoded{$w^{\mathrm{rev}}(i) = s(n - i)$, the reversal of $s$
+viewed at the level of positions.}
+
+\begin{sidebar}{why \texttt{rev\_perm\_ord * s}, not \texttt{s * rev\_perm\_ord}?}
+Mathcomp's group convention is \texttt{(s * t) i = t (s i)} (see
+the lemma \texttt{permM}). With \texttt{rev\_perm := rev\_perm\_ord * s},
+applying gives \texttt{(rev\_perm\_ord * s) i = s (rev\_perm\_ord i)
+= s (n - i)}. This reverses \emph{positions} (Stanley's
+$w^{\mathrm{rev}}_i = w_{n+1-i}$). Post-composing instead would
+reverse \emph{values}, a different operation. Picking the wrong
+side here would silently change the lemma's content; the choice
+matches Stanley by direct check on a small example.
+\end{sidebar}
 
 \begin{lemma}[Descents of the reverse]
   \label{lem:is_descent_rev}
@@ -238,6 +564,10 @@ giving Stanley's $w^{\mathrm{rev}}$.
 Lemma is_descent_rev s (i : 'I_n) :
   is_descent (rev_perm s) i = ~~ is_descent s (rev_ord i).
 \end{lstlisting}
+
+\decoded{Position $i$ is a descent of $w^{\mathrm{rev}}$ iff
+position $n - i$ is \emph{not} a descent of $w$. The
+\texttt{\textasciitilde\textasciitilde} is boolean negation.}
 
 \noindent
 \emph{Proof sketch.} Direct calculation: $\mathtt{(rev\_perm\,s)\,j} =
@@ -264,15 +594,35 @@ Definition eulerian (n k : nat) : nat :=
   #|[set s : {perm 'I_n.+1} | des s == k]|.
 \end{lstlisting}
 
+\decoded{$\texttt{eulerian}\,n\,k = |\{s \in \Sn{n+1} : \des(s) = k\}|$.
+The \texttt{==} is boolean equality on \texttt{nat}, and
+\texttt{\#|\ldots|} is set cardinality.}
+
 \noindent
-\textbf{Off-by-one alert.} The Rocq parameter $n$ is "permutation
-size minus one." Concretely, \texttt{eulerian n k} counts perms of
-$\Perm{\ord{n+1}}$, which are Stanley's $\Sn{n+1}$. Hence
+\textbf{Off-by-one alert.} The Rocq parameter $n$ is ``permutation
+size minus one'' (see the design-choice sidebar above). Concretely,
+\texttt{eulerian n k} counts perms of $\Perm{\ord{n+1}}$, which are
+Stanley's $\Sn{n+1}$. Hence
 \[
   \texttt{eulerian } n\ k \;=\; \eulerianA(n+1, k).
 \]
 For instance, \texttt{eulerian 3 1} corresponds to Stanley's
 $\eulerianA(4, 1) = 11$ (Stanley table p.~36).
+
+\begin{computestrip}
+Compute eulerian 0 0.    (* = 1     -- Stanley A(1,0) = 1 *)
+Compute eulerian 1 0.    (* = 1     -- Stanley A(2,0) = 1 *)
+Compute eulerian 1 1.    (* = 1     -- Stanley A(2,1) = 1 *)
+Compute eulerian 2 0.    (* = 1     -- Stanley A(3,0) = 1 *)
+Compute eulerian 2 1.    (* = 4     -- Stanley A(3,1) = 4 *)
+Compute eulerian 2 2.    (* = 1     -- Stanley A(3,2) = 1 *)
+\end{computestrip}
+
+\noindent The numbers match Stanley's table on p.~36. Computing
+\texttt{eulerian} on \texttt{\{perm 'I\_n.+1\}} requires enumerating
+the set; for $n \geq 4$ the brute-force enumeration is slow, but
+for the small cases above it returns immediately and the values
+agree.
 
 \begin{lemma}[Row sum]
   \label{lem:eulerian_row_sum}
@@ -284,6 +634,10 @@ $\eulerianA(4, 1) = 11$ (Stanley table p.~36).
 Lemma eulerian_row_sum_fact n :
   \sum_(k < n.+1) eulerian n k = n.+1`!.
 \end{lstlisting}
+
+\decoded{$\sum_{k=0}^{n} \eulerianA(n+1, k) = (n+1)!$. The
+\texttt{`!} is mathcomp's factorial notation; \texttt{\textbackslash sum\_(k\,<\,n.+1)}
+sums over $k \in \{0, \dots, n\}$.}
 
 \noindent
 \emph{Proof sketch.} The summands partition $\Sn{n+1}$ by descent
@@ -300,6 +654,9 @@ Lemma eulerian_out_of_range n k :
   n < k -> eulerian n k = 0.
 \end{lstlisting}
 
+\decoded{If $k > n$ then $\eulerianA(n+1, k) = 0$, since perms of
+length $n+1$ have at most $n$ descents.}
+
 \noindent
 \emph{Proof sketch.} A permutation has at most $n$ descent positions
 (Lemma~\ref{lem:des_le}); none can have $k > n$ descents. \qed
@@ -313,6 +670,8 @@ Lemma eulerian_out_of_range n k :
 \begin{lstlisting}[language=Rocq]
 Lemma des0_id n (s : {perm 'I_n.+1}) : des s = 0 -> s = 1%g.
 \end{lstlisting}
+
+\decoded{If $\des(s) = 0$ then $s$ is the identity permutation.}
 
 \noindent
 \emph{Proof sketch.} $\des(s) = 0$ means $s(i) < s(i+1)$ for every
@@ -347,11 +706,25 @@ Definition insert_max_fun (i : 'I_n.+2) : 'I_n.+2 :=
 Definition insert_max_perm : {perm 'I_n.+2} := perm insert_max_fun_inj.
 \end{lstlisting}
 
-\noindent
-At position $p$, the output is $\mathtt{ord\_max} = n+1$. At any
-other position $\mathtt{lift\ p\ j}$ (i.e., positions $\neq p$,
-parameterized by $j : \ord{n+1}$), the output is
-$t\,j$ cast back to $\ord{n+2}$.
+\decoded{For $i \in \{0, \dots, n+1\}$: if $i = p$, output $n+1$
+(the new max); otherwise, write $i = $ \texttt{lift p j} for the
+unique $j \in \{0, \dots, n\}$ that skips $p$, and output $t(j)$
+cast into the larger type.}
+
+\begin{sidebar}{why \texttt{match unlift p i with}?}
+The fundamental case-split for inserting at position $p$ is ``is
+this position $p$ or not?''. Mathcomp encodes this as the
+\texttt{option}-valued partial inverse \texttt{unlift p}: it
+returns \texttt{None} exactly when $i = p$, and
+\texttt{Some j} otherwise --- where $j : \ord{n+1}$ is the unique
+witness of $i = $ \texttt{lift p j}. Carrying $j$ in the
+\texttt{Some} branch (rather than recomputing it from $i$ and $p$)
+avoids any arithmetic juggling: we get the correct
+\texttt{'I\_n.+1} value with its bound proof for free, and can
+apply $t$ directly. This is the universal idiom for constructing
+permutations on \texttt{'I\_n.+2} from a permutation on
+\texttt{'I\_n.+1} plus a special index.
+\end{sidebar}
 
 \begin{definition}[Extract-max]
   \label{def:extract_max}
@@ -368,6 +741,13 @@ Definition extract_max_fun (j : 'I_n.+1) : 'I_n.+1 :=
 Definition extract_max_perm : {perm 'I_n.+1} := perm extract_max_fun_inj.
 \end{lstlisting}
 
+\decoded{For $j \in \{0, \dots, n\}$: look at $s$ at position $j$
+of the original (skipping $p$); the result is some value in
+$\{0, \dots, n+1\}$ that is not $n+1$ (because $\sigma(p) = n+1$
+and $\sigma$ is a bijection); strip the high bit to land in
+$\{0, \dots, n\}$. The \texttt{odflt j (...)} provides a default
+that is provably unreachable.}
+
 \begin{theorem}[Insert-max is a bijection]
   \label{thm:insert_max_bij}
   The map $(t, p) \mapsto \mathtt{insert\_max}(t, p)$ is a bijection
@@ -381,6 +761,9 @@ Lemma insert_max_perm_bij n :
     exists! tp : {perm 'I_n.+1} * 'I_n.+2,
       sigma = insert_max_perm tp.1 tp.2.
 \end{lstlisting}
+
+\decoded{Every $\sigma \in \Sn{n+2}$ arises uniquely as
+$\mathtt{insert\_max}(t, p)$ for some $(t, p) \in \Sn{n+1} \times \{0, \dots, n+1\}$.}
 
 \noindent
 \emph{Proof sketch.} Given $\sigma$, the unique $p$ is
@@ -408,6 +791,11 @@ Theorem eulerian_rec n k :
   eulerian n.+1 k =
     (k.+1) * eulerian n k + (n.+1 - k) * eulerian n k.-1.
 \end{lstlisting}
+
+\decoded{$\eulerianA(n+2, k) = (k+1)\,\eulerianA(n+1, k) + (n+1 - k)\,\eulerianA(n+1, k-1)$.
+The \texttt{n.+1\,-\,k} on the second term reads as ``$n+1-k$''
+under our parameterisation; compare to Stanley's $(n+1-k)$ in
+$A(n+2, k) = (k+1) A(n+1, k) + (n+1 - k)\,A(n+1, k-1)$.}
 
 \noindent
 \emph{Proof sketch.} Using the insert-max bijection, classify each
@@ -441,9 +829,12 @@ Definition beta (n : nat) (D : {set 'I_n}) : nat :=
   #|[set sigma : {perm 'I_n.+1} | descent_set sigma == D]|.
 \end{lstlisting}
 
+\decoded{$\texttt{beta}\,n\,D = |\{\sigma \in \Sn{n+1} : \descent(\sigma) = D\}|$,
+the number of perms of length $n+1$ with descent set exactly $D$.}
+
 \noindent
 \textbf{Off-by-one alert.} As with \texttt{eulerian}, the Rocq
-parameter $n$ is "perm size minus one." So
+parameter $n$ is ``perm size minus one.'' So
 \texttt{beta n D} for $D : \Set{\ord{n}}$ equals Stanley's
 $\beps{n+1}{D}$, with $D$ interpreted as a subset of $\{0, \dots, n-1\}$
 that corresponds to Stanley's 1-indexed $S \subseteq \{1, \dots, n\}$.
@@ -463,6 +854,10 @@ Lemma beta_eulerian n k :
   \sum_(D : {set 'I_n} | #|D| == k) beta D = eulerian n k.
 \end{lstlisting}
 
+\decoded{$\sum_{D \subseteq \{0, \dots, n-1\},\ |D| = k} \beps{n+1}{D} = \eulerianA(n+1, k)$.
+The big-op syntax \texttt{\textbackslash sum\_(D\,:\,\{set 'I\_n\}\,|\,\#|D|\,==\,k)}
+sums over all sets $D$ of cardinality exactly $k$.}
+
 \noindent
 \emph{Proof sketch.} The sets $\{\sigma : \descent(\sigma) = D\}$ for
 $D$ ranging over subsets of cardinality $k$ partition the set of
@@ -481,6 +876,11 @@ permutations with $k$ descents. The cardinalities sum. \qed
 Lemma beta_rev n (D : {set 'I_n}) :
   beta [set rev_ord i | i in D] = beta (~: D).
 \end{lstlisting}
+
+\decoded{$\beps{n+1}{\{n-1-i : i \in D\}} = \beps{n+1}{\overline{D}}$.
+The set comprehension \texttt{[set rev\_ord i | i in D]} is the
+image of $D$ under $i \mapsto n-1-i$; \texttt{\textasciitilde:\,D}
+is the complement of $D$ in \texttt{'I\_n}.}
 
 \noindent
 \emph{Proof sketch.} Reversal $w \mapsto w^{\mathrm{rev}}$ is a
@@ -505,6 +905,109 @@ requires the toggle-action machinery of \S1.6.3 and is the subject
 of a future chapter.
 
 \appendix
+
+% =====================================================================
+\chapter{Glossary of mathcomp primitives}
+\label{app:glossary}
+% =====================================================================
+
+A quick-reference companion to Chapter~\ref{ch:primer}. Entries are
+ordered roughly by first appearance in the chapter; each gives the
+mathcomp source file, a one-line gloss, and an example.
+
+\begin{description}
+  \item[\texttt{'I\_n}] (\texttt{fintype.v}) The finite type of
+    natural numbers strictly less than $n$. Inhabitant: a pair
+    \texttt{(i, proof of i\,<\,n)}. Cardinality $n$.
+
+  \item[\texttt{ord0\,:\,'I\_n.+1}] (\texttt{fintype.v}) The value
+    $0$, with its proof of $0 < n+1$.
+
+  \item[\texttt{ord\_max\,:\,'I\_n.+1}] (\texttt{fintype.v}) The
+    value $n$, the largest element.
+
+  \item[\texttt{val\,i\,:\,nat}] (\texttt{eqtype.v}) Strips an
+    ordinal back to its underlying natural number.
+
+  \item[\texttt{widen\_ord (h\,:\,m\,\textbackslash leq\,n) i}]
+    (\texttt{fintype.v}) Casts \texttt{i\,:\,'I\_m} to \texttt{'I\_n}
+    keeping the same numerical value. Pure cast.
+
+  \item[\texttt{lift (p\,:\,'I\_n.+1) j}] (\texttt{fintype.v})
+    Casts \texttt{j\,:\,'I\_n} to \texttt{'I\_n.+1} ``skipping''
+    the value $p$. With $p = $ \texttt{ord0}, this is $j \mapsto j+1$.
+
+  \item[\texttt{unlift p i\,:\,option 'I\_n}] (\texttt{fintype.v})
+    Partial inverse of \texttt{lift p}. Returns \texttt{None} when
+    $i = p$, else \texttt{Some j} with $i = $ \texttt{lift p j}.
+
+  \item[\texttt{rev\_ord i}] (\texttt{fintype.v}) The involution
+    $i \mapsto n - 1 - i$ on \texttt{'I\_n}.
+
+  \item[\texttt{\{set T\}}] (\texttt{finset.v}) The type of finite
+    subsets of \texttt{T} (a finite type), with extensional equality.
+
+  \item[\texttt{[set i\,:\,T\,|\,P i]}] (\texttt{finset.v}) Set
+    comprehension: \texttt{\{i\,:\,T\,|\,P i\}}.
+
+  \item[\texttt{[set f i\,|\,i in S]}] (\texttt{finset.v}) Image of
+    set $S$ under function $f$.
+
+  \item[\texttt{\#|S|}] (\texttt{fintype.v}) Cardinality of a finite
+    set or predicate.
+
+  \item[\texttt{i \textbackslash in S}] (\texttt{finset.v})
+    Membership test, returning \texttt{bool}.
+
+  \item[\texttt{\textasciitilde:\,S}] (\texttt{finset.v}) Complement
+    of $S$ in its ambient finite type.
+
+  \item[\texttt{\{perm T\}}] (\texttt{perm.v}) Type of bijections
+    \texttt{T\,\textbackslash to T} for \texttt{T} a finite type.
+    Inhabitant: a function plus its proof of injectivity.
+
+  \item[\texttt{1\%g}] (\texttt{fingroup.v}) Group identity. For
+    \texttt{\{perm T\}}, the identity permutation.
+
+  \item[\texttt{(s * t)\%g}] (\texttt{fingroup.v}) Group
+    multiplication. For perms: \texttt{(s * t) i = t (s i)}; see
+    lemma \texttt{permM}.
+
+  \item[\texttt{perm (h\,:\,injective f)}] (\texttt{perm.v})
+    Constructor: turn an injective function into a \texttt{\{perm T\}}.
+
+  \item[\texttt{\textbackslash sum\_(i\,:\,T) f i}] (\texttt{bigop.v})
+    Sum of \texttt{f i} over every \texttt{i\,:\,T}.
+
+  \item[\texttt{\textbackslash sum\_(i\,<\,n) f i}] (\texttt{bigop.v})
+    Same, indexed by \texttt{i\,:\,'I\_n}.
+
+  \item[\texttt{\textbackslash sum\_(i\,\textbackslash in\,S) f i}]
+    (\texttt{bigop.v}) Sum over the elements of an explicit set
+    \texttt{S}.
+
+  \item[\texttt{\textbackslash sum\_(i\,|\,P i) f i}]
+    (\texttt{bigop.v}) Sum over $i$ satisfying boolean filter $P$.
+    The vertical bar is a filter, not disjunction.
+
+  \item[\texttt{partition\_big f xpredT}] (\texttt{bigop.v})
+    Rewrite a sum as a nested sum partitioned by the value of $f$.
+
+  \item[\texttt{n.+1}, \texttt{n.+2}, \texttt{n.-1}] (\texttt{ssrnat.v})
+    Successor, double-successor, predecessor on \texttt{nat}. Read
+    as $n+1$, $n+2$, $n-1$.
+
+  \item[\texttt{\textasciitilde\textasciitilde\,b}] Boolean negation.
+
+  \item[\texttt{a\,==\,b}] (\texttt{eqtype.v}) Decidable equality
+    on an \texttt{eqType}, returning \texttt{bool}. Distinct from
+    propositional \texttt{=}; bridged by lemma \texttt{eqP}.
+
+  \item[\texttt{Section X.\,Variable n.\,\ldots\,End X.}] (Rocq)
+    Sections introduce parameters that are auto-generalised on
+    \texttt{End}. Inside the section, \texttt{n} reads as a fixed
+    natural; outside, every definition is implicitly parameterised.
+\end{description}
 
 % =====================================================================
 \chapter{Source map}

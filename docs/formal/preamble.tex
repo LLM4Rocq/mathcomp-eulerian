@@ -35,6 +35,10 @@
 \definecolor{rocqstr}{RGB}{200,30,30}
 \definecolor{rocqbg}{RGB}{248,248,248}
 \definecolor{rocqframe}{RGB}{220,220,230}
+\definecolor{decodedbg}{RGB}{255,253,238}
+\definecolor{sidebarbg}{RGB}{240,245,255}
+\definecolor{sidebarframe}{RGB}{180,200,230}
+\definecolor{computebg}{RGB}{245,255,245}
 
 \usepackage{listings}
 
@@ -136,6 +140,43 @@
 %
 % (Wrapping listings in \newenvironment is fragile across multi-pass
 %  builds with hyperref, so we use the listing environment directly.)
+
+% --- Pedagogical sidebars ---
+
+% \decoded{Plain-text mechanical translation of the formal block.}
+% Appears immediately after a Rocq block; substitutes mathcomp casts for
+% their meaning so the reader can see the formal text says what the
+% informal text claims.
+\newcommand{\decoded}[1]{%
+  \par\nopagebreak\smallskip%
+  \noindent\colorbox{decodedbg}{%
+    \begin{minipage}{\dimexpr\textwidth-2\fboxsep\relax}%
+      \footnotesize\textsf{Decoded.}\enspace #1%
+    \end{minipage}%
+  }\par\smallskip%
+}
+
+% \begin{sidebar}{Title} ... \end{sidebar}
+% A "Why this representation?" or "Design choice" box, used to explain
+% formalization decisions inline.  Implemented via a quote-style indent
+% with a coloured rule on the left margin.
+\newenvironment{sidebar}[1]{%
+  \par\smallskip%
+  \noindent\hspace{0.02\textwidth}%
+  \begin{minipage}{0.96\textwidth}%
+    \small%
+    {\color{sidebarframe}\rule{2pt}{0.6\baselineskip}}\enspace%
+    \textbf{Design choice: #1}\par\smallskip%
+}{%
+  \end{minipage}\par\smallskip%
+}
+
+% \begin{computestrip} ... \end{computestrip}
+% A short Rocq Compute output strip, demonstrating a definition's value
+% on a concrete example.
+\lstnewenvironment{computestrip}{%
+  \lstset{language=Rocq, backgroundcolor=\color{computebg}}%
+}{}
 
 % --- Title ---
 \title{The mathcomp-eulerian formalization\\
