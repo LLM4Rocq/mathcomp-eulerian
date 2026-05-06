@@ -35,15 +35,21 @@ Section TurnDefs.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* A position i : 'I_n is a turning point of s : {perm 'I_n.+2} iff the
-   direction at the descent slot widen i differs from the direction at
-   the descent slot lift ord0 i.  Both are descent slots, in 'I_n.+1. *)
+(** [is_turn s i] is the boolean indicator that interior position
+    [i : 'I_n] is a turning point of [s : {perm 'I_n.+2}]: the descent
+    indicator at slot [widen i] differs (XOR) from the indicator at slot
+    [lift ord0 i].  These two slots straddle position [i]. *)
 Definition is_turn s (i : 'I_n) : bool :=
   is_descent s (widen_ord (leqnSn _) i) (+) is_descent s (lift ord0 i).
 
+(** [turn_count s] is the number of turning points of [s], i.e., the
+    cardinality of [[set i : 'I_n | is_turn s i]].  Stanley §1.6.2: the
+    "turn count" governing the longest alternating subsequence length. *)
 Definition turn_count s : nat :=
   #|[set i : 'I_n | is_turn s i]|.
 
+(** Definitional unfolding of [is_turn] to its XOR-of-descents form;
+    used as a rewrite rule. *)
 Lemma is_turnE s i :
   is_turn s i =
     is_descent s (widen_ord (leqnSn _) i) (+) is_descent s (lift ord0 i).
@@ -61,6 +67,9 @@ End TurnDefs.
      xs[i-1] < xs[i] > xs[i+1]   or   xs[i-1] > xs[i] < xs[i+1].
    We define this directly by recursion on the seq. *)
 
+(** [alt_aux b x xs] checks alternation of the seq [x :: xs] given the
+    expected direction [b] of the first comparison ([true] = up, [false]
+    = down).  Successive directions flip at each step. *)
 Fixpoint alt_aux (b : bool) (x : nat) (xs : seq nat) : bool :=
   match xs with
   | [::] => true
@@ -68,6 +77,9 @@ Fixpoint alt_aux (b : bool) (x : nat) (xs : seq nat) : bool :=
       (if b then x < y else y < x) && alt_aux (~~ b) y xs'
   end.
 
+(** [is_alt xs] holds when [xs] is alternating: comparisons of consecutive
+    elements strictly alternate between [<] and [>].  Two starts are
+    possible (up-down or down-up); both are accepted by disjunction. *)
 Definition is_alt (xs : seq nat) : bool :=
   match xs with
   | [::] => true
@@ -80,10 +92,12 @@ Definition is_alt (xs : seq nat) : bool :=
 (* §C. Sequence model of a permutation                                       *)
 (* ========================================================================= *)
 
-(* The sequence [s 0; s 1; ...; s (n+1)] viewed as a seq nat. *)
+(** [perm_seq s] is the one-line word [[s 0; s 1; ...; s (n+1)]] of
+    [s : {perm 'I_n.+2}], as a [seq nat]. *)
 Definition perm_seq n (s : {perm 'I_n.+2}) : seq nat :=
   [seq val (s i) | i <- enum 'I_n.+2].
 
+(** [perm_seq s] always has length [n.+2]. *)
 Lemma size_perm_seq n (s : {perm 'I_n.+2}) :
   size (perm_seq s) = n.+2.
 Proof. by rewrite size_map size_enum_ord. Qed.
@@ -92,20 +106,21 @@ Proof. by rewrite size_map size_enum_ord. Qed.
 (* §D. Subsequences indexed by a {set} of positions                          *)
 (* ========================================================================= *)
 
-(* For a set of positions I : {set 'I_n.+2}, sort the positions in
-   ascending order (val) and pick the corresponding values from s. *)
+(** [pick_seq s I] is the subseq of [perm_seq s] indexed by the position
+    set [I : {set 'I_n.+2}] in ascending order: sort [I] by underlying
+    [val], then read off the [s]-values. *)
 Definition pick_seq n (s : {perm 'I_n.+2}) (I : {set 'I_n.+2}) : seq nat :=
   [seq val (s j) | j <- sort (fun a b : 'I_n.+2 => val a <= val b) (enum I)].
 
-(* `as_perm_max` is the maximum size of an index set whose ordered image
-   under s is alternating.  This is the bijective definition.  We also
-   define the direct version `as_perm` from turn_count, and the headline
-   theorem `as_perm_max_eq` (currently the existence direction is open;
-   only the upper bound is proved formally below). *)
+(** [as_perm_max s] is the bijective definition of [as(s)] from Stanley
+    §1.6.2: the maximum cardinality of a position set [I] whose ordered
+    image [pick_seq s I] is alternating. *)
 Definition as_perm_max n (s : {perm 'I_n.+2}) : nat :=
   \max_(I : {set 'I_n.+2} | is_alt (pick_seq s I)) #|I|.
 
-(* The DIRECT definition (Path X), which we use as the main `as_perm`. *)
+(** [as_perm s] is the DIRECT definition (Path X) of [as(s)] as
+    [(turn_count s).+2].  The headline [as_perm_max_eq] proves these
+    two definitions agree. *)
 Definition as_perm n (s : {perm 'I_n.+2}) : nat := (turn_count s).+2.
 
 (* ========================================================================= *)
@@ -139,9 +154,11 @@ Proof. by []. Qed.
 (* §F. Basic lemmas about is_alt                                             *)
 (* ========================================================================= *)
 
+(** The empty seq is alternating. *)
 Lemma is_alt_nil : is_alt [::] = true.
 Proof. by []. Qed.
 
+(** A singleton seq is alternating. *)
 Lemma is_alt_singleton x : is_alt [:: x] = true.
 Proof. by []. Qed.
 
@@ -151,10 +168,13 @@ Proof. by []. Qed.
 (* Tail of an alternating seq is alternating.  Proof goes by case
    analysis on the head and uses alt_aux to recover. *)
 
+(** Defining equation of [alt_aux] on a [cons] tail.  Used as a rewrite. *)
 Lemma alt_aux_cons b x y xs :
   alt_aux b x (y :: xs) = (if b then x < y else y < x) && alt_aux (~~ b) y xs.
 Proof. by []. Qed.
 
+(** Defining equation of [is_alt] on a 2-element prefix [x :: y :: xs]:
+    either start with an ascent or a descent.  Used as a rewrite. *)
 Lemma is_alt_cons2 x y xs :
   is_alt (x :: y :: xs) =
     ((x < y) && alt_aux false y xs) || ((y < x) && alt_aux true y xs).
@@ -163,14 +183,16 @@ Proof. by []. Qed.
 (* Alternating seq starting up: is_alt = (x<y) && alt_aux false y xs. *)
 (* Once we know the first comparison's direction, the rest is forced. *)
 
+(** Shape lemma: a non-empty seq tail satisfying [alt_aux] decomposes
+    as [y :: xs']. *)
 Lemma alt_aux_size_ge1 b x xs :
   alt_aux b x xs -> 0 < size xs -> exists y xs', xs = y :: xs'.
 Proof.
 case: xs => [|y xs'] // _ _; by exists y, xs'.
 Qed.
 
-(* If is_alt (x :: y :: xs) holds, drop the first element and the rest
-   is still alternating. *)
+(** Tail closure of [is_alt]: dropping the first element of an
+    alternating seq of length at least 2 leaves an alternating seq. *)
 Lemma is_alt_tail x y xs :
   is_alt (x :: y :: xs) -> is_alt (y :: xs).
 Proof.
@@ -194,22 +216,28 @@ Section TurnLemmas.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
+(** Cardinality bound: the turn-set of [s : {perm 'I_n.+2}] has at
+    most [n] turning points. *)
 Lemma turn_count_le s : turn_count s <= n.
 Proof.
 rewrite /turn_count (leq_trans (max_card _)) // card_ord //.
 Qed.
 
+(** Definitional unfolding [as_perm s = (turn_count s).+2]; rewrite rule. *)
 Lemma as_permE s : as_perm s = (turn_count s).+2.
 Proof. by []. Qed.
 
+(** Lower bound: any [as_perm] is at least [2] (the empty/two-element
+    base case). *)
 Lemma as_perm_ge2 s : 2 <= as_perm s.
 Proof. by rewrite as_permE. Qed.
 
-(* Simple bound: as_perm s <= n + 2 (the size of perm_seq). *)
+(** Upper bound on [as_perm]: bounded by [n.+2], the size of [perm_seq s]. *)
 Lemma as_perm_le_size s : as_perm s <= n.+2.
 Proof. by rewrite as_permE ltnS ltnS turn_count_le. Qed.
 
-(* Identity perm has no descents, hence no turns, hence as_perm = 2. *)
+(** The identity permutation has no descents, hence no turning points:
+    [turn_count 1 = 0]. *)
 Lemma turn_count_id : turn_count (1 : {perm 'I_n.+2}) = 0.
 Proof.
 apply/eqP; rewrite cards_eq0; apply/eqP/setP => i; rewrite !inE.
@@ -224,6 +252,7 @@ rewrite ltnNge leqW //=.
 rewrite ltnNge leqW //=.
 Qed.
 
+(** [as_perm] hits its minimum [2] on the identity permutation. *)
 Lemma as_perm_id : as_perm (1 : {perm 'I_n.+2}) = 2.
 Proof. by rewrite as_permE turn_count_id. Qed.
 
@@ -241,8 +270,8 @@ Section AltDesc.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* If descent_set s = alt_desc_set (n.+1), then turn_count s = n
-   (every position in 'I_n is a turning point), and so as_perm = n+2. *)
+(** When [s] has the alternating descent pattern, every interior
+    position is a turning point: [turn_count s = n]. *)
 Lemma turn_count_alt_desc s :
   descent_set s = alt_desc_set n.+1 -> turn_count s = n.
 Proof.
@@ -255,12 +284,14 @@ rewrite negbK add0n.
 by case: (odd i).
 Qed.
 
+(** When [s] has the alternating descent pattern, [as_perm s] attains
+    its maximum value [n.+2]. *)
 Lemma as_perm_alt_desc s :
   descent_set s = alt_desc_set n.+1 -> as_perm s = n.+2.
 Proof. by move=> Hds; rewrite as_permE (turn_count_alt_desc Hds). Qed.
 
-(* Conversely, the maximum value of as_perm is n+2, achieved exactly
-   when every position is a turning point. *)
+(** Characterization of the maximum [turn_count s = n]: equivalent to
+    every position [i : 'I_n] being a turning point. *)
 Lemma turn_count_max_iff s :
   (turn_count s == n) =
   [forall i : 'I_n, is_turn s i].
@@ -286,9 +317,8 @@ Section AsPermMaxBounds.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* The image of the empty set is the empty seq, which is alternating.
-   The image of a singleton is alternating.  The image of any 2-element
-   set is alternating since s is injective. *)
+(** Trivial alternation: any [pick_seq s I] of size at most [1] is
+    automatically alternating. *)
 Lemma is_alt_pick_seq_le2 s (I : {set 'I_n.+2}) :
   #|I| <= 1 -> is_alt (pick_seq s I).
 Proof.
@@ -299,6 +329,7 @@ have Hsz : size (sort (fun a b : 'I_n.+2 => val a <= val b) (enum I)) <= 1.
 case: (sort _ _) Hsz => [|x [|y rest]] //=.
 Qed.
 
+(** Trivial nonnegativity of [as_perm_max]; nat-valued. *)
 Lemma as_perm_max_ge0 s : 0 <= as_perm_max s.
 Proof. by []. Qed.
 
@@ -367,8 +398,8 @@ Section MaxAlternation.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* When descent_set s = alt_desc_set, every interior position is a
-   turn, so as_perm s = n+2 = size (perm_seq s). *)
+(** When the descent set is alternating, [as_perm s] equals the full
+    sequence length [size (perm_seq s) = n.+2]. *)
 Lemma as_perm_full s :
   descent_set s = alt_desc_set n.+1 ->
   as_perm s = size (perm_seq s).
@@ -389,27 +420,34 @@ End MaxAlternation.
    for any alternating subseq sub of xs would be a direct induction
    on xs / sub — we leave the inductive proof itself open. *)
 
-(* Direction at slot i: comparing xs[i] and xs[i+1].
-   Defined via pairmap to ensure structural recursion. *)
+(** [sign_seq xs] is the boolean direction sequence at each adjacent
+    pair: [xs[i] < xs[i+1]] for [i = 0, ..., size xs - 2].  Empty for
+    [xs = nil]. *)
 Definition sign_seq (xs : seq nat) : seq bool :=
   if xs is x :: xs' then pairmap (fun a b => a < b) x xs'
   else [::].
 
+(** Cons reduction for [sign_seq] on a 2-prefix. *)
 Lemma sign_seq_cons2 x y xs :
   sign_seq (x :: y :: xs) = (x < y) :: sign_seq (y :: xs).
 Proof. by []. Qed.
 
+(** Size of [sign_seq xs]: one less than [size xs]. *)
 Lemma size_sign_seq xs : size (sign_seq xs) = (size xs).-1.
 Proof.
 case: xs => [|x xs] //=.
 by rewrite size_pairmap.
 Qed.
 
-(* Number of "flips" in a seq of bools: positions i where ss[i] != ss[i+1]. *)
+(** [flip_count ss] is the number of adjacent disagreements (XOR
+    flips) in a boolean seq [ss].  Counts indices [i] with
+    [ss[i] != ss[i+1]]. *)
 Definition flip_count (ss : seq bool) : nat :=
   if ss is a :: ss' then \sum_(p <- pairmap (fun u v => u (+) v) a ss') p
   else 0.
 
+(** Cons reduction: flip count of [a :: b :: ss] equals the boundary
+    flip [a (+) b] plus the flip count of [b :: ss]. *)
 Lemma flip_count_cons2 a b ss :
   flip_count (a :: b :: ss) = (a (+) b) + flip_count (b :: ss).
 Proof.
@@ -417,14 +455,21 @@ rewrite /flip_count /=.
 by rewrite big_cons.
 Qed.
 
+(** [turn_count_seq xs] is the seq-level turn count: number of direction
+    flips in [xs], i.e., [flip_count (sign_seq xs)].  The seq analogue
+    of [turn_count] for permutations. *)
 Definition turn_count_seq (xs : seq nat) : nat := flip_count (sign_seq xs).
 
+(** [turn_count_seq] of the empty seq is [0]. *)
 Lemma turn_count_seq_nil : turn_count_seq [::] = 0.
 Proof. by []. Qed.
 
+(** [turn_count_seq] of a singleton is [0]. *)
 Lemma turn_count_seq_singleton x : turn_count_seq [:: x] = 0.
 Proof. by []. Qed.
 
+(** [turn_count_seq] of a 2-element seq is [0]: only one comparison,
+    no flip. *)
 Lemma turn_count_seq_pair x y : turn_count_seq [:: x; y] = 0.
 Proof. by rewrite /turn_count_seq /sign_seq /= /flip_count /= big_nil. Qed.
 
@@ -478,11 +523,15 @@ Section SignPerm.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
+(** The sign sequence of [perm_seq s] has length [n.+1], one slot per
+    pair of consecutive positions. *)
 Lemma size_sign_seq_perm s :
   size (sign_seq (perm_seq s)) = n.+1.
 Proof. by rewrite size_sign_seq size_perm_seq /=. Qed.
 
-(* The enum 'I_n.+2 splits into ord0 and the lifts of enum 'I_n.+1. *)
+(** Decomposition of [enum 'I_n.+2] as [ord0] followed by the [lift
+    ord0]-image of [enum 'I_n.+1].  Used to align indexing of [perm_seq]
+    with [sign_seq]. *)
 Lemma enum_ord_split :
   enum 'I_n.+2 = ord0 :: [seq lift ord0 i | i <- enum 'I_n.+1].
 Proof.
@@ -500,8 +549,8 @@ have H2 := @nth_enum_ord n.+1 ord0 i Hi'.
 by rewrite H1 /bump /= add1n H2.
 Qed.
 
-(* Helper: descent at slot i in 'I_n.+1 corresponds to s (widen i) > s (lift 0 i).
-   We can rewrite ~~ is_descent as the strict less-than. *)
+(** Negated descent indicator as a strict less-than: [~~ is_descent s i]
+    iff [val (s (widen i)) < val (s (lift ord0 i))]. *)
 Lemma not_is_descentE s (i : 'I_n.+1) :
   ~~ is_descent s i = (val (s (widen_ord (leqnSn _) i)) < val (s (lift ord0 i))).
 Proof.
@@ -516,8 +565,9 @@ rewrite leq_eqVlt (negbTE Hvne) /=.
 by [].
 Qed.
 
-(* The connection bridge: sign_seq of perm_seq is exactly the negated
-   descent indicator.  This identifies slot-direction with ascent/descent. *)
+(** Bridge identifying [sign_seq (perm_seq s)] with the (negated)
+    descent indicator over [enum 'I_n.+1].  Connects the seq-level
+    flip-count machinery to the perm-level descent/turn structure. *)
 Lemma sign_seq_perm_seq s :
   sign_seq (perm_seq s) = [seq ~~ is_descent s i | i <- enum 'I_n.+1].
 Proof.
@@ -556,6 +606,8 @@ Section AsPermMaxBoundsM.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
+(** Trivial size bound: [as_perm_max s <= n.+2], the size of the
+    underlying [perm_seq s]. *)
 Lemma as_perm_max_le_size s : as_perm_max s <= n.+2.
 Proof.
 rewrite /as_perm_max.
@@ -571,6 +623,8 @@ Section PickSeqFull.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
+(** [enum 'I_m] is sorted by [val] ascending.  Used to identify
+    [pick_seq s [set: ...]] with [perm_seq s]. *)
 Lemma sorted_val_enum_ord m :
   sorted (fun a b : 'I_m => val a <= val b) (enum 'I_m).
 Proof.
@@ -581,6 +635,8 @@ move=> /andP [Hxy Hr].
 by rewrite Hxy; apply: IH; rewrite /= Hr.
 Qed.
 
+(** Picking the full position set yields the full one-line word:
+    [pick_seq s [set: 'I_n.+2] = perm_seq s]. *)
 Lemma pick_seq_setT s : pick_seq s [set: 'I_n.+2] = perm_seq s.
 Proof.
 rewrite /pick_seq /perm_seq.
@@ -591,8 +647,8 @@ apply: sorted_sort.
 - exact: sorted_val_enum_ord.
 Qed.
 
-(* If perm_seq s itself is alternating, then as_perm_max s achieves its
-   maximum value n.+2. *)
+(** If [perm_seq s] is itself alternating, [as_perm_max s] hits its
+    maximum [n.+2] (witnessed by the full set). *)
 Lemma as_perm_max_full s :
   is_alt (perm_seq s) -> as_perm_max s = n.+2.
 Proof.
@@ -611,12 +667,12 @@ End PickSeqFull.
 (* §N. Auxiliary alt-subseq lemmas (towards the upper bound)                  *)
 (* ========================================================================= *)
 
-(* Tiny seqs: any seq of size <= 1 is alternating. *)
+(** Any seq of size at most [1] is alternating. *)
 Lemma is_alt_size_le1 (xs : seq nat) : size xs <= 1 -> is_alt xs.
 Proof. by case: xs => [|x [|y xs]]. Qed.
 
-(* Three-element shape: an alt seq of length >= 3 cannot have its first three
-   elements strictly monotone (in either direction). *)
+(** An alternating seq of length at least [3] cannot have its first
+    three entries strictly monotone in either direction. *)
 Lemma is_alt_three x y z xs :
   is_alt (x :: y :: z :: xs) ->
   (x < y < z) = false /\ (z < y < x) = false.
@@ -634,9 +690,8 @@ case/orP => /andP [Hxy].
     by have := ltn_trans Hyz Hzy; rewrite ltnn.
 Qed.
 
-(* Strict-monotone case of the upper bound: any alt subseq of a strictly
-   ascending seq has length <= 2.  This handles the "single run" base case
-   for the general flip-count bound. *)
+(** Strict-monotone base case for the upper bound: any alternating
+    subseq of a strictly ascending seq has length at most [2]. *)
 Lemma is_alt_subseq_strictmono_le2 (xs sub : seq nat) :
   subseq sub xs -> sorted ltn xs -> is_alt sub -> size sub <= 2.
 Proof.
@@ -669,16 +724,19 @@ Section SlotInterval.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
+(** [slot_iv i j] is the set of descent slots [k : 'I_n.+1] whose
+    underlying [nat] satisfies [val i <= val k < val j].  Indexes the
+    "slot interval" between positions [i] and [j]. *)
 Definition slot_iv (i j : 'I_n.+2) : {set 'I_n.+1} :=
   [set k : 'I_n.+1 | (val i <= val k) && (val k < val j)].
 
+(** Membership in [slot_iv i j] unfolded to the [val] inequalities. *)
 Lemma mem_slot_iv (i j : 'I_n.+2) (k : 'I_n.+1) :
   (k \in slot_iv i j) = (val i <= val k) && (val k < val j).
 Proof. by rewrite inE. Qed.
 
-(* Cardinality: when val i <= val j, the interval has val j - val i
-   elements (clamped to 'I_n.+1, but since val j <= n.+1 < n.+2 the
-   relevant range fits cleanly). *)
+(** Cardinality of the slot interval: [#|slot_iv i j| = val j - val i],
+    when [val j <= n.+1]. *)
 Lemma card_slot_iv (i j : 'I_n.+2) :
   val j <= n.+1 ->
   #|slot_iv i j| = val j - val i.
@@ -730,9 +788,10 @@ Section InterTurn.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* §P.2.helper — slot_descent_const.  Under "no turn in slot range
-   [val i, val j)", consecutive slots are descent-equal, and so all
-   slots in that range have the same descent indicator. *)
+(** Constancy of the descent indicator on a turn-free slot interval:
+    if no turning point of [s] lies in slot range [[val i, val j)], then
+    [is_descent s k1 = is_descent s k2] for all slots [k1, k2] in the
+    range.  Used to derive monotone behavior of [s] on turn-free zones. *)
 Lemma slot_descent_const s (i j : 'I_n.+2) :
   (forall t : 'I_n, val i <= (val t).+1 < val j -> ~~ is_turn s t) ->
   forall (k1 k2 : 'I_n.+1),
@@ -766,9 +825,9 @@ elim: (val k2 - val k1) {-2}k1 (refl_equal (val k2 - val k1)) =>
   - by rewrite HSk1 (leq_trans Hi1).
 Qed.
 
-(* §P.2.helper — constant_descent_monotone.  If is_descent is constant
-   value `b` on all slots in [val p, val q), then s is monotone on
-   the position range [p, q]: ascending (b=false) or descending (b=true). *)
+(** Constant-descent implies monotonicity: if [is_descent s k = b] for
+    all slots [k] in [[val p, val q)], then [s] is monotone on positions
+    [(p, q)]: ascending if [b = false], descending if [b = true]. *)
 Lemma constant_descent_monotone s (p q : 'I_n.+2) (b : bool) :
   val p < val q ->
   (forall k : 'I_n.+1, val p <= val k < val q -> is_descent s k = b) ->
@@ -837,9 +896,10 @@ case: (eqVneq (val q) (val p').+1) => [Hpq1|Hne].
     by apply: ltn_trans Hd1' IHmid'.
 Qed.
 
-(* §P.3 — inter_turn_monotone.  In the absence of turns in slot range
-   [val i, val j), the comparison direction at any sub-interval (p, q)
-   matches the boundary comparison (i, j). *)
+(** Direction transport across a turn-free slot range: if no turning
+    point lies in [[val i, val j)], then the [s]-comparison direction
+    on any sub-pair [(p, q)] inside [[i, j]] matches the boundary
+    direction at [(i, j)]. *)
 Lemma inter_turn_monotone s (i j : 'I_n.+2) :
   val i < val j ->
   (forall t : 'I_n, val i <= (val t).+1 < val j -> ~~ is_turn s t) ->
@@ -874,9 +934,9 @@ case Eb : b Hmono_ij Hmono_pq => Hmono_ij Hmono_pq /=.
 - by rewrite Hmono_pq Hmono_ij.
 Qed.
 
-(* §P.4 — pick_flip_has_turn.  If three positions i < j < k have a
-   "flip" in their s-comparisons, there must be a turn in the slot
-   interval [val i, val k). *)
+(** Existence of a witness turn for any sign flip: if three positions
+    [i < j < k] have an [s]-comparison flip across the middle, then
+    some turning point of [s] lies in the slot interval [[val i, val k)]. *)
 Lemma pick_flip_has_turn s (i j k : 'I_n.+2) :
   val i < val j < val k ->
   (val (s i) < val (s j))%N <> (val (s j) < val (s k))%N ->
@@ -971,23 +1031,30 @@ Section UpperBound.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* Turn-interval: turns t such that (val t).+1 lies in [a, b) — i.e., the
-   "slot border" controlled by t falls between positions a and b. *)
+(** [turn_iv s a b] is the set of turning points [t : 'I_n] of [s]
+    whose witness position [(val t).+1] lies in the half-open interval
+    [[a, b)]. *)
 Definition turn_iv s (a b : nat) : {set 'I_n} :=
   [set t : 'I_n | is_turn s t && (a <= (val t).+1 < b)].
 
+(** Membership in [turn_iv s a b] unfolded to its conjunction. *)
 Lemma mem_turn_iv s a b (t : 'I_n) :
   (t \in turn_iv s a b) = (is_turn s t && (a <= (val t).+1 < b)).
 Proof. by rewrite inE. Qed.
 
+(** [turn_iv s a b] is a subset of the global turn set of [s]. *)
 Lemma turn_iv_subset s a b :
   turn_iv s a b \subset [set t : 'I_n | is_turn s t].
 Proof. by apply/subsetP => t; rewrite !inE; case/andP => ->. Qed.
 
+(** Cardinality bound: [#|turn_iv s a b| <= turn_count s]. *)
 Lemma card_turn_iv_le s a b :
   #|turn_iv s a b| <= turn_count s.
 Proof. exact: subset_leq_card (turn_iv_subset s a b). Qed.
 
+(** Additivity of [turn_iv] cardinality on a split point [b]:
+    [#|turn_iv s a c| = #|turn_iv s a b| + #|turn_iv s b c|]
+    when [a <= b <= c]. *)
 Lemma turn_iv_split s (a b c : nat) :
   a <= b -> b <= c ->
   #|turn_iv s a c| = #|turn_iv s a b| + #|turn_iv s b c|.
@@ -1083,13 +1150,15 @@ End UpperBound.
    `flip_count_le_turn_iv` (or its global cousin `flip_count_le_turn_count`)
    is SESSION B-5 work — see comment at the end. *)
 
-(* The Hamming triangle inequality on bools — used as a base for the
-   nat-comparison triangle. *)
+(** Hamming-style triangle inequality on three booleans:
+    [a XOR c <= (a XOR b) + (b XOR c)].  Building block for the
+    flip-count monotonicity arguments. *)
 Lemma bool_triangle (a b c : bool) : (a (+) c) <= (a (+) b) + (b (+) c).
 Proof. by case: a; case: b; case: c. Qed.
 
-(* Triangle inequality for XOR of nat comparisons.
-   Crucial: this uses the INFEASIBLE-TRIPLES argument from nat order. *)
+(** Triangle inequality for XOR of strict nat comparisons, used to
+    bound the flip count when an element is inserted between two others.
+    Exploits the transitivity / total-order structure of [<] on nats. *)
 Lemma triangle_xor_nat_g (a x y z : nat) :
   (a < x) (+) (x < z) <= (a < x) (+) (x < y) + ((x < y) (+) (y < z)).
 Proof.
@@ -1106,8 +1175,8 @@ case Hxy : (x < y)%N; case Hyz : (y < z)%N.
   by case: (a < x)%N.
 Qed.
 
-(* Variant of the triangle, with the middle position on the LEFT not RIGHT.
-   Used for "insert at front" reductions. *)
+(** Mirror variant of [triangle_xor_nat_g] with the middle position on
+    the left.  Used for "insert at front" reductions in flip count. *)
 Lemma triangle_xor_nat (w y z r : nat) :
   (w < z) (+) (z < r) <= (w < y) (+) (y < z) + ((y < z) (+) (z < r)).
 Proof.
@@ -1124,7 +1193,9 @@ case Hwz : (w < z)%N; case Hzr : (z < r)%N; rewrite /= ?addn0 ?addn1.
 - exact: leq0n.
 Qed.
 
-(* Inserting an element at the FRONT of a nat seq increases flip_count. *)
+(** Front-insertion monotonicity for [flip_count] on a [pairmap]:
+    inserting one element at the front never decreases the flip count.
+    Step 1 building block for [flip_count_pairmap_insert_anywhere]. *)
 Lemma flip_count_pairmap_insert (a y : nat) (xs : seq nat) :
   flip_count (pairmap (fun u : nat => [eta leq u.+1]) a xs) <=
   flip_count (pairmap (fun u : nat => [eta leq u.+1]) a (y :: xs)).
@@ -1139,8 +1210,9 @@ case: xs => [|x xs] /=.
     exact: (triangle_xor_nat a y x x').
 Qed.
 
-(* The KEY HELPER for insertion-anywhere: combines the IH with a case analysis
-   on whether (x<z) = (y<z) (which controls whether the inner sums match). *)
+(** Inductive step helper for [flip_count_pairmap_insert_anywhere]:
+    combines the IH bound [s1 <= ... + s2] with a structural matching
+    condition to handle the four [(x < z) = (y < z)] cases uniformly. *)
 Lemma flip_step_helper (a x y z : nat) (s1 s2 : nat) :
   s1 <= ((x < y) (+) (y < z)) + s2 ->
   ((x < z) = (y < z) -> s1 = s2) ->
@@ -1172,8 +1244,10 @@ case Hxz : (x<z)%N; case Hyz : (y<z)%N.
   exact: bool_triangle.
 Qed.
 
-(* THE KEY MILESTONE: Inserting an element ANYWHERE in a nat seq increases
-   flip_count of the resulting pairmap. *)
+(** Insertion-anywhere monotonicity for [flip_count] on a [pairmap]:
+    inserting one element at any position never decreases the flip
+    count.  Generalizes [flip_count_pairmap_insert] to interior
+    positions. *)
 Lemma flip_count_pairmap_insert_anywhere (xs ys : seq nat) (y : nat) (a : nat) :
   flip_count (pairmap (fun u : nat => [eta leq u.+1]) a (xs ++ ys)) <=
   flip_count (pairmap (fun u : nat => [eta leq u.+1]) a (xs ++ y :: ys)).
@@ -1197,7 +1271,8 @@ move: a; elim: xs => [|x xs IH] a /=.
     exact: IHv.
 Qed.
 
-(* Sign-seq variant for nat seqs *)
+(** Sign-seq front-insertion monotonicity: inserting [y] at the front
+    of [xs] never decreases [flip_count (sign_seq _)]. *)
 Lemma flip_count_sign_seq_insert_front (y : nat) (xs : seq nat) :
   flip_count (sign_seq xs) <= flip_count (sign_seq (y :: xs)).
 Proof.
@@ -1248,7 +1323,8 @@ Qed.
 (* §Q.2. Subseq monotonicity for flip_count (Session B-5, Step 1-2)          *)
 (* ========================================================================= *)
 
-(* Helper: if xs is a strict subseq of ys, we can drop one extra element from ys. *)
+(** Strict-subseq dropping: if [xs] is a proper subseq of [ys], some
+    index [i] of [ys] can be removed while still containing [xs]. *)
 Lemma subseq_drop_extra (xs ys : seq nat) :
   subseq xs ys -> size xs < size ys ->
   exists i, i < size ys /\
@@ -1268,7 +1344,7 @@ case: xs => [|x xs] /=.
     by rewrite drop0.
 Qed.
 
-(* Helper: size of a sequence with one element removed at position i. *)
+(** Size of [ys] with element at position [i] removed: [(size ys).-1]. *)
 Lemma size_take_drop_skip (i : nat) (ys : seq nat) :
   i < size ys -> size (take i ys ++ drop i.+1 ys) = (size ys).-1.
 Proof.
@@ -1280,7 +1356,9 @@ have Him : i <= m by rewrite -ltnS.
 by rewrite subnKC.
 Qed.
 
-(* SUBSEQ MONOTONICITY of flip_count(pairmap _ a -). Key step (Session B-5). *)
+(** Subseq monotonicity for [flip_count] on a [pairmap]: if [xs] is a
+    subseq of [ys], its flip count is at most that of [ys].  Iterates
+    [flip_count_pairmap_insert_anywhere] across the size difference. *)
 Lemma flip_count_pairmap_le_subseq (xs ys : seq nat) :
   subseq xs ys ->
   forall a : nat,
@@ -1314,7 +1392,10 @@ elim: k => [|k IH] xs ys Hsub Hk a.
   exact: flip_count_pairmap_insert_anywhere.
 Qed.
 
-(* Specialized to sign_seq. *)
+(** Subseq monotonicity specialized to [sign_seq]: if [xs] is a subseq
+    of [ys], then [flip_count (sign_seq xs) <= flip_count (sign_seq ys)].
+    Used in [as_perm_max_upper] to bound subseq alternation by the global
+    flip count. *)
 Lemma flip_count_sign_seq_le_subseq (xs ys : seq nat) :
   subseq xs ys ->
   flip_count (sign_seq xs) <= flip_count (sign_seq ys).
@@ -1344,19 +1425,24 @@ Qed.
 (* §R. Seq-level: alternating seq has flip_count(sign_seq) = size - 2.       *)
 (* ========================================================================= *)
 
-(* Auxiliary: a boolean-list version of "fully alternating". *)
+(** [is_alt_bool_aux a xs] checks alternation of a boolean seq with a
+    leading "previous" element [a]: every adjacent pair must XOR to true. *)
 Fixpoint is_alt_bool_aux (a : bool) (xs : seq bool) : bool :=
   match xs with
   | [::] => true
   | b :: rest => (a (+) b) && is_alt_bool_aux b rest
   end.
 
+(** [is_alt_bool xs] holds when the boolean seq [xs] is fully
+    alternating: every adjacent pair differs. *)
 Definition is_alt_bool (xs : seq bool) : bool :=
   match xs with
   | [::] => true
   | a :: rest => is_alt_bool_aux a rest
   end.
 
+(** Fully alternating boolean seqs maximize flip count:
+    [flip_count xs = (size xs).-1] when [is_alt_bool xs] holds. *)
 Lemma flip_count_is_alt_bool xs :
   is_alt_bool xs -> flip_count xs = (size xs).-1.
 Proof.
@@ -1370,7 +1456,8 @@ rewrite /flip_count /= in IHv.
 by rewrite IHv add1n.
 Qed.
 
-(* sign_seq of an is_alt seq is itself alternating (every adjacent pair differs). *)
+(** The sign seq of an [is_alt] nat seq is itself fully alternating
+    as a boolean seq: every adjacent direction pair differs. *)
 Lemma sign_seq_is_alt xs :
   is_alt xs -> 2 <= size xs -> is_alt_bool (sign_seq xs).
 Proof.
@@ -1395,6 +1482,9 @@ case/orP: Halt => /andP [Hcmp Halt].
   by move: IHv; rewrite Hyz.
 Qed.
 
+(** Flip-count formula for alternating seqs: an [is_alt] seq of size
+    at least [2] has [flip_count (sign_seq xs) = (size xs).-2].  Used
+    in [as_perm_max_upper] to reduce alternation to flip-count bounds. *)
 Lemma is_alt_flip_count xs :
   is_alt xs -> 2 <= size xs -> flip_count (sign_seq xs) = (size xs).-2.
 Proof.
@@ -1412,7 +1502,9 @@ Section UpperBoundAssembly.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* The sort by val produces a strict-sorted seq for {set 'I_n.+2}. *)
+(** Sorting the enumeration of a [{set 'I_n.+2}] by [val] gives a
+    strictly sorted seq, since the underlying enumeration is
+    duplicate-free. *)
 Lemma sort_enum_strict_sorted (I : {set 'I_n.+2}) :
   sorted (fun a b : 'I_n.+2 => val a < val b)
          (sort (fun a b : 'I_n.+2 => val a <= val b) (enum I)).
@@ -1454,28 +1546,37 @@ Section LowerBound.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* Inject a turn t : 'I_n into 'I_n.+2 at position (val t).+1. *)
+(** [turn_inj t] injects an interior position [t : 'I_n] into
+    [{ 'I_n.+2 }] at the offset [(val t).+1].  Used to construct the
+    witness set [turn_witness] for the lower-bound construction. *)
 Definition turn_inj (t : 'I_n) : 'I_n.+2 :=
   lift ord0 (widen_ord (leqnSn n) t).
 
+(** Underlying value of [turn_inj t]: [(val t).+1]. *)
 Lemma val_turn_inj (t : 'I_n) : val (turn_inj t) = (val t).+1.
 Proof. by rewrite /turn_inj /= /bump /= add1n. Qed.
 
+(** [turn_inj] is injective. *)
 Lemma turn_inj_inj : injective turn_inj.
 Proof.
 move=> a b /(congr1 val); rewrite !val_turn_inj => /succn_inj.
 exact: val_inj.
 Qed.
 
+(** [turn_witness s] is the explicit alternating-subseq witness:
+    [{ord0; ord_max} ∪ {turn_inj t | t turning point of s}].  Has
+    cardinality [(turn_count s).+2]; its [pick_seq] is the alternating
+    subsequence of length [(turn_count s).+2]. *)
 Definition turn_witness s : {set 'I_n.+2} :=
   ord0 |: (ord_max |: [set turn_inj t | t in [set i : 'I_n | is_turn s i]]).
 
-(* The image of turn_inj on the turn-set has cardinality = turn_count s. *)
+(** Image of [turn_inj] on the turn set has cardinality [turn_count s]. *)
 Lemma card_turn_image s :
   #|[set turn_inj t | t in [set i : 'I_n | is_turn s i]]| = turn_count s.
 Proof. by rewrite card_imset //; apply: turn_inj_inj. Qed.
 
-(* Element membership characterizations for the turn_image *)
+(** Range bound: any element of the [turn_inj]-image of the turn set
+    has [0 < val x <= n]; in particular, neither [ord0] nor [ord_max]. *)
 Lemma turn_image_lt_max s (x : 'I_n.+2) :
   x \in [set turn_inj t | t in [set i : 'I_n | is_turn s i]] ->
   0 < val x <= n.
@@ -1485,6 +1586,7 @@ rewrite val_turn_inj /=.
 by have := ltn_ord t.
 Qed.
 
+(** [ord0] is not in the [turn_inj]-image of the turn set. *)
 Lemma ord0_notin_turn_image s :
   (ord0 : 'I_n.+2) \notin [set turn_inj t | t in [set i : 'I_n | is_turn s i]].
 Proof.
@@ -1492,6 +1594,7 @@ apply/negP => /turn_image_lt_max /andP [].
 by rewrite (_ : val (ord0 : 'I_n.+2) = 0).
 Qed.
 
+(** [ord_max] is not in the [turn_inj]-image of the turn set. *)
 Lemma ord_max_notin_turn_image s :
   (ord_max : 'I_n.+2) \notin
     [set turn_inj t | t in [set i : 'I_n | is_turn s i]].
@@ -1501,9 +1604,12 @@ rewrite (_ : val (ord_max : 'I_n.+2) = n.+1) //.
 by rewrite ltnn.
 Qed.
 
+(** Trivial distinction: [ord0] and [ord_max] differ in [{'I_n.+2}]. *)
 Lemma ord0_neq_ord_max : (ord0 : 'I_n.+2) != ord_max.
 Proof. by rewrite -val_eqE /=. Qed.
 
+(** Cardinality of the lower-bound witness set:
+    [#|turn_witness s| = (turn_count s).+2]. *)
 Lemma card_turn_witness s :
   #|turn_witness s| = (turn_count s).+2.
 Proof.
@@ -1514,8 +1620,9 @@ rewrite cardsU1 (negbTE (ord_max_notin_turn_image s)) /=.
 by rewrite card_turn_image add1n add1n.
 Qed.
 
-(* Strict-left variant of slot_descent_const: only requires no turns in the
-   STRICTLY interior slot range (val t).+1 ∈ (val i, val j). *)
+(** Strict-left variant of [slot_descent_const]: hypothesis only excludes
+    turns with witness STRICTLY greater than [val i].  Used in the
+    lower-bound construction where [i] itself may be a turn position. *)
 Lemma slot_descent_const_strict s (i j : 'I_n.+2) :
   (forall t : 'I_n, val i < (val t).+1 < val j -> ~~ is_turn s t) ->
   forall (k1 k2 : 'I_n.+1),
@@ -1549,7 +1656,8 @@ elim: (val k2 - val k1) {-2}k1 (refl_equal (val k2 - val k1)) =>
   - by rewrite HSk1 (leq_trans Hi1).
 Qed.
 
-(* Strict-left variant of inter_turn_monotone. *)
+(** Strict-left variant of [inter_turn_monotone]: monotone direction
+    transport with a strict lower-bound hypothesis on turn witnesses. *)
 Lemma inter_turn_monotone_strict s (i j : 'I_n.+2) :
   val i < val j ->
   (forall t : 'I_n, val i < (val t).+1 < val j -> ~~ is_turn s t) ->
@@ -1584,9 +1692,10 @@ case Eb : b Hmono_ij Hmono_pq => Hmono_ij Hmono_pq /=.
 - by rewrite Hmono_pq Hmono_ij.
 Qed.
 
-(* Direction at pair (a, b) is determined by descent slot.  Specifically,
-   when b = turn_inj t and there are no interior turns in (val a, val b),
-   the direction val (s a) < val (s b) equals ~~ is_descent s (widen_ord t). *)
+(** Direction LEFT of a turn witness: when [b = turn_inj t] and no
+    interior turn lies in [(val a, val b)], the direction [s a] vs
+    [s b] equals [~~ is_descent s (widen_ord t)] (the "left half"
+    descent indicator at slot [t]). *)
 Lemma dir_left_of_turn s (a b : 'I_n.+2) (t : 'I_n) :
   b = turn_inj t -> val a <= val t ->
   (forall t' : 'I_n, val a < (val t').+1 < val b -> ~~ is_turn s t') ->
@@ -1614,6 +1723,9 @@ have := not_is_descentE s (widen_ord (leqnSn n) t).
 by rewrite Hwt Hlt => ->.
 Qed.
 
+(** Direction RIGHT of a turn witness: dual of [dir_left_of_turn]; the
+    direction [s b] vs [s c] equals [~~ is_descent s (lift ord0 t)]
+    (the "right half" descent indicator at slot [t]). *)
 Lemma dir_right_of_turn s (b c : 'I_n.+2) (t : 'I_n) :
   b = turn_inj t -> val b < val c ->
   (forall t' : 'I_n, val b < (val t').+1 < val c -> ~~ is_turn s t') ->
@@ -1642,9 +1754,11 @@ have := not_is_descentE s (lift ord0 t).
 by rewrite Hwt Hlt => ->.
 Qed.
 
-(* The KEY adjacency lemma: for an interior witness b = turn_inj t and
-   neighbors a (left) and c (right), the directions across (a,b) and (b,c)
-   differ. *)
+(** Key adjacency lemma for the lower bound: at an interior witness
+    [b = turn_inj t] flanked by neighbors [a, c] with no interior turns
+    in the half-open intervals, the directions across [(a, b)] and [(b, c)]
+    DIFFER (since [t] is a turning point).  Used in [triple_flip_pos_seq]
+    to verify the alternating property of [pick_seq s (turn_witness s)]. *)
 Lemma sign_flip_at_turn s (a b c : 'I_n.+2) (t : 'I_n) :
   is_turn s t -> b = turn_inj t ->
   val a <= val t -> val b < val c ->
@@ -1668,27 +1782,32 @@ End LowerBound.
 (* Converse to sign_seq_is_alt: alternating signs (with adjacent distinctness)
    imply is_alt.  We need this so we can build is_alt from sign-flip data. *)
 
-(* All adjacent pairs in xs are distinct. *)
+(** [uniq_adj xs] holds when every adjacent pair in [xs] consists of
+    distinct elements.  Weaker than [uniq], used to characterize when
+    [is_alt] follows from sign-seq alternation. *)
 Definition uniq_adj (xs : seq nat) : bool :=
   match xs with
   | [::] => true
   | x :: xs' => all (fun p => p.1 != p.2) (zip (x :: xs') xs')
   end.
 
+(** Cons reduction for [uniq_adj] on a 2-prefix. *)
 Lemma uniq_adj_cons2 x y rest :
   uniq_adj (x :: y :: rest) = (x != y) && uniq_adj (y :: rest).
 Proof. by rewrite /= eqE. Qed.
 
-(* Uniqueness of adjacent pairs reflected through cons. *)
+(** Tail closure of [uniq_adj]. *)
 Lemma uniq_adj_tail x y rest :
   uniq_adj (x :: y :: rest) -> uniq_adj (y :: rest).
 Proof. by case: rest => [|z r] /= /andP []. Qed.
 
+(** Head distinctness extracted from [uniq_adj]. *)
 Lemma uniq_adj_head_neq x y rest :
   uniq_adj (x :: y :: rest) -> x != y.
 Proof. by case: rest => [|z r] /= /andP []. Qed.
 
-(* Comparison sign at adjacent distinct nats: x < y iff ~~ (y < x) (and x ≠ y). *)
+(** For distinct nats, [x < y] iff [~~ (y < x)]; trichotomy in
+    boolean form. *)
 Lemma sign_pair_neq (x y : nat) : x != y -> (x < y)%N = ~~ (y < x)%N.
 Proof.
 move=> Hne; case Hxy : (x < y)%N.
@@ -1697,9 +1816,9 @@ move/negbT: Hxy; rewrite -leqNgt leq_eqVlt => /orP [/eqP Hxy|->] //.
 by rewrite Hxy eq_refl in Hne.
 Qed.
 
-(* Key reverse direction: alternating sign_seq + adjacent uniqueness ⟹ alt_aux.
-   Direction at y is OPPOSITE of (x < y), since alternation means the next
-   step flips. *)
+(** Key reverse direction: an alternating boolean sign seq plus adjacent
+    distinctness implies the [alt_aux] predicate.  Building block for
+    [is_alt_from_sign]. *)
 Lemma alt_aux_from_sign x y xs :
   uniq_adj (x :: y :: xs) ->
   is_alt_bool (sign_seq (x :: y :: xs)) ->
@@ -1724,8 +1843,10 @@ case Exy : (x < y)%N Hxy_yz => Hxy_yz /=.
   by rewrite Hyz_true /= => ->.
 Qed.
 
-(* The sign_seq of the image of any seq under val ∘ s is alternating
-   if every adjacent triple in the position seq has flipping s-direction. *)
+(** Triple-flip sufficient condition for sign-seq alternation: if every
+    adjacent triple [(js[i], js[i+1], js[i+2])] has flipping
+    [s]-direction, then the sign seq of the [s]-image is alternating
+    as a boolean seq. *)
 Lemma sign_seq_alt_of_triple_flip n (s : {perm 'I_n.+2}) (js : seq 'I_n.+2) :
   (forall i, i.+2 < size js ->
      (val (s (nth ord0 js i)) < val (s (nth ord0 js i.+1)))%N
@@ -1748,7 +1869,7 @@ have := Htriples 0%N H0; rewrite /=.
 by case: (val (s x) < _)%N; case: (val (s y) < _)%N.
 Qed.
 
-(* uniq_adj implied by uniq for nat sequences. *)
+(** [uniq_adj] follows from full [uniq] for nat seqs. *)
 Lemma uniq_adj_of_uniq (xs : seq nat) : uniq xs -> uniq_adj xs.
 Proof.
 case: xs => [|x xs] //=.
@@ -1758,7 +1879,9 @@ rewrite Hxy /=.
 by apply: IH; rewrite Hy Hu.
 Qed.
 
-(* Main reverse: is_alt characterized by alt_bool sign_seq + adjacent uniq. *)
+(** Main reverse characterization: [is_alt xs] follows from
+    [is_alt_bool (sign_seq xs)] together with adjacent distinctness.
+    Used to construct alternating subseqs from sign-flip witnesses. *)
 Lemma is_alt_from_sign xs :
   uniq_adj xs -> is_alt_bool (sign_seq xs) -> is_alt xs.
 Proof.
@@ -1779,30 +1902,38 @@ Section ExistenceLB.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* The sorted positions in turn_witness s. *)
+(** [pos_seq s] is the [turn_witness s] enumerated in ascending [val]
+    order: the sorted seq of position indices in the lower-bound
+    witness construction. *)
 Definition pos_seq s : seq 'I_n.+2 :=
   sort (fun a b : 'I_n.+2 => val a <= val b) (enum (turn_witness s)).
 
+(** [pos_seq s] has length [(turn_count s).+2]. *)
 Lemma size_pos_seq s : size (pos_seq s) = (turn_count s).+2.
 Proof. by rewrite /pos_seq size_sort -cardE card_turn_witness. Qed.
 
+(** [pos_seq s] is duplicate-free. *)
 Lemma pos_seq_uniq s : uniq (pos_seq s).
 Proof. by rewrite /pos_seq sort_uniq enum_uniq. Qed.
 
+(** Definitional unfolding: [pick_seq s (turn_witness s)] equals the
+    map of [pos_seq s] under [val (s _)]. *)
 Lemma pick_seq_pos_seq s :
   pick_seq s (turn_witness s) = [seq val (s j) | j <- pos_seq s].
 Proof. by []. Qed.
 
+(** [pos_seq s] is strictly sorted by [val]. *)
 Lemma pos_seq_strict_sorted s :
   sorted (fun a b : 'I_n.+2 => val a < val b) (pos_seq s).
 Proof. exact: sort_enum_strict_sorted. Qed.
 
-(* Membership in pos_seq matches membership in turn_witness s. *)
+(** Membership transfer: [x \in pos_seq s] iff [x \in turn_witness s]. *)
 Lemma mem_pos_seq s (x : 'I_n.+2) :
   x \in pos_seq s = (x \in turn_witness s).
 Proof. by rewrite /pos_seq mem_sort mem_enum. Qed.
 
-(* In a strict-sorted seq, the val-ordering is determined by index ordering. *)
+(** Strict-sorted property: index-order in [pos_seq s] matches
+    [val]-order. *)
 Lemma pos_seq_val_lt s (i j : nat) :
   i < size (pos_seq s) -> j < size (pos_seq s) -> i < j ->
   val (nth ord0 (pos_seq s) i) < val (nth ord0 (pos_seq s) j).
@@ -1813,7 +1944,8 @@ have Htrans : transitive (fun a b : 'I_n.+2 => val a < val b).
 exact: (sorted_ltn_nth Htrans ord0 (pos_seq_strict_sorted s)).
 Qed.
 
-(* In a strict-sorted seq, val-ordering ⟹ index-ordering. *)
+(** Converse strict-sorted property: [val]-order forces index-order
+    in [pos_seq s]. *)
 Lemma pos_seq_val_lt_inv s (i j : nat) :
   i < size (pos_seq s) -> j < size (pos_seq s) ->
   val (nth ord0 (pos_seq s) i) < val (nth ord0 (pos_seq s) j) ->
@@ -1825,7 +1957,8 @@ case: (ltngtP i j) Hlt => // Hij Hlt.
 by rewrite Hij ltnn in Hlt.
 Qed.
 
-(* No element of pos_seq has val strictly between consecutive entries. *)
+(** Gap property: no element of [pos_seq s] has [val] strictly between
+    consecutive entries [pos_seq s i] and [pos_seq s i.+1]. *)
 Lemma no_inner_in_pos_seq s i (x : 'I_n.+2) :
   i.+1 < size (pos_seq s) ->
   x \in pos_seq s ->
@@ -1842,7 +1975,7 @@ have H2 := pos_seq_val_lt_inv Hj Hi Hxb.
 by have := leq_trans H2 H1; rewrite ltnn.
 Qed.
 
-(* The first element of pos_seq is ord0. *)
+(** First element of [pos_seq s] is [ord0]. *)
 Lemma pos_seq_nth0 s : nth ord0 (pos_seq s) 0 = ord0.
 Proof.
 have Hsz : 0 < size (pos_seq s) by rewrite size_pos_seq.
@@ -1857,7 +1990,7 @@ rewrite Hk_eq /=.
 by [].
 Qed.
 
-(* The last element of pos_seq has val n.+1 (= ord_max). *)
+(** Last element of [pos_seq s] has value [n.+1] (i.e., is [ord_max]). *)
 Lemma pos_seq_last_val s :
   val (nth ord0 (pos_seq s) (turn_count s).+1) = n.+1.
 Proof.
@@ -1879,7 +2012,9 @@ by apply/eqP; rewrite eqn_leq; apply/andP; split;
   [have := Hbound; rewrite ltnS | apply: ltnW].
 Qed.
 
-(* Interior elements (index 1..size-2) are images under turn_inj. *)
+(** Interior elements of [pos_seq s] (indices [0 < i < size - 1]) are
+    [turn_inj]-images of turning points: they correspond to actual
+    turns of [s]. *)
 Lemma interior_is_turn_inj s (i : nat) :
   0 < i -> i.+1 < size (pos_seq s) ->
   exists t : 'I_n, is_turn s t /\ nth ord0 (pos_seq s) i = turn_inj t.
@@ -1908,7 +2043,8 @@ exists t; split.
 by [].
 Qed.
 
-(* Strict interior bounds: val of nth pos_seq i is in (0, n+1) for 0 < i < size-1. *)
+(** Strict interior value bounds: [0 < val (pos_seq s i) < n.+1] for
+    indices [i] strictly between the endpoints. *)
 Lemma interior_val_bounds s i :
   0 < i -> i.+1 < size (pos_seq s) ->
   0 < val (nth ord0 (pos_seq s) i) /\
@@ -1922,7 +2058,9 @@ split; first by [].
 by have := ltn_ord t.
 Qed.
 
-(* The triple-flip property for adjacent triples in pos_seq. *)
+(** Triple-flip property for adjacent triples in [pos_seq s]: directions
+    across consecutive [s]-comparisons differ.  The interior witness in
+    each triple is a turning point, so [sign_flip_at_turn] applies. *)
 Lemma triple_flip_pos_seq s i :
   i.+2 < size (pos_seq s) ->
   (val (s (nth ord0 (pos_seq s) i)) < val (s (nth ord0 (pos_seq s) i.+1)))%N
@@ -1970,7 +2108,9 @@ have Hno_right : forall t' : 'I_n, val b < (val t').+1 < val c -> ~~ is_turn s t
 exact: (sign_flip_at_turn Htn Heqb Hat Hbc Hno_left Hno_right).
 Qed.
 
-(* The picked seq is alternating. *)
+(** Witness alternation: [pick_seq s (turn_witness s)] is alternating.
+    Combines [triple_flip_pos_seq] with the sign-seq characterization
+    of [is_alt]. *)
 Theorem is_alt_pick_turn_witness s :
   is_alt (pick_seq s (turn_witness s)).
 Proof.
@@ -1984,7 +2124,10 @@ apply: sign_seq_alt_of_triple_flip.
 exact: triple_flip_pos_seq.
 Qed.
 
-(* Main lower bound. *)
+(** Headline lower bound for [as_perm_max]:
+    [(turn_count s).+2 <= as_perm_max s].  Witnessed by [turn_witness s],
+    which has [(turn_count s).+2] elements and induces an alternating
+    [pick_seq] (Stanley §1.6.2). *)
 Theorem as_perm_max_lower s : (turn_count s).+2 <= as_perm_max s.
 Proof.
 rewrite -card_turn_witness.
@@ -2003,7 +2146,8 @@ Section UpperBoundChain.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+2}).
 
-(* Sort of enum I (I : {set 'I_n.+2}) is a subseq of enum 'I_n.+2. *)
+(** Sorted enumeration of a subset is a subseq of the sorted full
+    enumeration: [sort by val (enum I)] is a subseq of [enum 'I_n.+2]. *)
 Lemma sort_enum_subseq_enum (I : {set 'I_n.+2}) :
   subseq (sort (fun a b : 'I_n.+2 => val a <= val b) (enum I)) (enum 'I_n.+2).
 Proof.
@@ -2024,6 +2168,7 @@ apply: (subseq_sort Hle_total Hle_trans).
 exact: Hsub_enumI.
 Qed.
 
+(** [pick_seq s I] is a subseq of [perm_seq s] for any position set [I]. *)
 Lemma pick_seq_subseq_perm_seq s (I : {set 'I_n.+2}) :
   subseq (pick_seq s I) (perm_seq s).
 Proof.
@@ -2031,6 +2176,8 @@ rewrite /pick_seq /perm_seq.
 exact: map_subseq (sort_enum_subseq_enum I).
 Qed.
 
+(** Flip-count comparison for [pick_seq] vs [perm_seq]: any pick has
+    [flip_count] at most that of the full perm seq. *)
 Lemma flip_count_pick_le_perm s (I : {set 'I_n.+2}) :
   flip_count (sign_seq (pick_seq s I)) <= flip_count (sign_seq (perm_seq s)).
 Proof.
@@ -2039,7 +2186,8 @@ Qed.
 
 (* Step 4: flip_count of sign_seq of perm_seq equals turn_count.              *)
 
-(* Auxiliary: flip_count as a sum over consecutive XOR-pairs. *)
+(** [flip_count] expressed as an indexed sum of consecutive XOR-pairs.
+    Used to align with the [turn_count] sum over [is_turn]. *)
 Lemma flip_count_as_sum (xs : seq bool) :
   flip_count xs = \sum_(0 <= i < (size xs).-1) (nth false xs i (+) nth false xs i.+1).
 Proof.
@@ -2056,9 +2204,14 @@ case: i Hi' {Hi} => [|i] Hi' //=.
   by rewrite (@set_nth_default _ _ false x i.+1 Hi').
 Qed.
 
+(** XOR is invariant under double negation: [~~ a (+) ~~ b = a (+) b]. *)
 Lemma neg_add_neg (a b : bool) : ~~ a (+) ~~ b = a (+) b.
 Proof. by case: a; case: b. Qed.
 
+(** Bridge identity: [flip_count (sign_seq (perm_seq s)) = turn_count s].
+    The seq-level flip count of the full word equals the perm-level turn
+    count, via [sign_seq_perm_seq] and the descent-XOR characterization
+    of [is_turn]. *)
 Lemma flip_count_perm_seq_eq_turn_count s :
   flip_count (sign_seq (perm_seq s)) = turn_count s.
 Proof.
@@ -2091,7 +2244,11 @@ rewrite inE.
 by case: (is_turn s i).
 Qed.
 
-(* Step 5: as_perm_max_upper. *)
+(** Headline upper bound for [as_perm_max]:
+    [as_perm_max s <= (turn_count s).+2].  Combines the alternating
+    [flip_count] formula [is_alt_flip_count] with the subseq monotonicity
+    [flip_count_pick_le_perm] and the bridge
+    [flip_count_perm_seq_eq_turn_count]. *)
 Lemma as_perm_max_upper s : as_perm_max s <= (turn_count s).+2.
 Proof.
 rewrite /as_perm_max.
@@ -2110,7 +2267,11 @@ have Hbound : (#|I|).-2 <= turn_count s.
 by case Hcard : #|I| Hsize2 Hbound => [|[|m]] // _ _.
 Qed.
 
-(* Step 6: THE HEADLINE THEOREM. *)
+(** HEADLINE THEOREM (Stanley §1.6.2): the longest alternating
+    subsequence count of [s : {perm 'I_n.+2}] equals [(turn_count s).+2].
+    That is, [as(w) = (turn_count w).+2], proving the two definitions
+    [as_perm_max] (bijective max) and [as_perm] (turn count) coincide.
+    Combines [as_perm_max_upper] and [as_perm_max_lower]. *)
 Theorem as_perm_max_eq s : as_perm_max s = (turn_count s).+2.
 Proof.
 apply: anti_leq.

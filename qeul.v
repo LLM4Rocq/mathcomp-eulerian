@@ -34,6 +34,10 @@ Notation qpow k := (('X ^+ k : {poly int})%:P : {poly {poly int}}).
 (* §1. Definition of the q-Eulerian polynomial                               *)
 (* ========================================================================= *)
 
+(** [q_eul_pol n] is the q-Eulerian polynomial
+    [A_n(q,t) = \sum_(sigma in S_{n+1}) q^(maj sigma) * t^(des sigma)],
+    the bivariate joint generating function of [maj] and [des] over
+    permutations of [n+1] letters.  Stanley EC1 §1.4. *)
 Definition q_eul_pol (n : nat) : {poly {poly int}} :=
   \sum_(σ : {perm 'I_n.+1}) qpow (maj σ) * 'X^(des σ).
 
@@ -41,6 +45,8 @@ Definition q_eul_pol (n : nat) : {poly {poly int}} :=
 (* §2. Specialization t = 1: q-factorial                                     *)
 (* ========================================================================= *)
 
+(** Specialization [t = 1] of [A_n(q,t)] recovers the q-factorial:
+    [A_n(q, 1) = [n+1]_q!].  Direct consequence of [maj_q_fact]. *)
 Theorem q_eul_pol_t1 n :
   (q_eul_pol n).[1] = q_fact n.
 Proof.
@@ -55,10 +61,16 @@ Qed.
 (* §3. Classical Eulerian polynomial                                         *)
 (* ========================================================================= *)
 
+(** [eul_pol n] is the classical Eulerian polynomial
+    [\sum_(k <= n) eulerian(n,k) * t^k], with coefficients the Eulerian
+    numbers counting permutations of [n+1] letters by descent count.
+    Stanley EC1 §1.4. *)
 Definition eul_pol (n : nat) : {poly int} :=
   \sum_(k < n.+1) (eulerian n k)%:R * 'X^k.
 
-(* Helper: \sum_σ 'X^(des σ) = eul_pol n. *)
+(** The descent generating function expressed as the Eulerian polynomial:
+    [\sum_(sigma in S_{n+1}) X^(des sigma) = eul_pol n].  Obtained by
+    partitioning permutations according to their descent count. *)
 Lemma sum_des_eq_eul_pol n :
   \sum_(σ : {perm 'I_n.+1}) 'X^(des σ) = eul_pol n :> {poly int}.
 Proof.
@@ -77,10 +89,15 @@ Qed.
 (* §4. Specialization q = 1: classical Eulerian polynomial                   *)
 (* ========================================================================= *)
 
-(* The "set q := 1" map: apply horner-at-1 to each coefficient. *)
+(** [q1_subst] is the substitution [q := 1] on a bivariate polynomial in
+    [{poly {poly int}}], implemented by evaluating each inner polynomial
+    coefficient at [1]. *)
 Definition q1_subst : {poly {poly int}} -> {poly int} :=
   map_poly (horner_eval (1 : int)).
 
+(** Specialization [q = 1] of [A_n(q,t)] recovers the classical Eulerian
+    polynomial: [A_n(1, t) = eul_pol n].  Each [q^(maj sigma)] becomes [1],
+    leaving the descent generating function. *)
 Theorem q_eul_pol_q1 n :
   q1_subst (q_eul_pol n) = eul_pol n.
 Proof.

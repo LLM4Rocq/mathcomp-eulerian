@@ -23,14 +23,21 @@ Unset Printing Implicit Defensive.
 (* SA. Type bridge: finset -> seq nat                                        *)
 (* ========================================================================= *)
 
-(* Convert a descent set {set 'I_n} to a sorted seq nat of positions.       *)
+(** [set_to_seq D] -- convert the finset [D : {set 'I_n}] to the
+    sorted [seq nat] of underlying positions; bridges the finset
+    descent world to the seq-based [psi_cdindex] machinery. *)
 Definition set_to_seq (n : nat) (D : {set 'I_n}) : seq nat :=
   sort leq [seq val i | i <- enum D].
 
+(** [mem_set_to_seq] -- membership in [set_to_seq D] equals membership
+    in the unsorted underlying value list (sorting is order-preserving
+    on memberships). *)
 Lemma mem_set_to_seq n (D : {set 'I_n}) (k : nat) :
   (k \in set_to_seq D) = (k \in [seq val i | i <- enum D]).
 Proof. by rewrite mem_sort. Qed.
 
+(** [mem_set_to_seq_iff] -- alternative form of membership in
+    [set_to_seq D] as a [has] over [enum D]. *)
 Lemma mem_set_to_seq_iff n (D : {set 'I_n}) (k : nat) :
   (k \in set_to_seq D) =
   has (fun i => val i == k) (enum D).
@@ -41,6 +48,8 @@ rewrite in_cons IH.
 by congr orb.
 Qed.
 
+(** [mem_set_to_seq_ord] -- ordinal-level membership bridge: [val i]
+    is in [set_to_seq D] iff [i] is in [D]. *)
 Lemma mem_set_to_seq_ord n (D : {set 'I_n}) (i : 'I_n) :
   (val i \in set_to_seq D) = (i \in D).
 Proof.
@@ -53,6 +62,8 @@ apply/hasP/idP.
   by rewrite mem_enum.
 Qed.
 
+(** [uniq_set_to_seq] -- the seq-of-positions [set_to_seq D] has no
+    duplicates. *)
 Lemma uniq_set_to_seq n (D : {set 'I_n}) :
   uniq (set_to_seq D).
 Proof.
@@ -60,6 +71,8 @@ rewrite sort_uniq map_inj_uniq ?enum_uniq //.
 by move=> x y /= /val_inj.
 Qed.
 
+(** [set_to_seq_bound] -- every element of [set_to_seq D] is bounded
+    above by [n]. *)
 Lemma set_to_seq_bound n (D : {set 'I_n}) (k : nat) :
   k \in set_to_seq D -> k < n.
 Proof.
@@ -71,8 +84,9 @@ Qed.
 (* SB. omega_set / omega_seq correspondence                                  *)
 (* ========================================================================= *)
 
-(* The omega map on seq nat, mirroring psi_cdindex.omega_seq.               *)
-(* omega(S) = {k : exactly one of k, k+1 belongs to S}.                    *)
+(** [omega_seq_local s] -- the omega map at the seq level (mirrors
+    [psi_cdindex.omega_seq]): the list of [k] in [iota 0 (max s).+1]
+    such that exactly one of [k], [k+1] belongs to [s]. *)
 Definition omega_seq_local (s : seq nat) : seq nat :=
   [seq k <- iota 0 (foldr maxn 0 s).+1
    | (k \in s) != ((k.+1) \in s)].
@@ -81,6 +95,9 @@ Definition omega_seq_local (s : seq nat) : seq nat :=
 (* membership in omega_seq_local (set_to_seq D) (seq), provided there      *)
 (* exists an element >= k in D (so foldr maxn covers k).                    *)
 
+(** [foldr_maxn_set_to_seq_lb] -- any element of [set_to_seq D] is
+    bounded above by [foldr maxn 0] over the same list (used to ensure
+    the [iota] bound in [omega_seq_local] covers the relevant range). *)
 Lemma foldr_maxn_set_to_seq_lb n (D : {set 'I_n}) (k : nat) :
   k \in set_to_seq D -> k <= foldr maxn 0 (set_to_seq D).
 Proof.
@@ -90,7 +107,9 @@ rewrite in_cons => /orP [/eqP -> | /IH Hle].
 - exact: leq_trans Hle (leq_maxr _ _).
 Qed.
 
-(* If D is nonempty, foldr maxn gives a value in D. *)
+(** [omega_set_seq_local_bridge] -- key bridge: [k \in omega_set D]
+    (finset side) iff [val k \in omega_seq_local (set_to_seq D)] (seq
+    side). Connects the two formulations of Stanley's omega map. *)
 Lemma omega_set_seq_local_bridge (m : nat)
     (D : {set 'I_m.+1}) (k : 'I_m) :
   (k \in omega_set D) =

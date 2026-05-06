@@ -24,6 +24,9 @@ Unset Printing Implicit Defensive.
 (* ω(S) ⊆ [n−2]: position k ∈ ω(S) iff exactly one of k, k+1 belongs to S. *)
 (* Mirrors omega_set in beta_swap.v but on seq nat (descent positions).       *)
 
+(** [omega_seq s] is the seq-level [omega] map: positions [k] such that
+    exactly one of [k], [k+1] belongs to [s].  Mirrors [omega_set] from
+    [beta_swap.v] on raw [seq nat] (no finset). *)
 Definition omega_seq (s : seq nat) : seq nat :=
   [seq k <- iota 0 (foldr maxn 0 s).+1
    | (k \in s) != ((k.+1) \in s)].
@@ -32,9 +35,13 @@ Definition omega_seq (s : seq nat) : seq nat :=
 (* For the cd-string Φ'_w = f_0 ... f_{n-1}, define S_w = {i-1 : f_i = d}.  *)
 (* Using the M5 definition classify_vertex_cde.                              *)
 
+(** [is_D_letter l] tests whether [l] is the D cd-letter. *)
 Definition is_D_letter (l : cde) : bool :=
   match l with D_letter => true | _ => false end.
 
+(** [S_w_seq w] is the d-position set of [w]: predecessors of D-vertices
+    in the cd-classification.  This is the support set [S_w] from
+    Stanley's Prop 1.6.4. *)
 Definition S_w_seq (w : seq nat) : seq nat :=
   [seq i.-1 | i <- iota 1 (size w).-1
              & is_D_letter (classify_vertex_cde i w)].
@@ -48,6 +55,8 @@ Definition S_w_seq (w : seq nat) : seq nat :=
 (* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
 (* Verified exhaustively for all permutations up to S_7.                     *)
 
+(** Boolean form of the support claim: [X] expands from [phi_w w] iff every
+    d-position of [w] is in [omega] of [X]'s descent set. *)
 Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
   (X \in expand_cde (phi_w w)) ==
   all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
@@ -92,8 +101,9 @@ Proof. by vm_compute. Qed.
 (*   Strict: for k ∈ ω(T)\ω(S), the cd-word c^k d c^{n-3-k} witnesses      *)
 (*     β(T) > β(S).  (Stanley lines 384-395.)                               *)
 
-(* Weak monotonicity (proved): if ω(S) ⊆ ω(T) as sets then every M-class
-   whose d-positions are covered by ω(S) is also covered by ω(T). *)
+(** Weak monotonicity: if [omega_seq S] is contained in [omega_seq T], then
+    every M-class whose d-positions are covered by [omega_seq S] is also
+    covered by [omega_seq T].  Half of Stanley's Prop 1.6.4. *)
 Lemma omega_monotone_class_count (n : nat) (S T : seq nat) :
   uniq S -> uniq T ->
   {subset omega_seq S <= omega_seq T} ->
@@ -112,10 +122,13 @@ Qed.
 
 (* ----- Helpers for strict_witness_exists ---------------------------------- *)
 
-(* Witness permutation: [1;2;...;k; k+2;k+1; k+3;k+4;...;n]              *)
+(** [witness_perm n k] is the permutation [1;..;k; k+2; k+1; k+3;..;n]:
+    a single inversion at position [k] embedded in a sorted backbone.
+    Realises a cd-word with [S_w = {k}], used in [strict_witness_exists]. *)
 Definition witness_perm (n k : nat) : seq nat :=
   iota 1 k ++ [:: k.+2; k.+1] ++ iota k.+3 (n - k - 2).
 
+(** Local arithmetic helper: [maxn a b = a] when [b <= a]. *)
 Lemma leq_maxn' a b : b <= a -> maxn a b = a.
 Proof.
 move=> Hba; rewrite /maxn; case Hlt: (a < b).
@@ -123,9 +136,11 @@ move=> Hba; rewrite /maxn; case Hlt: (a < b).
 by [].
 Qed.
 
+(** Local arithmetic helper: [maxn a b = b] when [a <= b]. *)
 Lemma geq_maxn' a b : a <= b -> maxn a b = b.
 Proof. by move=> H; rewrite maxnC; exact: leq_maxn'. Qed.
 
+(** Local arithmetic helper: [minn a b = a] when [a <= b]. *)
 Lemma geq_minn' a b : a <= b -> minn a b = a.
 Proof.
 move=> Hab; rewrite /minn; case Hlt: (a < b) => //.
@@ -133,6 +148,7 @@ move: Hlt => /negbT; rewrite -leqNgt => Hba.
 by apply/eqP; rewrite eqn_leq Hab Hba.
 Qed.
 
+(** A leq-path from [a] over [s] gives [a <= last a s]. *)
 Lemma path_leq_last' (s : seq nat) (a : nat) :
   path leq a s -> a <= last a s.
 Proof.
@@ -140,6 +156,8 @@ elim: s a => [//|x s IH] a /= /andP [Hax Hp].
 exact: leq_trans Hax (IH _ Hp).
 Qed.
 
+(** On a sorted (leq-path) sequence, [foldr maxn] reduces to its last
+    element. *)
 Lemma foldr_maxn_path' (s : seq nat) (a : nat) :
   path leq a s -> foldr maxn a s = last a s.
 Proof.
@@ -159,6 +177,7 @@ exact: leq_trans Hxy
   (@path_leq_last' s y Hps').
 Qed.
 
+(** [foldr minn a s = a] when every element of [s] is at least [a]. *)
 Lemma foldr_minn_ge' (a : nat) (s : seq nat) :
   all (fun x => a <= x) s -> foldr minn a s = a.
 Proof.
@@ -167,27 +186,32 @@ rewrite /= => /andP [Hax Hs].
 rewrite IH // minnC geq_minn' //.
 Qed.
 
+(** Every element of [iota m.+1 n] is at least [m]. *)
 Lemma all_le_iota' m n :
   all (fun x => m <= x) (iota m.+1 n).
 Proof.
 apply/allP => x; rewrite mem_iota => /andP [Hm _]; exact: ltnW.
 Qed.
 
+(** [min_pos] of an ascending [iota] is 0 (minimum is the head). *)
 Lemma min_pos_iota' m n : min_pos (iota m n.+1) = 0.
 Proof.
 rewrite /min_pos /= foldr_minn_ge' ?all_le_iota' //.
 by rewrite /= eqxx.
 Qed.
 
+(** [iota m.+1 n] is a leq-path with starting point [m]. *)
 Lemma path_iota' m n : path leq m (iota m.+1 n).
 Proof. elim: n m => [//|n IH] m /=. by rewrite leqnSn IH. Qed.
 
+(** Last element of [m :: iota m.+1 n] is [m + n]. *)
 Lemma last_iota' m n : last m (iota m.+1 n) = m + n.
 Proof.
 case: n => [|n]; first by rewrite addn0.
 by rewrite -nth_last size_iota nth_iota // addnS.
 Qed.
 
+(** [foldr maxn] of an ascending [iota] equals its last element. *)
 Lemma foldr_maxn_iota' m n :
   foldr maxn m (iota m.+1 n) = m + n.
 Proof.
@@ -197,6 +221,7 @@ rewrite (@foldr_maxn_path' (iota m.+1 n.+1) m);
 exact: last_iota'.
 Qed.
 
+(** [max_pos] of an ascending [iota] is the last index. *)
 Lemma max_pos_iota' m n :
   max_pos (iota m n.+1) = n.
 Proof.
@@ -213,11 +238,13 @@ rewrite (negbTE Hnotin) size_iota /= eqxx /=.
 by rewrite addn0.
 Qed.
 
+(** [mm_pos] of an ascending [iota] is 0 (root is the minimum). *)
 Lemma mm_pos_iota' m n : mm_pos (iota m n.+1) = 0.
 Proof. by rewrite /mm_pos min_pos_iota' max_pos_iota'. Qed.
 
 (* ----- Size and uniqueness of witness_perm ------ *)
 
+(** [witness_perm n k] has length [n] when [k + 2 < n]. *)
 Lemma size_witness_perm n k :
   k + 2 < n -> size (witness_perm n k) = n.
 Proof.
@@ -227,9 +254,11 @@ rewrite addnA -subnDA.
 by rewrite subnKC // ltnW.
 Qed.
 
+(** Membership in [iota m l] gives [m <= i < m + l]. *)
 Lemma iota_mem_range m l i : i \in iota m l -> m <= i < m + l.
 Proof. by rewrite mem_iota. Qed.
 
+(** [witness_perm n k] is duplicate-free when [k + 2 < n]. *)
 Lemma witness_perm_uniq n k :
   k + 2 < n -> uniq (witness_perm n k).
 Proof.
@@ -269,6 +298,8 @@ Qed.
    induction: the min-max tree of the witness has a predictable
    structure. We verify all cases via a boolean check function.    *)
 
+(** Boolean witness: [witness_perm n k] is uniq, of length [n], and has
+    [S_w_seq] equal to [[:: k]].  Used for vm_compute sanity checks. *)
 Definition check_strict_witness (n k : nat) : bool :=
   let w := witness_perm n k in
   uniq w && (size w == n) && (S_w_seq w == [:: k]).
@@ -294,6 +325,7 @@ Proof. by vm_compute. Qed.
 
 (* The key property: check_strict_witness n k implies the
    conclusion of strict_witness_exists for that (n,k). *)
+(** [check_strict_witness] reflects [strict_witness_exists] for that [n,k]. *)
 Lemma check_strict_witness_correct n k :
   check_strict_witness n k ->
   exists w : seq nat,
@@ -304,8 +336,8 @@ case/andP => /andP [Huniq /eqP Hsz] /eqP HSw.
 by exists (witness_perm n k).
 Qed.
 
-(* Helper: ascending sequences have no left children in their min-max
-   tree, because mm_pos is always 0 (the minimum is at position 0). *)
+(** Helper: ascending sequences ([iota]) have no left children in their
+    min-max tree, since [mm_pos = 0] at every recursion depth. *)
 Lemma has_left_child_iota m l i :
   has_left_child i (iota m l) = false.
 Proof.
@@ -317,7 +349,8 @@ elim: l m i => [m i | l IH m [|i]].
   exact: IH.
 Qed.
 
-(* Helper: foldr minn a s = a when a is strictly less than all s *)
+(** Helper: [foldr minn a s = a] when [a] is strictly less than every
+    element of [s]. *)
 Lemma foldr_minn_all_gt' (a : nat) (s : seq nat) :
   (forall x, x \in s -> a < x) -> foldr minn a s = a.
 Proof.
@@ -328,7 +361,7 @@ have Hs : forall x, x \in s -> a < x
 rewrite /= IH // minnC; apply/minn_idPl; exact: ltnW.
 Qed.
 
-(* mm_pos = 0 when first element is the strict minimum *)
+(** [mm_pos (a :: s) = 0] when [a] is the strict minimum of [a :: s]. *)
 Lemma mm_pos_min_first a s :
   (forall x, x \in s -> a < x) ->
   mm_pos (a :: s) = 0.
@@ -340,7 +373,8 @@ rewrite /= eqxx.
 done.
 Qed.
 
-(* min_pos of the witness core [k+2; k+1] ++ iota k.+3 m = 1 *)
+(** [min_pos] of the witness core [[k+2; k+1] ++ iota k.+3 m] is 1
+    (the [k+1] at position 1 is the unique minimum). *)
 Lemma min_pos_core k m :
   min_pos ([:: k.+2; k.+1] ++ iota k.+3 m) = 1.
 Proof.
@@ -353,7 +387,8 @@ have -> : (k.+2 == k.+1) = false by rewrite eqSS (gtn_eqF (ltnSn _)).
 by rewrite eqxx.
 Qed.
 
-(* max_pos of the witness core > 0 when suffix is non-empty *)
+(** [max_pos] of the witness core is positive when the suffix [iota k.+3 m]
+    is non-empty. *)
 Lemma max_pos_core_gt0 k m :
   0 < m ->
   0 < max_pos ([:: k.+2; k.+1] ++ iota k.+3 m).
@@ -367,7 +402,8 @@ rewrite eq_sym (gtn_eqF Hge).
 by [].
 Qed.
 
-(* mm_pos of the witness core = 1 when suffix is non-empty *)
+(** [mm_pos] of the witness core is 1 (position of [k+1]) when the suffix
+    is non-empty. *)
 Lemma mm_pos_core k m :
   0 < m ->
   mm_pos ([:: k.+2; k.+1] ++ iota k.+3 m) = 1.
@@ -383,7 +419,8 @@ Qed.
    - k+1: peel first element (mm_pos = 0), reduce to k via IH +
      order_iso *)
 
-(* has_left_child at positions in the core: only position 1 *)
+(** In the witness core, only position 1 has a left child; all other
+    positions are leaves of the min-max tree. *)
 Lemma hlc_core_not1 k m i :
   0 < m -> i != 1 ->
   has_left_child i
@@ -402,6 +439,7 @@ case: i Hne => [|[|i]] Hne.
   exact: has_left_child_iota.
 Qed.
 
+(** Position 1 in the witness core has a left child (the [k+2] vertex). *)
 Lemma hlc_core_1 k m :
   0 < m ->
   has_left_child 1 ([:: k.+2; k.+1] ++ iota k.+3 m) = true.
@@ -413,7 +451,8 @@ change (k.+2 :: k.+1 :: iota k.+3 m) with
 by rewrite mm_pos_core.
 Qed.
 
-(* window_size at mm_pos position 1 in the core *)
+(** [window_size] at the [mm_pos] position 1 in the witness core is [m.+1]
+    (covers [k+1] and the entire ascending suffix). *)
 Lemma ws_core_1 k m :
   0 < m ->
   window_size 1
@@ -428,7 +467,8 @@ rewrite !size_cat /= size_iota.
 by [].
 Qed.
 
-(* S_w_seq of the core [k+2; k+1] ++ iota k.+3 m = [:: 0] *)
+(** [S_w_seq] of the witness core is [[:: 0]]: the only D-position is at
+    index 1, contributing [0] to the d-position set. *)
 Lemma S_w_seq_core k m :
   0 < m ->
   S_w_seq ([:: k.+2; k.+1] ++ iota k.+3 m) =
@@ -463,7 +503,8 @@ have Hi_ne1 : i != 1 by rewrite neq_ltn Hi2 orbT.
 by rewrite HnD.
 Qed.
 
-(* For k=0: witness_perm n 0 = [:: 2; 1] ++ iota 3 (n-2) = core *)
+(** Base case [k = 0]: [witness_perm n 0] is exactly the witness core, so
+    [S_w_seq = [:: 0]]. *)
 Lemma S_w_seq_witness_k0 n :
   3 <= n ->
   S_w_seq (witness_perm n 0) = [:: 0].
@@ -474,7 +515,9 @@ have -> : [:: 2, 1, 3 & iota 4 n] = [:: 2; 1] ++ iota 3 n.+1 by [].
 by apply: (S_w_seq_core 0); apply: ltn0Sn.
 Qed.
 
-(* For k >= 1: classify_vertex_cde i (1 :: rest) when mm_pos = 0 *)
+(** When the head [a] is at the root ([mm_pos = 0]), classifying any
+    positive position [i] in [a :: rest] reduces to classifying [i-1] in
+    the right subtree [rest]. *)
 Lemma classify_skip_mm0 i a rest :
   mm_pos (a :: rest) = 0 -> 0 < i ->
   classify_vertex_cde i (a :: rest) =
@@ -496,7 +539,8 @@ have -> : (i < (size rest).+1) =
 done.
 Qed.
 
-(* S_w_seq shift via mm_pos = 0 *)
+(** Index-shift property: when the head is at the root, [S_w_seq] of the
+    cons equals the [S_w_seq] of the tail with every entry incremented. *)
 Lemma S_w_seq_shift a rest :
   mm_pos (a :: rest) = 0 ->
   S_w_seq (a :: rest) =
@@ -538,8 +582,8 @@ case/andP: Hj => _ /andP [Hj _].
 by case: j Hj.
 Qed.
 
-(* drop 1 (witness_perm n k.+1) is order-isomorphic to
-   witness_perm (n-1) k (both have same size and same order) *)
+(** Tail of [witness_perm n k.+1] equals the [+1]-shift of
+    [witness_perm n.-1 k]; provides the inductive step for k. *)
 Lemma drop1_witness_map_succ n k :
   k.+4 <= n ->
   drop 1 (witness_perm n k.+1) =
@@ -561,7 +605,8 @@ have -> : n.+1 - k.+1 - 2 = n - k - 2.
 done.
 Qed.
 
-(* map S preserves the comparison order *)
+(** Mapping [S] over a uniq sequence preserves the order of elements
+    (used to lift order-iso properties through the witness shift). *)
 Lemma map_succ_order_iso (s : seq nat) :
   uniq s ->
   forall p q, p < size s -> q < size s ->
@@ -572,7 +617,8 @@ move=> Hu p q Hp Hq.
 by rewrite !(nth_map 0) // ltnS ltnS.
 Qed.
 
-(* classify_vertex_cde preserved by map S *)
+(** [classify_vertex_cde] is invariant under the [+1]-shift on a uniq
+    sequence (since cd-classification depends only on order). *)
 Lemma classify_map_succ (s : seq nat) i :
   uniq s ->
   classify_vertex_cde i [seq j.+1 | j <- s] =
@@ -600,7 +646,7 @@ rewrite (has_left_child_order_iso i (esym Hsz) Hu2 Hu); last first.
 done.
 Qed.
 
-(* S_w_seq preserved by map S *)
+(** [S_w_seq] is invariant under the [+1]-shift on a uniq sequence. *)
 Lemma S_w_seq_map_succ (s : seq nat) :
   uniq s ->
   S_w_seq [seq j.+1 | j <- s] = S_w_seq s.
@@ -612,7 +658,8 @@ apply: eq_filter => i.
 by rewrite (classify_map_succ _ Hu).
 Qed.
 
-(* mm_pos of witness_perm is 0 when k >= 1 *)
+(** [mm_pos] of [witness_perm n k] is 0 for [k >= 1]: the [1] at the head
+    is the strict minimum of the permutation. *)
 Lemma mm_pos_witness k n :
   0 < k -> k.+3 <= n ->
   mm_pos (witness_perm n k) = 0.
@@ -630,7 +677,9 @@ case/orP=> [|H].
   + by rewrite mem_iota in H2; case/andP: H2 => H _; apply: ltn_trans H.
 Qed.
 
-(* Main lemma *)
+(** Main lemma: [S_w_seq (witness_perm n k) = [:: k]] for all [k.+3 <= n].
+    Proof by induction on [k]: base via [S_w_seq_witness_k0], step via
+    [S_w_seq_shift] + [drop1_witness_map_succ] + [S_w_seq_map_succ]. *)
 Lemma S_w_seq_witness_perm n k :
   k.+3 <= n -> S_w_seq (witness_perm n k) = [:: k].
 Proof.
@@ -659,6 +708,9 @@ elim: k => [|k IHk] n Hkn.
   by rewrite IHk.
 Qed.
 
+(** Strict-witness existence (Stanley Prop 1.6.4, strict half): for every
+    [k < n.-2] there is a uniq permutation [w] of length [n] with
+    [S_w_seq w = [:: k]].  The witness is [witness_perm n k]. *)
 Lemma strict_witness_exists :
   forall (n : nat) (k : nat),
   k < n.-2 ->

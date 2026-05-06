@@ -22,13 +22,22 @@ Open Scope ring_scope.
 (* §0. q-integer and q-factorial                                             *)
 (* ========================================================================= *)
 
+(** [q_int n] is the q-integer [n]_q = 1 + q + q^2 + ... + q^(n-1),
+    represented as the polynomial [\sum_(i < n) 'X^i] in [{poly int}].
+    Stanley EC1 §1.4. *)
 Definition q_int (n : nat) : {poly int} := \sum_(i < n) 'X^i.
+
+(** [q_fact n] is the q-factorial [n+1]_q! = [1]_q [2]_q ... [n+1]_q,
+    the product of [q_int k.+1] for [k < n.+1].  Stanley EC1 §1.4. *)
 Definition q_fact (n : nat) : {poly int} := \prod_(k < n.+1) q_int k.+1.
 
 (* ========================================================================= *)
 (* §1. sum_rev_X reindexing helper                                           *)
 (* ========================================================================= *)
 
+(** Reindexing identity: summing [X^(n - p)] over [p < n.+1] equals
+    [q_int n.+1].  Used to recognize the q-integer factor produced by
+    expanding [exprD] over [val p] in the [inv_q_fact] inductive step. *)
 Lemma sum_rev_X n :
   \sum_(p < n.+1) 'X^(n - val p)%N = q_int n.+1 :> {poly int}.
 Proof.
@@ -55,6 +64,9 @@ Notation σ := (insert_max_perm t p).
 
 (* Lift map on pairs of 'I_{n+1}, sending (j1, j2) -> (lift p j1, lift p j2). *)
 
+(** Inversion correspondence on the "non-[p] rows": a pair
+    [(lift p j1, lift p j2)] is an inversion of [insert_max_perm t p]
+    iff [(j1, j2)] is an inversion of [t]. *)
 Lemma is_inv_lift_pair (j1 j2 : 'I_n.+1) :
   is_inv σ (lift p j1) (lift p j2) = is_inv t j1 j2.
 Proof.
@@ -64,9 +76,9 @@ suff -> : (widen_ord (leqnSn n.+1) (t j2) < widen_ord (leqnSn n.+1) (t j1))
 by [].
 Qed.
 
-(* Pairs of inversions of σ in the "p row": (p, j) with p < j.
-   For such j = lift p k (since j ≠ p), σ p = ord_max, σ (lift p k) is a widen,
-   so σ p > σ (lift p k) always.  Hence each such pair is an inversion.       *)
+(** Inversions on the "[p]-row": every pair [(p, lift p k)] with
+    [p < lift p k] is an inversion of [insert_max_perm t p], since
+    [σ p = ord_max] dominates every value [σ (lift p k)]. *)
 Lemma is_inv_p_lift (k : 'I_n.+1) : is_inv σ p (lift p k) = (p < lift p k).
 Proof.
 rewrite /is_inv insert_max_perm_at_p insert_max_perm_lift /=.
@@ -75,7 +87,9 @@ rewrite andbC; apply/idP/idP.
 - by move=> ->; rewrite andbT; exact: ltn_ord.
 Qed.
 
-(* Pairs (i, p) with i < p are NOT inversions: σ p = ord_max > σ i. *)
+(** Pairs [(lift p k, p)] are never inversions of [insert_max_perm t p]:
+    [σ p = ord_max] is the maximum value, so it cannot be exceeded by any
+    earlier image [σ (lift p k)]. *)
 Lemma is_inv_lift_p (k : 'I_n.+1) : is_inv σ (lift p k) p = false.
 Proof.
 rewrite /is_inv insert_max_perm_at_p insert_max_perm_lift.
@@ -86,7 +100,9 @@ Qed.
 
 End InvInsertMax.
 
-(* Helper: count elements of 'I_n.+1 with val >= p. *)
+(** Counts the elements [k : 'I_n.+1] with [p <= val k]: there are
+    exactly [n.+1 - p] of them.  Used to evaluate the [p]-row contribution
+    in [inv_insert_max]. *)
 Lemma sum_geq_p n p :
   (p <= n.+1)%N ->
   \sum_(k : 'I_n.+1 | (p <= k)%N) (1%N) = (n.+1 - p)%N.
@@ -109,7 +125,8 @@ apply/idP/imsetP.
 - by case=> k _ ->; rewrite /= leq_addl.
 Qed.
 
-(* inv as a 2D unconditional sum over the boolean is_inv. *)
+(** Reformulates [inv s] as the unconditional double sum
+    [\sum_i \sum_j is_inv s i j], unfolding the [#|...|] counting form. *)
 Lemma inv_via_sum n (s : {perm 'I_n.+1}) :
   inv s = (\sum_i \sum_j is_inv s i j)%N.
 Proof.
@@ -123,7 +140,10 @@ rewrite [RHS]pair_bigA.
 by apply: eq_bigr => p _; case: p.
 Qed.
 
-(* The headline arithmetic lemma. *)
+(** Headline arithmetic identity for the [insert_max_perm] bijection:
+    [inv (insert_max_perm t p) = inv t + (n.+1 - val p)].  The new image
+    [ord_max] at position [p] contributes exactly [n.+1 - val p] new
+    inversions; the rest match [inv t] under the lift. *)
 Lemma inv_insert_max n (t : {perm 'I_n.+1}) (p : 'I_n.+2) :
   inv (insert_max_perm t p) = (inv t + (n.+1 - val p))%N.
 Proof.
@@ -185,6 +205,10 @@ Qed.
 (* §3. Headline theorem: inv_q_fact                                          *)
 (* ========================================================================= *)
 
+(** Headline q-factorial identity for the inversion statistic
+    (Stanley EC1 §1.4, Cor 1.3.10):
+    [\sum_(sigma in S_{n+1}) X^(inv sigma) = [n+1]_q!].  Proved by induction
+    on [n] using the [insert_max_perm] bijection and [inv_insert_max]. *)
 Theorem inv_q_fact n :
   \sum_(σ : {perm 'I_n.+1}) 'X^(inv σ) = q_fact n :> {poly int}.
 Proof.
@@ -215,6 +239,11 @@ Qed.
 (* §4. Corollary: maj_q_fact via Foata                                       *)
 (* ========================================================================= *)
 
+(** Headline q-factorial identity for the major-index statistic
+    (Stanley EC1 §1.4):
+    [\sum_(sigma in S_{n+1}) X^(maj sigma) = [n+1]_q!].  One-line transfer
+    from [inv_q_fact] via the Foata bijection [foata_perm], which sends
+    [inv] to [maj]. *)
 Theorem maj_q_fact n :
   \sum_(σ : {perm 'I_n.+1}) 'X^(maj σ) = q_fact n :> {poly int}.
 Proof.

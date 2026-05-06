@@ -18,18 +18,19 @@ Unset Printing Implicit Defensive.
 (* §A. Cycle count                                                           *)
 (* ========================================================================= *)
 
-(* cycle_count s = number of cycles in the disjoint-cycle decomposition
-   of [s].  In mathcomp this is the cardinality of [porbits s], the set
-   of orbits of [s] acting on [T] by iteration.                            *)
+(** [cycle_count s] is the number of cycles in the disjoint-cycle
+    decomposition of [s], equivalently the cardinality of [porbits s],
+    the set of orbits of [s] acting on [T] by iteration.  Stanley's [c(w)]. *)
 Definition cycle_count {T : finType} (s : {perm T}) : nat := #|porbits s|.
 
 (* ========================================================================= *)
 (* §B. Stirling cycle numbers                                                *)
 (* ========================================================================= *)
 
-(* stirling_c n k = number of permutations of [0, ..., n-1] with exactly
-   k cycles in their disjoint-cycle decomposition.  Stanley writes
-   [c(n, k)] (signless Stirling numbers of the first kind).               *)
+(** [stirling_c n k] is the number of permutations of ['I_n] with exactly
+    [k] cycles in their disjoint-cycle decomposition.  This is Stanley's
+    [c(n, k)], the signless Stirling number of the first kind (Stanley
+    EC1 §1.3.2). *)
 Definition stirling_c (n k : nat) : nat :=
   #|[set s : {perm 'I_n} | cycle_count s == k]|.
 
@@ -39,8 +40,8 @@ Definition stirling_c (n k : nat) : nat :=
 
 Section CycleBasic.
 
-(* Each cycle is non-empty, so [cycle_count s <= |T|].  This is the cycle
-   analogue of [des_le] for descents.                                      *)
+(** Each cycle is non-empty, so [cycle_count s <= #|T|].  Cycle analogue
+    of [des_le] for descents. *)
 Lemma cycle_count_le {T : finType} (s : {perm T}) :
   cycle_count s <= #|T|.
 Proof.
@@ -48,10 +49,8 @@ rewrite /cycle_count /porbits.
 exact: leq_imset_card.
 Qed.
 
-(* The identity permutation has exactly [|T|] cycles — one singleton per
-   element.  Stanley §1.3.1 (a fixed point is a 1-cycle).                 *)
-(* For the identity, every porbit is a singleton {x}.  We prove this
-   pointwise and then count.                                              *)
+(** Under the identity permutation each [porbit] is the singleton [{x}].
+    Used in [cycle_count_id]. *)
 Lemma porbit_id_singleton (T : finType) (x : T) :
   porbit (1 : {perm T}) x = [set x].
 Proof.
@@ -61,6 +60,8 @@ apply/porbitP/eqP.
 - by move=> ->; exists 0; rewrite expg1n perm1.
 Qed.
 
+(** The identity permutation on [T] has exactly [#|T|] cycles, one
+    singleton per element (Stanley §1.3.1: each fixed point is a 1-cycle). *)
 Lemma cycle_count_id (T : finType) :
   cycle_count (1 : {perm T}) = #|T|.
 Proof.
@@ -79,10 +80,9 @@ End CycleBasic.
 (* §D. Row sum: sum over cycle counts recovers n!                            *)
 (* ========================================================================= *)
 
-(* The cycle-count statistic partitions {perm 'I_n} just as the descent
-   count does, so summing stirling_c over all cycle counts recovers the
-   total permutation count.  Mirrors [eulerian_row_sum] in eulerian.v.   *)
-
+(** Row sum: summing [stirling_c n k] over all cycle counts [k <= n]
+    recovers the total number of permutations of ['I_n].  Mirrors
+    [eulerian_row_sum] in eulerian.v. *)
 Lemma stirling_c_row_sum n :
   \sum_(k < n.+1) stirling_c n k = #|{perm 'I_n}|.
 Proof.
@@ -95,6 +95,8 @@ have := cycle_count_le s.
 by rewrite card_ord.
 Qed.
 
+(** Row sum, factorial form: [\sum_k c(n, k) = n!].  Stanley's identity
+    derived from [stirling_c_row_sum] via [card_Sn]. *)
 Lemma stirling_c_row_sum_fact n :
   \sum_(k < n.+1) stirling_c n k = n`!.
 Proof. by rewrite stirling_c_row_sum card_Sn. Qed.

@@ -14,33 +14,38 @@ Section Descent.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+1}) (i : 'I_n).
 
-(* A position i : 'I_n is a descent of s : {perm 'I_n.+1} if               *)
-(*   s(i) > s(i+1)                                                         *)
-(* (positions of s are in 'I_n.+1 = {0,...,n}; descents are between         *)
-(* consecutive positions so i ranges over 'I_n).                           *)
-
+(** [is_descent s i] holds when [s] descends at position [i], i.e. when
+    [s i > s (i+1)]. Stanley's predicate "[i] is a descent of [w]" (Stanley EC1, S1.4). *)
 Definition is_descent s i : bool :=
   s (widen_ord (leqnSn n) i) > s (lift ord0 i).
 
+(** [descent_set s] is the descent set of [s], Stanley's [D(w)] (Stanley EC1, S1.4). *)
 Definition descent_set s : {set 'I_n} := [set i | is_descent s i].
 
+(** [des s] is the descent number of [s], Stanley's [d(w) = #D(w)] (Stanley EC1, S1.4). *)
 Definition des s : nat := #|descent_set s|.
 
+(** [asc s = n - des s] is the ascent number of [s]. *)
 Definition asc s : nat := n - des s.
 
+(** Equivalence with the underlying boolean for rewriting. *)
 Lemma is_descentE s i :
   is_descent s i = (s (widen_ord (leqnSn n) i) > s (lift ord0 i)).
 Proof. by []. Qed.
 
+(** Membership in [descent_set s] is just [is_descent s i]; rewrites [inE] form. *)
 Lemma mem_descent_set s i : (i \in descent_set s) = is_descent s i.
 Proof. by rewrite inE. Qed.
 
+(** Descent number is bounded by [n], the number of consecutive positions. *)
 Lemma des_le s : des s <= n.
 Proof. by rewrite /des (leq_trans (max_card _)) // card_ord. Qed.
 
+(** Descents and ascents partition the [n] consecutive positions. *)
 Lemma des_add_asc s : des s + asc s = n.
 Proof. by rewrite /asc subnKC // des_le. Qed.
 
+(** The identity permutation has no descents. *)
 Lemma des_id : des (1 : {perm 'I_n.+1}) = 0.
 Proof.
 apply/eqP; rewrite cards_eq0; apply/eqP/setP => i; rewrite !inE.
@@ -56,10 +61,9 @@ End Descent.
 Section DescentDrop.
 Variable n : nat.
 
-(* Descents at interior positions are preserved by drop_perm.                *)
-(* More precisely: for σ : {perm 'I_n.+2} and i : 'I_n, the descent of       *)
-(* drop_perm σ at i corresponds to the descent of σ at widen_ord i.           *)
-
+(** Descents at interior positions are preserved by [drop_perm]: for
+    [s : {perm 'I_n.+2}] and [i : 'I_n], the descent of [drop_perm s] at [i]
+    corresponds to the descent of [s] at [widen_ord i]. *)
 Lemma is_descent_drop (s : {perm 'I_n.+2}) (i : 'I_n) :
   is_descent (drop_perm s) i = is_descent s (widen_ord (leqnSn _) i).
 Proof.
@@ -77,16 +81,23 @@ Section DescentReverse.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+1}).
 
+(** [rev_perm_ord] is the reversal permutation [i |-> n - i] of ['I_n.+1]. *)
 Definition rev_perm_ord : {perm 'I_n.+1} := perm (@rev_ord_inj n.+1).
 
+(** Equivalence with the underlying [rev_ord] for rewriting. *)
 Lemma rev_perm_ordE (j : 'I_n.+1) : rev_perm_ord j = rev_ord j.
 Proof. by rewrite permE. Qed.
 
+(** [rev_perm s] is the reversal of [s] (compose with [rev_perm_ord] on the left).
+    It corresponds to reading the one-line notation of [s] backwards. *)
 Definition rev_perm s : {perm 'I_n.+1} := rev_perm_ord * s.
 
+(** Defining equation: [rev_perm s j = s (rev_ord j)]. *)
 Lemma rev_permE s (j : 'I_n.+1) : rev_perm s j = s (rev_ord j).
 Proof. by rewrite permM rev_perm_ordE. Qed.
 
+(** Reversal swaps descents and ascents pointwise: [i] is a descent of [rev_perm s]
+    iff [rev_ord i] is not a descent of [s]. *)
 Lemma is_descent_rev s (i : 'I_n) :
   is_descent (rev_perm s) i = ~~ is_descent s (rev_ord i).
 Proof.
@@ -102,6 +113,8 @@ have sab : s a != s b by apply: contra ab_ne => /eqP /perm_inj ->.
 by rewrite ltn_neqAle leqNgt sab /=.
 Qed.
 
+(** Descent count under reversal: [des (rev_perm s) = n - des s].
+    This is the involution underlying the symmetry [eulerian n k = eulerian n (n-k)]. *)
 Lemma des_rev_perm s : des (rev_perm s) = n - des s.
 Proof.
 rewrite /des /descent_set.
@@ -116,6 +129,7 @@ have -> : [set rev_ord x | x in [set i | is_descent (rev_perm s) i]]
 by rewrite cardsCs setCK card_ord.
 Qed.
 
+(** The reversal permutation [n,n-1,...,0] has the maximal [n] descents. *)
 Lemma des_rev_perm_ord : des rev_perm_ord = n.
 Proof. by rewrite -[rev_perm_ord]mulg1 -/(rev_perm 1) des_rev_perm des_id subn0. Qed.
 

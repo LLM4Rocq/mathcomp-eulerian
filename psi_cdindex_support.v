@@ -34,6 +34,9 @@ Arguments has_left_child_fuel : simpl never.
 (* Hence max i in the filter is (size w).-2, giving k = i.-1 ≤ (size w).-3. *)
 (* Thus k < (size w).-2 = (size w).-1.-1.                                   *)
 
+(** Every element of [S_w_seq w] is bounded: [k < (size w).-2].  Holds
+    because the last vertex of [w] is always an endpoint, hence cannot
+    contribute a [D] letter. *)
 Lemma S_w_seq_bound w k :
   k \in S_w_seq w -> k < (size w).-1.-1.
 Proof.
@@ -63,7 +66,7 @@ have Hnint : is_internal (size w).-1 w = false.
 by rewrite Hnint.
 Qed.
 
-(* -- S_w_seq is psi-invariant --------------------------------------------- *)
+(** Vertex classification is invariant under [psi j]. *)
 Lemma classify_vertex_cde_psi j i w :
   uniq w ->
   classify_vertex_cde i (psi j w) = classify_vertex_cde i w.
@@ -74,6 +77,7 @@ by rewrite (is_internal_apply_psis [:: j]) //
            (has_left_child_apply_psis [:: j]).
 Qed.
 
+(** [S_w_seq] is invariant under [psi j], hence constant on each M-class. *)
 Lemma S_w_seq_psi j w :
   uniq w -> S_w_seq (psi j w) = S_w_seq w.
 Proof.
@@ -88,8 +92,8 @@ Qed.
 (* S_w_seq at mm_pos, producing small proof terms that avoid heavy        *)
 (* simpl/vm_compute during -vo compilation.                               *)
 
-(* mm_pos < (size s).-1 for uniq sequences of size >= 2. *)
-(* This ensures the root of the min-max tree is internal. *)
+(** [mm_pos s < (size s).-1] for uniq [s] of size at least 2.  Ensures
+    the root of the min-max tree is an internal vertex. *)
 Lemma mm_pos_lt_pred (s : seq nat) :
   uniq s -> 1 < size s -> mm_pos s < (size s).-1.
 Proof.
@@ -155,7 +159,8 @@ have : a \in s0.
 move=> Hain; by rewrite Hain in Hnotin.
 Qed.
 
-(* classify_vertex_cde decomposition at mm_pos *)
+(** Classification splits across [mm_pos]: for [i < j = mm_pos s], use
+    classification on the left subtree [take j s]. *)
 Lemma classify_vertex_left i a s0 :
   let j := mm_pos (a :: s0) in
   i < j ->
@@ -176,6 +181,8 @@ have ->: size (take j s) = j by rewrite size_takel // ltnW.
 by rewrite Hij.
 Qed.
 
+(** Classification on the right side of [mm_pos]: for [i > j], shift
+    index by [j.+1] and classify in the right subtree [drop j.+1 s]. *)
 Lemma classify_vertex_right i a s0 :
   let j := mm_pos (a :: s0) in
   j < i ->
@@ -202,6 +209,9 @@ have ->: i.+1 - j - 1 = i - j by rewrite subnAC subn1.
 by rewrite ltn_sub2rE // ltnW.
 Qed.
 
+(** Classification at the root [j = mm_pos s] of a uniq seq of size at
+    least 2: [D_letter] if the root has a left subtree ([j > 0]), else
+    [C_letter]. *)
 Lemma classify_vertex_mm a s0 :
   let j := mm_pos (a :: s0) in
   uniq (a :: s0) -> 1 < size (a :: s0) ->
@@ -226,7 +236,9 @@ rewrite (has_left_child_cons j a s0) -/s -/j
 by case: (0 < j).
 Qed.
 
-(* phi_w cons decomposition when mm_pos = 0 *)
+(** Cons decomposition of [phi_w] when [mm_pos = 0] (root has no left
+    subtree): the root contributes a [C_letter] and recursion peels into
+    the tail. *)
 Lemma phi_w_cons_mm0 a rest :
   mm_pos (a :: rest) = 0 ->
   1 < size (a :: rest) ->
@@ -254,7 +266,9 @@ rewrite subn1 /= in H.
 exact H.
 Qed.
 
-(* phi_w decomposition when mm_pos > 0 *)
+(** Decomposition of [phi_w] at [mm_pos > 0]: [phi_w s] equals the cd-index
+    of the left subtree concatenated with [D_letter] then the cd-index of
+    the right subtree. *)
 Lemma phi_w_decomp_mm a s0 :
   let s := a :: s0 in
   let j := mm_pos s in
@@ -297,7 +311,8 @@ congr (_ ++ _ :: _).
   by rewrite addSn -addnS addKn subn1.
 Qed.
 
-(* D_offsets decomposition: C_letter :: m *)
+(** Cons decomposition of [D_offsets] over a [C] head: every offset
+    shifts by 1 bit. *)
 Lemma D_offsets_cons_C m :
   D_offsets (C_letter :: m) =
   [seq x.+1 | x <- D_offsets m].
@@ -312,7 +327,9 @@ apply/eq_in_map => i Hi /=.
 by rewrite /cde_offset /= /cde_width add1n.
 Qed.
 
-(* D_offsets decomposition: m1 ++ D_letter :: m2 *)
+(** Concatenation decomposition of [D_offsets] across a [D] inserted
+    between [m1] and [m2]: left offsets, then the [D] at offset
+    [cde_total_width m1], then right offsets shifted by [cde_total_width m1 + 2]. *)
 Lemma D_offsets_cat_D m1 m2 :
   D_offsets (m1 ++ D_letter :: m2) =
   D_offsets m1 ++
@@ -381,7 +398,9 @@ have HltF : ((size m1).+1 + k < size m1) = false
 by rewrite HltF addSn -addnS addKn /= map_cat sumn_cat addnA.
 Qed.
 
-(* S_w_seq decomposition at mm_pos > 0 *)
+(** Decomposition of [S_w_seq] at [mm_pos > 0], parallel to
+    [phi_w_decomp_mm]: left positions, then [j.-1] (the D-position
+    contributed by the root), then right positions shifted by [j.+1]. *)
 Lemma S_w_seq_decomp_mm a s0 :
   let s := a :: s0 in
   let j := mm_pos s in
@@ -463,6 +482,9 @@ Qed.
 (* The mm_pos > 0 case uses phi_w_decomp_mm (root is D) and IH for       *)
 (* take j w and drop j.+1 w.                                              *)
 
+(** Total bit-width of [phi_w w] equals [(size w).-1] for any uniq [w]
+    (proved by structural induction on size with [mm_pos] decomposition).
+    Captures that [expand_cde (phi_w w)] elements are descent-bit strings. *)
 Lemma cde_total_width_phi_w_all w :
   uniq w ->
   cde_total_width (phi_w w) = (size w).-1.
@@ -543,6 +565,8 @@ rewrite HconsC (IH rest HszR' HuR') /s /=.
 by rewrite add1n prednK.
 Qed.
 
+(** Sized variant of [cde_total_width_phi_w_all]; states the bit-width
+    identity under the usable hypothesis [2 <= size w]. *)
 Lemma cde_total_width_phi_w w :
   uniq w -> 2 <= size w ->
   cde_total_width (phi_w w) = (size w).-1.
@@ -555,6 +579,9 @@ Qed.
 (* and S_w_seq_shift. The mm_pos > 0 case uses D_offsets_cat_D,           *)
 (* S_w_seq_decomp_mm, and the key identity j.-1 + 2 = j.+1 for j > 0.    *)
 
+(** Headline structural identity: the [D]-offsets of [phi_w w] coincide
+    with [S_w_seq w].  Proved by structural induction on size with
+    [mm_pos] decomposition. *)
 Lemma D_offsets_phi_w_eq_S_w_seq w :
   uniq w -> 2 <= size w ->
   D_offsets (phi_w w) = S_w_seq w.
@@ -632,6 +659,14 @@ Qed.
 (* 5. D_offsets_phi_w_eq_S_w_seq: D-offsets match S_w_seq                  *)
 (*    [PROVED by structural induction on size w with mm_pos decomposition]  *)
 
+(** Headline support theorem: for uniq [w] with [size w >= 2] and any
+    bit-string [X] of length [(size w).-1], [X] lies in [expand_cde (phi_w w)]
+    iff every d-position of [w] (i.e. every element of [S_w_seq w]) belongs
+    to [omega_seq] of [X]'s descent set.  This is Stanley's support claim
+    [Phi_w(a+b, ab+ba) = sum_{omega(X) supseteq S_w} u_X], the key
+    ingredient feeding into [omega_proper_beta_lt] and Prop 1.6.4.
+    Proof composes [expand_cde_mem_iff], [D_offsets_phi_w_eq_S_w_seq] and
+    [has_transition_omega_seq]. *)
 Lemma phi_w_support_general (w : seq nat) (X : seq bool) :
   uniq w -> 2 <= size w -> size X = (size w).-1 ->
   (X \in expand_cde (phi_w w)) =
@@ -662,7 +697,7 @@ Qed.
 (* membership (using phi_w_support_general) + injectivity.                   *)
 (* ========================================================================= *)
 
-(* -- uniq of expand_cde -------------------------------------------------- *)
+(** [expand_cde m] enumerates each cd-monomial expansion exactly once. *)
 Lemma uniq_expand_cde m : uniq (expand_cde m).
 Proof.
 elim: m => [|[||] l IH] //=.
@@ -676,7 +711,8 @@ elim: m => [|[||] l IH] //=.
   apply/negP => /mapP [z Hz]. by case.
 Qed.
 
-(* -- perm_eq from subset + same size + uniq ------------------------------- *)
+(** Two uniq sequences of the same size with one a subset of the other
+    are permutations of each other. *)
 Lemma perm_eq_from_subset (T : eqType) (s1 s2 : seq T) :
   uniq s1 -> uniq s2 -> size s1 = size s2 ->
   {subset s1 <= s2} -> perm_eq s1 s2.
@@ -693,7 +729,8 @@ have : size (x :: s1) <= size s2.
 by rewrite /= Hsz ltnn.
 Qed.
 
-(* -- check_fact3 from perm_eq --------------------------------------------- *)
+(** [perm_eq] of the M-class char_monos with [expand_cde (phi_w w)]
+    implies the boolean Fact #3 statement. *)
 Lemma check_fact3_of_perm_eq w :
   perm_eq [seq char_mono (apply_psis ss w) | ss <- powerset_internal w]
           (expand_cde (phi_w w)) ->
@@ -705,6 +742,8 @@ Qed.
 
 (* -- D-type vertex descent transition ------------------------------------ *)
 
+(** At a D-vertex (LR-internal, [has_left_child i w]), the descent bits
+    at [i.-1] and [i] always differ -- the LR-swap behaviour of [psi]. *)
 Lemma D_vertex_descent_transition w i :
   uniq w -> 0 < i -> is_internal i w -> has_left_child i w ->
   is_descent_seq w i.-1 != is_descent_seq w i.
@@ -719,6 +758,8 @@ Qed.
 
 (* -- Self-support: char_mono w is in expand_cde (phi_w w) ----------------- *)
 
+(** Self-support: [char_mono w] is itself a member of [expand_cde (phi_w w)],
+    using [phi_w_support_general] applied to [X = char_mono w]. *)
 Lemma char_mono_self_mem w :
   uniq w -> 2 <= size w ->
   char_mono w \in expand_cde (phi_w w).
@@ -758,6 +799,9 @@ Qed.
 
 (* -- Membership: all M-class char_monos are in expand_cde ----------------- *)
 
+(** Membership: every M-class element has its [char_mono] inside
+    [expand_cde (phi_w w)], by combining [phi_w_apply_psis] and
+    [char_mono_self_mem]. *)
 Lemma char_mono_apply_psis_mem w ss :
   uniq w -> 2 <= size w ->
   char_mono (apply_psis ss w) \in expand_cde (phi_w w).
@@ -771,7 +815,7 @@ Qed.
 
 (* -- Injectivity: distinct subsets give distinct char_monos --------------- *)
 
-(* Membership in internal_vertices is exactly is_internal.                    *)
+(** Membership in [internal_vertices] is exactly [is_internal]. *)
 Lemma in_internal_vertices i w :
   (i \in internal_vertices w) = is_internal i w.
 Proof.
@@ -781,8 +825,10 @@ rewrite mem_iota /=.
 by move: Hi => /andP [-> _].
 Qed.
 
-(* Recover the membership ss-bit from the char_mono bits at v (and v.-1).     *)
-(* Uses C-bit / D-bit recovery + D_vertex_descent_transition for D-vertices.  *)
+(** Injectivity: distinct subsets of internal vertices give distinct
+    [char_mono (apply_psis ss w)].  Proof recovers the membership bit at
+    each internal vertex from the char_mono via [_C_bit] / [_D_bit_self]
+    + [D_vertex_descent_transition]. *)
 Lemma char_mono_apply_psis_inj w ss1 ss2 :
   uniq w ->
   ss1 \in powerset_internal w ->
@@ -850,6 +896,8 @@ rewrite Eq1 Eq2.
 by apply: eq_in_filter => x _; exact: Hmem.
 Qed.
 
+(** The list of M-class char_monos (indexed by [powerset_internal w]) is
+    duplicate-free, by [char_mono_apply_psis_inj]. *)
 Lemma uniq_map_char_mono_powerset w :
   uniq w -> 2 <= size w ->
   uniq [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
@@ -862,6 +910,8 @@ Qed.
 
 (* -- check_fact3_true: structural proof ----------------------------------- *)
 
+(** Boolean Fact #3 holds for every uniq [w]: combines uniq + same-size +
+    membership to derive [perm_eq], then the sorted equality. *)
 Lemma check_fact3_true w :
   uniq w -> check_fact3 w.
 Proof.
@@ -879,6 +929,10 @@ apply: perm_eq_from_subset.
   exact: char_mono_apply_psis_mem.
 Qed.
 
+(** Headline Fact #3 (Stanley EC1 §1.6.3, Theorem 1.6.3): the multiset of
+    char_monos over the M-class of [w], canonicalised by [sort leq_seqb],
+    equals the canonicalised expansion [expand_cde (phi_w w)].  Direct
+    consequence of [check_fact3_true] via [check_fact3P]. *)
 Lemma fact3 : forall (w : seq nat),
   uniq w ->
   sort leq_seqb

@@ -20,41 +20,50 @@ Unset Printing Implicit Defensive.
 
 (* ----- M5.0 Definitions ----------------------------------------------------- *)
 
-(* Vertex i is internal (not an endpoint) iff it has window_size > 1. *)
+(** [is_internal i w] holds iff vertex [i] is non-endpoint in the
+    min-max tree of [w] (its window has size > 1). *)
 Definition is_internal (i : nat) (w : seq nat) : bool :=
   (i < size w) && (1 < window_size i w).
 
-(* Apply a sequence of psi operators left-to-right. *)
+(** [apply_psis ops w] applies the sequence of [psi] operators left-to-right,
+    threading [psi i] for each [i] in [ops] through [w]. *)
 Definition apply_psis (ops : seq nat) (w : seq nat) : seq nat :=
   foldl (fun w' i => psi i w') w ops.
 
-(* Characteristic monomial: the seq of descent bits, true = b, false = a. *)
+(** [char_mono w] is the descent bit-string of [w] (length [(size w).-1]):
+    bit [k] is [true] iff there is a descent at position [k]. *)
 Definition char_mono (w : seq nat) : seq bool :=
   [seq is_descent_seq w k | k <- iota 0 (size w).-1].
 
-(* The cd-alphabet for classifying internal vertices. *)
+(** The cd-alphabet for classifying vertices: [C_letter] (right child only),
+    [D_letter] (both children), [E_letter] (endpoint). *)
 Inductive cde := C_letter | D_letter | E_letter.
 
+(** [classify_vertex_cde i w] returns the cd-letter for vertex [i] of [w]:
+    [E_letter] if endpoint, [D_letter] if it has a left child, else [C_letter]. *)
 Definition classify_vertex_cde (i : nat) (w : seq nat) : cde :=
   if ~~ is_internal i w then E_letter
   else if has_left_child i w then D_letter
   else C_letter.
 
-(* Φ'_w: the full classification string (one letter per vertex). *)
+(** [phi'_w w] is the full cde-classification string, one letter per vertex
+    of [w] (length [size w]). *)
 Definition phi'_w (w : seq nat) : seq cde :=
   [seq classify_vertex_cde i w | i <- iota 0 (size w)].
 
-(* Φ_w: delete endpoints (set e = 1, the empty word). *)
+(** [phi_w w] is the cd-index of [w]: [phi'_w w] with all [E_letter]
+    (endpoints) stripped. *)
 Definition phi_w (w : seq nat) : seq cde :=
   [seq x <- phi'_w w | match x with E_letter => false | _ => true end].
 
-(* The list of internal vertex positions, sorted. *)
+(** [internal_vertices w] enumerates internal-vertex positions of [w]
+    in ascending order. *)
 Definition internal_vertices (w : seq nat) : seq nat :=
   [seq i <- iota 0 (size w) | is_internal i w].
 
-(* Expand a cd-word into the multiset of seq bool words.
-   c = a + b expands to {[false], [true]}.
-   d = ab + ba expands to {[false;true], [true;false]}. *)
+(** [expand_cde letters] expands a cd-word to the multiset of bit-strings:
+    [c = a+b] yields one bit, [d = ab+ba] yields two bits in either order;
+    [E_letter] contributes nothing. *)
 Fixpoint expand_cde (letters : seq cde) : seq (seq bool) :=
   match letters with
   | [::] => [:: [::]]
@@ -67,12 +76,14 @@ Fixpoint expand_cde (letters : seq cde) : seq (seq bool) :=
   | E_letter :: rest => expand_cde rest
   end.
 
-(* Powerset of internal vertices (for enumerating the class). *)
+(** [powerset_internal w] enumerates all subsequences of [internal_vertices w],
+    used to index the M-equivalence class of [w]. *)
 Definition powerset_internal (w : seq nat) : seq (seq nat) :=
   let ivs := internal_vertices w in
   foldl (fun acc i => acc ++ [seq s ++ [:: i] | s <- acc]) [:: [::]] ivs.
 
-(* Lexicographic order on seq bool (for sorting multisets). *)
+(** [leq_seqb] is the lexicographic order on [seq bool], used to canonicalize
+    the multiset of expanded cd-monomials by sorting. *)
 Fixpoint leq_seqb (s1 s2 : seq bool) : bool :=
   match s1, s2 with
   | [::], _ => true
@@ -84,35 +95,42 @@ Fixpoint leq_seqb (s1 s2 : seq bool) : bool :=
 
 (* ----- M5.1 Proved helpers -------------------------------------------------- *)
 
+(** Empty operator list acts as identity. *)
 Lemma apply_psis_nil w : apply_psis [::] w = w.
 Proof. by []. Qed.
 
+(** Cons unfolding: apply head [psi] then recurse. *)
 Lemma apply_psis_cons i ops w :
   apply_psis (i :: ops) w = apply_psis ops (psi i w).
 Proof. by []. Qed.
 
+(** [apply_psis] preserves the length of [w]. *)
 Lemma size_apply_psis ops w : size (apply_psis ops w) = size w.
 Proof.
 elim: ops w => [// | i ops IH] w /=.
 by rewrite IH size_psi.
 Qed.
 
+(** [apply_psis] preserves uniqueness of [w]. *)
 Lemma uniq_apply_psis ops w : uniq w -> uniq (apply_psis ops w).
 Proof.
 elim: ops w => [// | i ops IH] w /= Hu.
 by apply: IH; apply: uniq_psi.
 Qed.
 
+(** [apply_psis ops w] is a permutation of [w] (each [psi] is a transposition). *)
 Lemma perm_eq_apply_psis ops w : perm_eq (apply_psis ops w) w.
 Proof.
 elim: ops w => [| i ops IH] w /=; first exact: perm_refl.
 exact: perm_trans (IH _) (psi_perm_eq _ _).
 Qed.
 
+(** Concatenation of operator lists corresponds to function composition. *)
 Lemma apply_psis_cat ops1 ops2 w :
   apply_psis (ops1 ++ ops2) w = apply_psis ops2 (apply_psis ops1 w).
 Proof. by rewrite /apply_psis foldl_cat. Qed.
 
+(** Snoc unfolding: trailing index is applied last. *)
 Lemma apply_psis_rcons ops i w :
   apply_psis (rcons ops i) w = psi i (apply_psis ops w).
 Proof. by rewrite -cats1 apply_psis_cat. Qed.

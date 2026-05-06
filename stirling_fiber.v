@@ -28,6 +28,9 @@ Unset Printing Implicit Defensive.
 Section InsertAfter.
 Variable n : nat.
 
+(** [insert_after_fun j0 s] is the underlying function of [insert_after
+    j0 s]: it splices [ord_max] into the [j0]-cycle of [s] right after
+    [j0].  See [insert_after] for the perm wrapping. *)
 Definition insert_after_fun (j0 : 'I_n) (s : {perm 'I_n}) (x : 'I_n.+1) :
   'I_n.+1 :=
   match unlift ord_max x with
@@ -36,6 +39,8 @@ Definition insert_after_fun (j0 : 'I_n) (s : {perm 'I_n}) (x : 'I_n.+1) :
                 else lift ord_max (s k)
   end.
 
+(** [insert_after_fun j0 s] is injective on ['I_n.+1].  Used to package it
+    as a [perm] in [insert_after]. *)
 Lemma insert_after_fun_inj j0 s : injective (insert_after_fun j0 s).
 Proof.
 move=> x y.
@@ -70,21 +75,32 @@ rewrite ?liftK ?unlift_none.
   by [].
 Qed.
 
+(** [insert_after j0 s : {perm 'I_n.+1}] is the permutation that splices
+    [ord_max] into the [j0]-cycle of [s] right after [j0].  An [s]-cycle
+    [p1 -> ... -> j0 -> s j0 -> ...] becomes
+    [p1 -> ... -> j0 -> ord_max -> s j0 -> ...]. *)
 Definition insert_after (j0 : 'I_n) (s : {perm 'I_n}) : {perm 'I_n.+1} :=
   perm (@insert_after_fun_inj j0 s).
 
+(** [insert_after] unfolds to [insert_after_fun] pointwise. *)
 Lemma insert_afterE j0 s x :
   insert_after j0 s x = insert_after_fun j0 s x.
 Proof. by rewrite /insert_after permE. Qed.
 
+(** Defining equation: [insert_after j0 s] sends [ord_max] to
+    [lift ord_max (s j0)]. *)
 Lemma insert_after_ord_max j0 s :
   insert_after j0 s ord_max = lift ord_max (s j0).
 Proof. by rewrite insert_afterE /insert_after_fun unlift_none. Qed.
 
+(** Defining equation: [insert_after j0 s] sends [lift ord_max j0] to
+    [ord_max] (the spliced-in element follows [j0] in its cycle). *)
 Lemma insert_after_j0 j0 s :
   insert_after j0 s (lift ord_max j0) = ord_max.
 Proof. by rewrite insert_afterE /insert_after_fun liftK eqxx. Qed.
 
+(** Defining equation: on points [lift ord_max k] with [k != j0],
+    [insert_after j0 s] acts like the [lift ord_max]-extension of [s]. *)
 Lemma insert_after_other j0 s k :
   k != j0 -> insert_after j0 s (lift ord_max k) = lift ord_max (s k).
 Proof.
@@ -92,6 +108,8 @@ move=> kne.
 by rewrite insert_afterE /insert_after_fun liftK (negbTE kne).
 Qed.
 
+(** [insert_after j0 s] does not fix [ord_max].  Used to characterise
+    the image of [insert_after] in the bijection of §D. *)
 Lemma insert_after_ord_max_neq j0 s :
   insert_after j0 s ord_max != ord_max.
 Proof. by rewrite insert_after_ord_max eq_sym neq_lift. Qed.
@@ -107,6 +125,9 @@ End InsertAfter.
 (* symbolic sanity: insert_after preserves the j0-cycle structure pointwise.  *)
 (* ========================================================================= *)
 
+(** Symbolic sanity check: bundles the three defining equations of
+    [insert_after j0 s] (since mathcomp's [{perm}] is opaque to
+    [vm_compute], we cannot do a numeric check). *)
 Lemma sanity_insert_after_pointwise n (j0 : 'I_n) (s : {perm 'I_n}) :
   let sigma := insert_after j0 s in
   [/\ sigma ord_max = lift ord_max (s j0),
@@ -132,8 +153,10 @@ Variable j0 : 'I_n.
 
 Notation sigma := (insert_after j0 s).
 
-(* Decomposition: sigma factors as (tperm ord_max (lift j0)) * lift_perm.
-   In mathcomp, (p * q) x = q (p x), so we apply tperm first, then lift_perm. *)
+(** Decomposition: [insert_after j0 s] factors as the transposition
+    [tperm ord_max (lift ord_max j0)] composed with [perm.lift_perm
+    ord_max ord_max s].  Used in [cycle_count_insert_after] to apply
+    [porbits_mul_tperm]. *)
 Lemma insert_after_decomp :
   insert_after j0 s =
   ((tperm ord_max (lift ord_max j0)) * (perm.lift_perm ord_max ord_max s))%g.
@@ -151,6 +174,9 @@ case: (unliftP ord_max x) => [k -> | ->].
 - by rewrite tpermL perm.lift_perm_lift insert_after_ord_max.
 Qed.
 
+(** Key invariant: [insert_after j0 s] preserves the cycle count of [s].
+    Splicing [ord_max] into the [j0]-cycle widens that cycle by one
+    element without creating or destroying cycles. *)
 Lemma cycle_count_insert_after :
   cycle_count (insert_after j0 s) = cycle_count s.
 Proof.
@@ -181,7 +207,8 @@ End CycleCountInsertAfter.
 (*       {sigma : {perm 'I_n.+1} | sigma ord_max != ord_max}                  *)
 (* ========================================================================= *)
 
-(* Injectivity in the (j0, s) pair. *)
+(** [insert_after] is injective in the pair [(j0, s)]: distinct
+    [(j0, s)] yield distinct permutations of ['I_n.+1]. *)
 Lemma insert_after_inj_pair n j0 j0' (s s' : {perm 'I_n}) :
   insert_after j0 s = insert_after j0' s' -> (j0 = j0' /\ s = s').
 Proof.
@@ -204,9 +231,11 @@ case: (altP (k =P j0)) => [-> | kne].
   exact: (@lift_inj _ ord_max) H.
 Qed.
 
-(* Surjectivity: every sigma with sigma ord_max != ord_max is in the image
-   of insert_after.  Construction uses the perm_compress drop_perm operator
-   on the conjugate "tau = tperm * sigma" which fixes ord_max. *)
+(** Surjectivity onto the non-fixing class: every [sigma : {perm 'I_n.+1}]
+    with [sigma ord_max != ord_max] arises as [insert_after j0 s] for
+    some [j0] and [s].  Constructed by conjugating [sigma] with a
+    transposition to land in the fixed-[ord_max] class, then applying
+    [drop_perm]. *)
 Lemma insert_after_surj n (sigma : {perm 'I_n.+1}) :
   sigma ord_max != ord_max ->
   exists j0 (s : {perm 'I_n}), sigma = insert_after j0 s.
@@ -242,9 +271,9 @@ Qed.
 (* §E. Per-fiber count and stirling_c_rec assembly                            *)
 (* ========================================================================= *)
 
-(* Count of permutations sigma of 'I_n.+1 with sigma ord_max != ord_max
-   and a given cycle count.  Via the (j0, s) bijection, this is
-   n * stirling_c n k.+1. *)
+(** Count of permutations [sigma] of ['I_n.+1] with [sigma ord_max !=
+    ord_max] and exactly [k.+1] cycles equals [n * stirling_c n k.+1].
+    This is the [j != ord_max] half of the Stirling fiber bijection. *)
 Lemma card_neq_ord_max_fiber n k :
   #|[set sigma : {perm 'I_n.+1} | (sigma ord_max != ord_max) &&
                                   (cycle_count sigma == k.+1)]|
@@ -284,8 +313,10 @@ rewrite (eq_bigl (fun p : 'I_n * {perm 'I_n} => cycle_count p.2 == k.+1)).
 by move=> p; rewrite inE.
 Qed.
 
-(* The eq_ord_max fiber: bijection via mathcomp's perm.lift_perm and
-   perm_compress.drop_perm. *)
+(** Count of permutations [sigma] of ['I_n.+1] fixing [ord_max] with
+    exactly [k.+1] cycles equals [stirling_c n k].  Bijection via
+    [perm.lift_perm ord_max ord_max] and [drop_perm].  This is the
+    [j = ord_max] half of the Stirling fiber bijection. *)
 Lemma card_eq_ord_max_fiber n k :
   #|[set sigma : {perm 'I_n.+1} | (sigma ord_max == ord_max) &&
                                   (cycle_count sigma == k.+1)]|
@@ -337,7 +368,10 @@ rewrite /stirling_c.
 by apply: eq_card => s; rewrite !inE.
 Qed.
 
-(* Final assembly. *)
+(** Stirling cycle-number recurrence:
+    [c(n+1, k+1) = n * c(n, k+1) + c(n, k)] (Stanley EC1 §1.3.2).
+    Final assembly from [card_neq_ord_max_fiber] and
+    [card_eq_ord_max_fiber]. *)
 Lemma stirling_c_rec n k :
   stirling_c n.+1 k.+1 = n * stirling_c n k.+1 + stirling_c n k.
 Proof.

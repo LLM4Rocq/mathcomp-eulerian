@@ -13,12 +13,18 @@ Unset Printing Implicit Defensive.
 
 (* ----- 1. Alternating min-or-max split ----------------------------------- *)
 
+(** [max_pos s] is the least index in [s] at which the maximum of [s]
+    occurs, the dual of [min_pos]. *)
 Definition max_pos (s : seq nat) : nat :=
   index (foldr maxn (head 0 s) (behead s)) s.
 
+(** [mm_pos s] is Stanley's min-or-max split index: the least index at
+    which either the minimum or the maximum of [s] occurs. *)
 Definition mm_pos (s : seq nat) : nat :=
   if min_pos s <= max_pos s then min_pos s else max_pos s.
 
+(** [max_in] is the dual of [min_in]: [foldr maxn a s] always lies in
+    [a :: s]. *)
 Lemma max_in s a : foldr maxn a s \in a :: s.
 Proof.
 elim: s a => [| b s IH] a /=.
@@ -29,17 +35,23 @@ case: leqP => _.
 by rewrite eqxx orbT.
 Qed.
 
+(** [max_pos_lt] : on a nonempty sequence the index [max_pos s] is in range. *)
 Lemma max_pos_lt s : s <> [::] -> max_pos s < size s.
 Proof.
 case: s => [// | a s _]; rewrite /max_pos.
 by rewrite index_mem; exact: max_in.
 Qed.
 
+(** [mm_pos_lt] : on a nonempty sequence the min-or-max split index is in
+    range, ensuring [mmtree_of_seq_mm_fuel] recursion is well-defined. *)
 Lemma mm_pos_lt s : s <> [::] -> mm_pos s < size s.
 Proof.
 move=> Hs; rewrite /mm_pos; case: ifP => _; [exact: min_pos_lt | exact: max_pos_lt].
 Qed.
 
+(** [mmtree_of_seq_mm_fuel fuel s] is the Stanley-correct min-max tree
+    construction (M2 variant): splits [s] at [mm_pos s] rather than
+    [min_pos s], producing the alternating-extremum tree shape. *)
 Fixpoint mmtree_of_seq_mm_fuel (fuel : nat) (s : seq nat) : mmtree nat :=
   match fuel with
   | 0 => @Leaf nat
@@ -54,9 +66,13 @@ Fixpoint mmtree_of_seq_mm_fuel (fuel : nat) (s : seq nat) : mmtree nat :=
       end
   end.
 
+(** [mmtree_of_seq_mm s] is Stanley's min-max tree [M(w)] for [s = w]: the
+    canonical M-class representative used to define [psi]. *)
 Definition mmtree_of_seq_mm (s : seq nat) : mmtree nat :=
   mmtree_of_seq_mm_fuel (size s) s.
 
+(** [mmtree_of_seq_mm_fuel_correct] : the M2 fuel construction round-trips
+    in-order, the analogue of [mmtree_of_seq_fuel_correct]. *)
 Lemma mmtree_of_seq_mm_fuel_correct :
   forall fuel s, size s <= fuel ->
     mmtree_to_seq (mmtree_of_seq_mm_fuel fuel s) = s.
@@ -79,6 +95,8 @@ congr (_ ++ _).
 by rewrite (drop_nth 0 Hj).
 Qed.
 
+(** [mmtree_of_seq_mmK] is the M2 round-trip theorem: in-order traversal
+    inverts the Stanley min-max construction [mmtree_of_seq_mm]. *)
 Theorem mmtree_of_seq_mmK : forall s, mmtree_to_seq (mmtree_of_seq_mm s) = s.
 Proof.
 by move=> s; apply: mmtree_of_seq_mm_fuel_correct.
@@ -90,6 +108,9 @@ Qed.
 (* or 0 when i is out of range. The window itself is take (window_size i w)  *)
 (* (drop i w).                                                              *)
 
+(** [window_size_fuel fuel i s] computes the size of the M-window at
+    in-order position [i] (i.e. [1 + |right subtree of vertex i|]) by
+    fuel-bounded recursion mirroring [mmtree_of_seq_mm_fuel]. *)
 Fixpoint window_size_fuel (fuel : nat) (i : nat) (s : seq nat) : nat :=
   match fuel with
   | 0 => 0
@@ -104,9 +125,15 @@ Fixpoint window_size_fuel (fuel : nat) (i : nat) (s : seq nat) : nat :=
       end
   end.
 
+(** [window_size i s] is [1 + |right subtree of vertex at in-order position i|]
+    in [M(s)], i.e. the size of the M-window on which [psi i] acts; [0] when
+    [i >= size s]. *)
 Definition window_size (i : nat) (s : seq nat) : nat :=
   window_size_fuel (size s) i s.
 
+(** [window_at i w] is the in-order labels of the M-window at position [i]:
+    the contiguous slice [w_i, w_{i+1}, ..., w_{i+ws-1}] where [ws =
+    window_size i w]. *)
 Definition window_at (i : nat) (w : seq nat) : seq nat :=
   take (window_size i w) (drop i w).
 
@@ -115,7 +142,9 @@ Definition window_at (i : nat) (w : seq nat) : seq nat :=
    Equivalently: window_size i w = 0 when i >= size w,
    and 0 < window_size i w and i + window_size i w <= size w otherwise. *)
 
-(* Combined invariant: gt0 iff in-range, and size-bound as slice-safe. *)
+(** [window_size_fuel_bound] : combined invariant for the fuel version --
+    the window is positive iff [i] is in range, and is bounded by the
+    available suffix length. *)
 Lemma window_size_fuel_bound :
   forall fuel i s, size s <= fuel ->
     (0 < window_size_fuel fuel i s) = (i < size s)
@@ -175,6 +204,7 @@ have -> : size s0 - (i - 1) = 0.
 done.
 Qed.
 
+(** [window_size_gt0] : the M-window at an in-range position is nonempty. *)
 Lemma window_size_gt0 i w : i < size w -> 0 < window_size i w.
 Proof.
 move=> Hi.
@@ -182,11 +212,15 @@ have [Heq _] := window_size_fuel_bound i (leqnn (size w)).
 by rewrite /window_size Heq.
 Qed.
 
+(** [window_size_bound] : the M-window at [i] never exceeds the suffix
+    [size w - i], so [window_at i w] is a slice of [w]. *)
 Lemma window_size_bound i w : window_size i w <= size w - i.
 Proof.
 by have [_ Hbd] := window_size_fuel_bound i (leqnn (size w)).
 Qed.
 
+(** [window_size_oor] : out-of-range positions have empty window, by which
+    [psi i] degenerates to the identity. *)
 Lemma window_size_oor i w : size w <= i -> window_size i w = 0.
 Proof.
 move=> Hi.
@@ -201,6 +235,9 @@ Qed.
 (* shift_amt L: if root = min, shift ranks by -1 (mod k); if root = max,    *)
 (* shift by +1 (mod k). Default shift = 0 (identity) for trivial windows.   *)
 
+(** [rank_shift_seq L] is the rank-shift on the M-window: replace the head
+    with the opposite extremum (max if head = min, else min) and rotate the
+    other ranks accordingly.  This is the algebraic core of [psi_i]. *)
 Definition rank_shift_seq (L : seq nat) : seq nat :=
   let sorted := sort leq L in
   let k := size sorted in
@@ -208,6 +245,7 @@ Definition rank_shift_seq (L : seq nat) : seq nat :=
   let shift_by := if head 0 L == nth 0 sorted 0 then k.-1 else 1 in
   [seq nth 0 sorted ((index y sorted + shift_by) %% k) | y <- L].
 
+(** [size_rank_shift_seq] : [rank_shift_seq] preserves length (definitional). *)
 Lemma size_rank_shift_seq L : size (rank_shift_seq L) = size L.
 Proof.
 rewrite /rank_shift_seq.
@@ -216,12 +254,17 @@ Qed.
 
 (* ----- 4. ψᵢ ------------------------------------------------------------- *)
 
+(** [psi i w] is Stanley's [psi_i] operator on the M-class representative
+    [w]: it fixes the prefix of length [i], applies the rank-shift to the
+    M-window [window_at i w], and concatenates the unchanged suffix.  Total
+    function; identity outside the window or when [i >= size w]. *)
 Definition psi (i : nat) (w : seq nat) : seq nat :=
   take i w ++ rank_shift_seq (window_at i w) ++ drop (i + window_size i w) w.
 
 (* ----- 5. rank_shift preserves the multiset ----------------------------- *)
 
-(* Helper: mapping sorted back by nth-index is the identity. *)
+(** [map_nth_iota_sorted] : mapping [nth 0 sorted] across [iota 0 (size sorted)]
+    reproduces [sorted].  Helper for the rank-shift permutation analysis. *)
 Lemma map_nth_iota_sorted (sorted : seq nat) :
   [seq nth 0 sorted i | i <- iota 0 (size sorted)] = sorted.
 Proof.
@@ -233,9 +276,9 @@ rewrite nth_iota ?add0n //.
 by move: Hi; rewrite size_map size_iota.
 Qed.
 
-(* For shift < k, map of (+shift) %% k on iota 0 k equals rot (k - shift) on
-   iota 0 k. This uses that iota 0 k = iota 0 (k-shift) ++ iota (k-shift) shift
-   and the mod rearrangement. *)
+(** [map_mod_iota_rot] : the modular shift [r |-> (r + shift) %% k] on
+    [iota 0 k] equals a rotation of [iota 0 k]; key step in proving
+    [rank_shift_perm_eq]. *)
 Lemma map_mod_iota_rot (shift k : nat) : shift < k ->
   [seq (i + shift) %% k | i <- iota 0 k] = rot shift (iota 0 k).
 Proof.
@@ -268,6 +311,8 @@ rewrite -modnDml modnn add0n modn_small //.
 by apply: leq_trans Hi Hsh_le.
 Qed.
 
+(** [rank_shift_perm_eq] : [rank_shift_seq L] is a permutation of [L], so
+    [psi i] preserves the multiset of labels in [w]. *)
 Lemma rank_shift_perm_eq L : perm_eq (rank_shift_seq L) L.
 Proof.
 rewrite /rank_shift_seq.
@@ -307,6 +352,8 @@ Qed.
 
 (* ----- 5b. rank_shift is an involution on uniq lists of size >= 2 ------- *)
 
+(** [sort_rank_shift_seq] : the rank-shift commutes with [sort leq], a
+    consequence of [rank_shift_perm_eq]. *)
 Lemma sort_rank_shift_seq L : uniq L -> 1 < size L ->
   sort leq (rank_shift_seq L) = sort leq L.
 Proof.
@@ -318,18 +365,23 @@ apply/perm_sortP; rewrite ?sort_sorted ?sort_le_sorted //.
 - exact: rank_shift_perm_eq.
 Qed.
 
+(** [uniq_rank_shift_seq] : the rank-shift preserves uniqueness, by
+    permutation. *)
 Lemma uniq_rank_shift_seq L : uniq L -> uniq (rank_shift_seq L).
 Proof.
 by move=> Huniq; rewrite (perm_uniq (rank_shift_perm_eq L)).
 Qed.
 
-(* Size preserved — follows from perm_eq. *)
+(** [size_rank_shift_seq2] : size preservation derived from [perm_eq],
+    convenient form for downstream rewrites. *)
 Lemma size_rank_shift_seq2 L : size (rank_shift_seq L) = size L.
 Proof. by apply: perm_size; apply: rank_shift_perm_eq. Qed.
 
 
 (* ----- 6. psi_perm_eq --------------------------------------------------- *)
 
+(** [psi_perm_eq] is the M2 multiset preservation theorem: [psi i w] is a
+    permutation of [w] for every [i] and [w]. *)
 Lemma psi_perm_eq i w : perm_eq (psi i w) w.
 Proof.
 rewrite /psi.
@@ -347,17 +399,22 @@ Qed.
 
 (* Non-triviality example first, sanity check. *)
 
+(** [psi_nontrivial] : a concrete computation showing [psi 5] is not the
+    identity on [[3;1;4;7;5;9;2;6]] (matches Stanley's worked example). *)
 Example psi_nontrivial :
   psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6] = [:: 3; 1; 4; 7; 5; 2; 6; 9].
 Proof. by []. Qed.
 
+(** [psi_involutive_ex] : involutivity of [psi 5] on the same concrete word,
+    as a [Compute]-level sanity check. *)
 Example psi_involutive_ex :
   psi 5 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) = [:: 3; 1; 4; 7; 5; 9; 2; 6].
 Proof. by []. Qed.
 
 (* ----- 7. Involutivity ---------------------------------------------------- *)
 
-(* Explicit characterization of one entry of rank_shift_seq. *)
+(** [rank_shift_seqE] : explicit map characterization of [rank_shift_seq L]
+    in terms of the sort and the head's extremum role. *)
 Lemma rank_shift_seqE L : uniq L -> 1 < size L ->
   rank_shift_seq L = [seq nth 0 (sort leq L)
     ((index y (sort leq L) +
@@ -372,6 +429,8 @@ case: ifP => [Hc|_]; first by move/negP: Hcond; rewrite Hc.
 by rewrite size_sort.
 Qed.
 
+(** [nth_rank_shift_seq] : positionwise formula for [rank_shift_seq L],
+    used in the involutivity and interior-order proofs. *)
 Lemma nth_rank_shift_seq L n : uniq L -> 1 < size L -> n < size L ->
   nth 0 (rank_shift_seq L) n =
     nth 0 (sort leq L)
@@ -383,6 +442,8 @@ move=> Hu Hsz Hn.
 by rewrite (rank_shift_seqE Hu Hsz) (nth_map 0).
 Qed.
 
+(** [head_rank_shift_seq] : the head of [rank_shift_seq L] is the formula
+    above instantiated at [n = 0]. *)
 Lemma head_rank_shift_seq L : uniq L -> 1 < size L ->
   head 0 (rank_shift_seq L) =
     nth 0 (sort leq L)
@@ -395,8 +456,9 @@ have Hsz0 : 0 < size L by apply: ltnW.
 by rewrite -nth0 (nth_rank_shift_seq Hu Hsz Hsz0) nth0.
 Qed.
 
-(* Key rank-shift involutivity lemma.  When L is uniq, has size >= 2, and
-   its head is the min or max of L, applying rank_shift_seq twice is identity. *)
+(** [rank_shift_seq_involutive] : applying the rank-shift twice is the
+    identity, provided the head of [L] is the global min or max.  Algebraic
+    heart of the [psi_involutive] theorem. *)
 Lemma rank_shift_seq_involutive L : uniq L -> 1 < size L ->
   let s := sort leq L in
   (head 0 L == nth 0 s 0) || (head 0 L == nth 0 s (size L).-1) ->
@@ -468,6 +530,8 @@ Qed.
 
 (* ----- 8. Window size structural recursion ------------------------------- *)
 
+(** [window_size_fuel_monotone] : the fuel-bounded [window_size] is
+    independent of fuel as long as fuel covers the input size. *)
 Lemma window_size_fuel_monotone fuel1 fuel2 i s :
   size s <= fuel1 -> fuel1 <= fuel2 ->
   window_size_fuel fuel2 i s = window_size_fuel fuel1 i s.
@@ -494,7 +558,8 @@ case: ifP => _ //.
 by apply: IH.
 Qed.
 
-(* Structural unfolding of window_size on a nonempty list. *)
+(** [window_size_cons] : structural unfolding of [window_size] on a [cons]
+    by the [mm_pos] split, mirroring the recursion of [mmtree_of_seq_mm]. *)
 Lemma window_size_cons i a s0 :
   let s := a :: s0 in
   let j := mm_pos s in
@@ -517,7 +582,8 @@ case: ifP => _ //.
 apply: window_size_fuel_monotone => //.
 Qed.
 
-(* psi is the identity when i is out of range. *)
+(** [psi_id_oor] : [psi i w = w] when [i] is out of range, the
+    edge convention from M2_PSI_INFORMAL.md. *)
 Lemma psi_id_oor i w : size w <= i -> psi i w = w.
 Proof.
 move=> Hi.
@@ -527,7 +593,8 @@ rewrite (_ : rank_shift_seq [::] = [::]); last by rewrite /rank_shift_seq.
 by rewrite cat0s cat_take_drop.
 Qed.
 
-(* psi is the identity when the window has size <= 1. *)
+(** [psi_id_trivial] : [psi i w = w] on a trivial window (size [<= 1],
+    i.e. a leaf or single-vertex right subtree). *)
 Lemma psi_id_trivial i w : window_size i w <= 1 -> psi i w = w.
 Proof.
 move=> Hws.
@@ -547,7 +614,8 @@ rewrite -[RHS](cat_take_drop (window_size i w) (drop i w)).
 by rewrite drop_drop addnC.
 Qed.
 
-(* Window-at decomposition by the mm_pos split *)
+(** [window_at_cons] : structural unfolding of [window_at] on a [cons], by
+    the [mm_pos] split.  Companion of [window_size_cons]. *)
 Lemma window_at_cons i a s0 :
   let s := a :: s0 in
   let j := mm_pos s in
@@ -588,12 +656,16 @@ Qed.
 
 (* ----- T4 prerequisites: basic psi properties ----------------------------- *)
 
+(** [size_psi] : [psi i] preserves length, derived from [psi_perm_eq]. *)
 Lemma size_psi i w : size (psi i w) = size w.
 Proof. by apply: perm_size; apply: psi_perm_eq. Qed.
 
+(** [uniq_psi] : [psi i] preserves uniqueness, derived from [psi_perm_eq]. *)
 Lemma uniq_psi i w : uniq w -> uniq (psi i w).
 Proof. by move=> Hu; rewrite (perm_uniq (psi_perm_eq i w)). Qed.
 
+(** [take_psi] : [psi j] does not touch positions strictly before [j], so
+    any prefix of length [k <= j] is unchanged. *)
 Lemma take_psi k j w :
   k <= j -> take k (psi j w) = take k w.
 Proof.
@@ -616,6 +688,8 @@ Qed.
 
 (* ----- T4 prerequisites: foldr min/max bounds ----------------------------- *)
 
+(** [foldr_minn_aux] : [foldr minn a s] bounds [a] and every element of
+    [s] from above; technical helper for the extremum reasoning. *)
 Lemma foldr_minn_aux s a :
   foldr minn a s <= a /\ forall x, x \in s -> foldr minn a s <= x.
 Proof.
@@ -627,12 +701,15 @@ move=> x; rewrite inE => /orP [/eqP -> | Hx].
 by apply: leq_trans (geq_minr _ _) (H2 _ Hx).
 Qed.
 
+(** [foldr_minn_le] : convenient form of [foldr_minn_aux] -- the fold-min
+    bounds every element of [a :: s] from below. *)
 Lemma foldr_minn_le s a x : x \in a :: s -> foldr minn a s <= x.
 Proof.
 have [H1 H2] := foldr_minn_aux s a.
 by rewrite inE => /orP [/eqP -> | /(H2 _)].
 Qed.
 
+(** [foldr_maxn_aux] : dual of [foldr_minn_aux] for [maxn]. *)
 Lemma foldr_maxn_aux s a :
   a <= foldr maxn a s /\ forall x, x \in s -> x <= foldr maxn a s.
 Proof.
@@ -644,12 +721,15 @@ move=> x; rewrite inE => /orP [/eqP -> | Hx].
 by apply: leq_trans (H2 _ Hx) (leq_maxr _ _).
 Qed.
 
+(** [foldr_maxn_ge] : dual of [foldr_minn_le] for [maxn]. *)
 Lemma foldr_maxn_ge s a x : x \in a :: s -> x <= foldr maxn a s.
 Proof.
 have [H1 H2] := foldr_maxn_aux s a.
 by rewrite inE => /orP [/eqP -> | /(H2 _)].
 Qed.
 
+(** [min_val_perm_eq] : the global min as computed by [foldr minn] depends
+    only on the multiset, so [psi i] preserves the minimum value. *)
 Lemma min_val_perm_eq s1 s2 :
   s1 <> [::] -> perm_eq s1 s2 ->
   foldr minn (head 0 s1) (behead s1) =
@@ -662,6 +742,7 @@ apply/eqP; rewrite eqn_leq; apply/andP; split.
 - by apply: foldr_minn_le; rewrite -(perm_mem Hp); apply: min_in.
 Qed.
 
+(** [max_val_perm_eq] : dual of [min_val_perm_eq] for the global max. *)
 Lemma max_val_perm_eq s1 s2 :
   s1 <> [::] -> perm_eq s1 s2 ->
   foldr maxn (head 0 s1) (behead s1) =
@@ -676,6 +757,8 @@ Qed.
 
 (* ----- T4: window_fits_left ----------------------------------------------- *)
 
+(** [window_fits_left] : when [i] sits in the left subtree of the root
+    ([i < mm_pos w]), the M-window at [i] does not cross the root. *)
 Lemma window_fits_left i w :
   w <> [::] -> i < mm_pos w -> i + window_size i w <= mm_pos w.
 Proof.
@@ -693,6 +776,8 @@ Qed.
 
 (* ----- T3: nth_psi_outside ------------------------------------------------ *)
 
+(** [drop_psi] : [psi i] does not touch positions at or after the window
+    end, so the suffix from [i + window_size i w] is unchanged. *)
 Lemma drop_psi i w :
   drop (i + window_size i w) (psi i w) = drop (i + window_size i w) w.
 Proof.
@@ -710,6 +795,8 @@ have Hsz_AB : size (take i w ++ rank_shift_seq wa) = i + ws.
 by rewrite /psi -/wa -/ws catA drop_cat Hsz_AB ltnn subnn drop0.
 Qed.
 
+(** [nth_psi_left] : positionwise version of [take_psi] -- entries before
+    the window are fixed. *)
 Lemma nth_psi_left i w k : k < i -> nth 0 (psi i w) k = nth 0 w k.
 Proof.
 move=> Hki.
@@ -717,6 +804,8 @@ rewrite -(@nth_take i _ 0 k Hki (psi i w)).
 by rewrite (@take_psi i i w (leqnn i)) (@nth_take i _ 0 k Hki w).
 Qed.
 
+(** [nth_psi_right] : positionwise version of [drop_psi] -- entries after
+    the window are fixed. *)
 Lemma nth_psi_right i w k :
   i + window_size i w <= k -> nth 0 (psi i w) k = nth 0 w k.
 Proof.
@@ -725,6 +814,8 @@ rewrite -{1}(subnK Hki) addnC -nth_drop.
 by rewrite drop_psi nth_drop addnC subnK.
 Qed.
 
+(** [nth_psi_inside] : within the window, [psi i w] reads off
+    [rank_shift_seq (window_at i w)] at the offset [k - i]. *)
 Lemma nth_psi_inside i w k :
   i < size w -> i <= k -> k < i + window_size i w ->
   nth 0 (psi i w) k =
@@ -747,6 +838,9 @@ Qed.
 
 (* ----- T4a: perm_eq of takes under psi ----------------------------------- *)
 
+(** [take_psi_perm] : when [j] sits past the window end, the prefix
+    [take j (psi i w)] is a permutation of [take j w]; used in
+    [mm_pos_psi_eq] to argue invariance of the global extremum positions. *)
 Lemma take_psi_perm j i w :
   i < size w -> i + window_size i w <= j -> j <= size w ->
   perm_eq (take j (psi i w)) (take j w).
@@ -782,6 +876,8 @@ Qed.
 
 (* ----- T4b: no extremum in prefix of w ----------------------------------- *)
 
+(** [notin_take_mm] : neither the global min nor the global max appears in
+    the prefix [take (mm_pos w) w], by minimality of [mm_pos]. *)
 Lemma notin_take_mm w :
   w <> [::] ->
   let j := mm_pos w in
@@ -798,6 +894,8 @@ Qed.
 
 (* ----- T4c: extremum at position j in psi(w) ----------------------------- *)
 
+(** [min_val_drop] : if the global min is not in [take j w], the min of
+    [drop j w] equals the global min of [w]. *)
 Lemma min_val_drop j w :
   w <> [::] ->
   foldr minn (head 0 w) (behead w) \notin take j w ->
@@ -822,6 +920,7 @@ apply/eqP; rewrite eqn_leq; apply/andP; split.
   apply: foldr_minn_le. exact: mem_drop Hmin_drop'.
 Qed.
 
+(** [max_val_drop] : dual of [min_val_drop] for the global max. *)
 Lemma max_val_drop j w :
   w <> [::] ->
   foldr maxn (head 0 w) (behead w) \notin take j w ->
@@ -848,6 +947,9 @@ Qed.
 
 (* ----- T4d: mm_pos characterization --------------------------------------- *)
 
+(** [mm_pos_char] : the [mm_pos s] index is uniquely characterized by:
+    no extremum sits in [take j s] and the extremum sits at [nth 0 s j].
+    Used to prove [mm_pos] is preserved by [psi]. *)
 Lemma mm_pos_char (s : seq nat) (j : nat) :
   s <> [::] -> j < size s ->
   foldr minn (head 0 s) (behead s) \notin take j s ->
@@ -884,6 +986,8 @@ case: Hval => Hval.
   by case: ifP => [Hle|_] //; apply/eqP; rewrite eqn_leq Hle Hmin_ge.
 Qed.
 
+(** [nth_w_mm_pos] : the entry at [mm_pos w] is exactly the global min or
+    the global max of [w], by definition of [mm_pos]. *)
 Lemma nth_w_mm_pos w :
   w <> [::] ->
   nth 0 w (mm_pos w) = foldr minn (head 0 w) (behead w) \/
@@ -897,6 +1001,8 @@ Qed.
 
 (* ----- T4e: bridge foldr minn/maxn to sorted-list positions --------------- *)
 
+(** [sorted_head_le] : on a sorted sequence, the head bounds every element
+    from below. *)
 Lemma sorted_head_le (s : seq nat) :
   sorted leq s ->
   forall x, x \in s -> head 0 s <= x.
@@ -908,6 +1014,8 @@ have : all (leq a) s
 by move/allP => /(_ x Hx).
 Qed.
 
+(** [sorted_last_ge] : on a sorted sequence, the last element bounds every
+    element from above. *)
 Lemma sorted_last_ge (s : seq nat) :
   sorted leq s ->
   forall x, x \in s -> x <= last 0 s.
@@ -922,6 +1030,8 @@ move: Hx; rewrite inE => /orP [/eqP -> | Hx].
 exact: (IH b Hpath x); rewrite inE Hx orbT.
 Qed.
 
+(** [min_eq_nth_sort_0] : the [foldr minn] minimum equals the first entry
+    of the sorted list -- bridge from value-based to rank-based statements. *)
 Lemma min_eq_nth_sort_0 (L : seq nat) :
   L <> [::] ->
   foldr minn (head 0 L) (behead L) =
@@ -940,6 +1050,8 @@ apply/eqP; rewrite eqn_leq; apply/andP; split.
     (sort_sorted leq_total (a :: s)) _ Hmin_in.
 Qed.
 
+(** [max_eq_nth_sort_last] : dual of [min_eq_nth_sort_0] -- the
+    [foldr maxn] maximum equals the last entry of the sorted list. *)
 Lemma max_eq_nth_sort_last (L : seq nat) :
   L <> [::] ->
   foldr maxn (head 0 L) (behead L) =
@@ -965,6 +1077,8 @@ Qed.
 (* ----- T4e2: Head-flip lemmas (moved up for use in mm_pos_psi_eq) -------- *)
 (* rank_shift sends min-head to max and vice versa.                         *)
 
+(** [rank_shift_head_min_to_max] : if the head of [L] is the minimum, the
+    rank-shift sends it to the maximum; this is one half of the head-flip. *)
 Lemma rank_shift_head_min_to_max (L : seq nat) :
   uniq L -> 1 < size L ->
   head 0 L = nth 0 (sort leq L) 0 ->
@@ -982,6 +1096,8 @@ rewrite Hmin index_uniq ?add0n ?size_sort //.
 by rewrite modn_small // prednK.
 Qed.
 
+(** [rank_shift_head_max_to_min] : the dual head-flip -- if the head of
+    [L] is the maximum, the rank-shift sends it to the minimum. *)
 Lemma rank_shift_head_max_to_min (L : seq nat) :
   uniq L -> 1 < size L ->
   head 0 L = nth 0 (sort leq L) (size L).-1 ->
@@ -1010,6 +1126,9 @@ Qed.
 
 (* ----- T4: mm_pos_psi_eq -------------------------------------------------- *)
 
+(** [mm_pos_psi_eq] : [psi i] preserves the global root index [mm_pos],
+    by the head-flip combined with extremum-preservation away from the
+    window.  Key step toward [psi_involutive]. *)
 Lemma mm_pos_psi_eq i w :
   uniq w -> 1 < window_size i w -> i < size w ->
   mm_pos (psi i w) = mm_pos w.
@@ -1135,12 +1254,17 @@ Qed.
 
 (* ----- T5 helpers: psi commutes with tree decomposition ------------------- *)
 
+(** [ws_lt_size] : a nontrivial window forces [i < size w]; used to
+    discharge in-range hypotheses cheaply. *)
 Lemma ws_lt_size i w : 1 < window_size i w -> i < size w.
 Proof.
 move=> Hws; case: (ltnP i (size w)) => // Hge.
 by move: Hws; rewrite (window_size_oor Hge).
 Qed.
 
+(** [take_mm_psi] : when [i] is in the left subtree, [psi i] commutes with
+    [take (mm_pos w)], i.e. acts on the left subtree's labels alone.
+    Recursive descent step for [window_size_psi_self] and [window_at_psi_self]. *)
 Lemma take_mm_psi i w :
   w <> [::] -> uniq w -> 1 < window_size i w ->
   i < mm_pos w ->
@@ -1171,6 +1295,9 @@ rewrite (take_drop (j - (i + ws)) (i + ws)).
 by rewrite subnK.
 Qed.
 
+(** [drop_mm_psi] : dual of [take_mm_psi] -- when [i] is in the right
+    subtree, [psi i] commutes with [drop (mm_pos w).+1] and re-indexes
+    [i] by subtracting the left-plus-root size. *)
 Lemma drop_mm_psi i w :
   w <> [::] -> uniq w -> 1 < window_size i w ->
   mm_pos w < i ->
@@ -1217,6 +1344,9 @@ Qed.
 
 (* ----- T5: window stability under psi ------------------------------------ *)
 
+(** [window_size_psi_self] : applying [psi i] to [w] does not change the
+    window size at the same position [i].  Proved by induction on size
+    using [take_mm_psi]/[drop_mm_psi]. *)
 Lemma window_size_psi_self i w :
   uniq w -> 1 < window_size i w -> i < size w ->
   window_size i (psi i w) = window_size i w.
@@ -1275,6 +1405,9 @@ case: (ltngtP i j) => [Hij | Hji | Hij].
   by rewrite -Hpsi_eq size_psi.
 Qed.
 
+(** [window_at_psi_self] : the window at [i] after one application of
+    [psi i] is exactly the rank-shifted original window.  Required by the
+    second [psi i] application in [psi_involutive]. *)
 Lemma window_at_psi_self i w :
   uniq w -> 1 < window_size i w -> i < size w ->
   window_at i (psi i w) = rank_shift_seq (window_at i w).
@@ -1349,6 +1482,10 @@ Qed.
 
 (* ----- T6: window_head_extremum ------------------------------------------ *)
 
+(** [window_head_extremum] : the head of [window_at i w] is always an
+    extremum (min or max) of the window -- Stanley's structural fact (F2)
+    transferred to the window.  Discharge condition for
+    [rank_shift_seq_involutive]. *)
 Lemma window_head_extremum w i :
   uniq w -> 1 < window_size i w ->
   let L := window_at i w in
@@ -1412,6 +1549,8 @@ Qed.
 
 (* ----- T7: psi_involutive ------------------------------------------------ *)
 
+(** [psi_involutive] is the M2 involutivity theorem: [psi i (psi i w) = w]
+    for every [i] and uniq [w].  Stanley fact about [psi_i]. *)
 Theorem psi_involutive i w : uniq w -> psi i (psi i w) = w.
 Proof.
 move=> Huniq.
@@ -1467,6 +1606,9 @@ Qed.
 (* different branches have disjoint windows; positions in the same branch     *)
 (* have nested windows. This is a structural property of binary trees.        *)
 
+(** [window_trichotomy] : two M-windows in the same word are either
+    disjoint (left or right) or one is nested in the other -- the binary
+    tree geometry that drives the [psi_comm] proof. *)
 Lemma window_trichotomy : forall i j (w : seq nat),
   i < size w -> j < size w -> i <> j ->
   [\/ i + window_size i w <= j,
@@ -1647,7 +1789,8 @@ case: (ltngtP i j0) => [Hi_lt | Hi_r | Hi_eq];
   by exfalso; apply: Hne; rewrite Hi_eq Hj_eq.
 Qed.
 
-(* Non-triviality: the nested case does occur (positions 1 and 5). *)
+(** [window_trichotomy_ex] : a concrete witness that the nested case is
+    realized (positions 1 and 5 in [[3;1;4;7;5;9;2;6]]). *)
 Example window_trichotomy_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   (1 < 5) && (5 + window_size 5 w <= 1 + window_size 1 w).
@@ -1669,16 +1812,22 @@ Proof. by []. Qed.
 (* ----- Order-isomorphism infrastructure ---------------------------------- *)
 (* mm_pos and window_size depend only on comparison structure.               *)
 
+(** [foldr_minn_le_nth] : positionwise version of [foldr_minn_le]. *)
 Lemma foldr_minn_le_nth s a i :
   i < (size s).+1 ->
   foldr minn a s <= nth 0 (a :: s) i.
 Proof. move=> Hi; apply: foldr_minn_le; exact: mem_nth. Qed.
 
+(** [foldr_maxn_ge_nth] : positionwise version of [foldr_maxn_ge]. *)
 Lemma foldr_maxn_ge_nth s a i :
   i < (size s).+1 ->
   nth 0 (a :: s) i <= foldr maxn a s.
 Proof. move=> Hi; apply: foldr_maxn_ge; exact: mem_nth. Qed.
 
+(** [mm_pos_order_iso] : [mm_pos] depends only on the comparison structure
+    of the sequence -- two order-isomorphic sequences have the same
+    [mm_pos].  Foundational for transferring tree shape across the
+    rank-shift. *)
 Lemma mm_pos_order_iso (s1 s2 : seq nat) :
   size s1 = size s2 -> uniq s1 -> uniq s2 ->
   s1 <> [::] ->
@@ -1783,7 +1932,8 @@ have Hmax_eq : max_pos s1 = max_pos s2.
 by rewrite /mm_pos Hmin_eq Hmax_eq.
 Qed.
 
-(* Helper: transfer order-isomorphism to take m *)
+(** [order_iso_take] : the order-isomorphism property descends to [take m]
+    of both sequences; helper for the recursive case in [window_size_order_iso]. *)
 Lemma order_iso_take m (s1 s2 : seq nat) :
   m < size s1 -> size s1 = size s2 ->
   (forall p q, p < size s1 -> q < size s1 ->
@@ -1800,7 +1950,8 @@ apply: Hord; exact: ltn_trans _ Hm.
 all: by rewrite (size_takel (ltnW Hm)) in Hp Hq.
 Qed.
 
-(* Helper: transfer order-isomorphism to drop m.+1 *)
+(** [order_iso_drop] : the order-isomorphism property descends to
+    [drop m.+1] of both sequences; companion of [order_iso_take]. *)
 Lemma order_iso_drop m (s1 s2 : seq nat) :
   m < size s1 -> size s1 = size s2 ->
   (forall p q, p < size s1 -> q < size s1 ->
@@ -1815,6 +1966,9 @@ apply: Hord.
 all: rewrite -ltn_subRL; by rewrite size_drop in Hp Hq *.
 Qed.
 
+(** [window_size_order_iso] : [window_size] is a function only of
+    comparison structure -- two order-isomorphic sequences have the same
+    window sizes at every position.  Lifts [mm_pos_order_iso] recursively. *)
 Lemma window_size_order_iso (s1 s2 : seq nat) i :
   size s1 = size s2 -> uniq s1 -> uniq s2 ->
   (forall p q, p < size s1 -> q < size s1 ->
@@ -1880,7 +2034,8 @@ Qed.
 
 (* ----- window_size_psi helpers -------------------------------------------- *)
 
-(* mm_pos of drop (mm_pos w) w is 0.                                *)
+(** [mm_pos_drop_mm] : after dropping the prefix up to the root, the new
+    head is itself the root of its subtree, so its [mm_pos] is [0]. *)
 Lemma mm_pos_drop_mm w :
   w <> [::] ->
   mm_pos (drop (mm_pos w) w) = 0.
@@ -1911,7 +2066,8 @@ apply: mm_pos_char => //.
   + by symmetry.
 Qed.
 
-(* Helper: psi 0 s = rank_shift_seq s when mm_pos s = 0 and 1 < size s. *)
+(** [psi_0_eq] : when [mm_pos s = 0] (the head is the root), [psi 0 s]
+    reduces to [rank_shift_seq s] -- the action on the whole sequence. *)
 Lemma psi_0_eq s :
   mm_pos s = 0 -> 1 < size s ->
   psi 0 s = rank_shift_seq s.
@@ -1935,7 +2091,8 @@ Qed.
 
 
 
-(* Helper: drop_suffix under psi when psi window is below cutoff.           *)
+(** [drop_psi_above] : [psi j] does not affect any suffix [drop k w] when
+    [k] is past the window end -- generalizes [drop_psi]. *)
 Lemma drop_psi_above j k w :
   j + window_size j w <= k ->
   drop k (psi j w) = drop k w.

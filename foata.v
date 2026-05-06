@@ -43,15 +43,15 @@ Unset Printing Implicit Defensive.
 (* §A. Building blocks: split into blocks, cyclic rotation                   *)
 (* ========================================================================= *)
 
-(* Cyclic rotation of a non-empty sequence: move the last letter to the
-   FRONT.  Empty seq stays empty. *)
+(** [cyc_last_to_front s] moves the last letter of [s] to the front.
+    Empty sequence stays empty.  Building block for [foata_step]. *)
 Definition cyc_last_to_front (s : seq nat) : seq nat :=
   if s is _ :: _ then last 0 s :: belast (head 0 s) (behead s)
   else [::].
 
-(* Split a sequence into blocks, where a "block boundary" occurs after
-   each position whose value satisfies P.  Returns the list of blocks
-   (each block ends with a P-letter, except possibly the last block). *)
+(** [split_blocks_aux P cur s] is the tail-recursive worker for
+    [split_blocks], threading the in-progress block [cur].  A boundary
+    occurs after each [P]-letter. *)
 Fixpoint split_blocks_aux (P : nat -> bool) (cur : seq nat) (s : seq nat) :
   seq (seq nat) :=
   match s with
@@ -61,12 +61,16 @@ Fixpoint split_blocks_aux (P : nat -> bool) (cur : seq nat) (s : seq nat) :
       else split_blocks_aux P (rcons cur x) rest
   end.
 
+(** [split_blocks P s] cuts [s] into maximal blocks each ending with a
+    [P]-letter (except possibly the last block).  Concatenating the
+    blocks recovers [s]. *)
 Definition split_blocks (P : nat -> bool) (s : seq nat) : seq (seq nat) :=
   split_blocks_aux P [::] s.
 
-(* The key step: given current word u and new letter a, produce the
-   updated word.  The split predicate depends on whether the last letter
-   of u is less than or greater than a. *)
+(** [foata_step a u] is one step of the Foata bijection: compare the last
+    letter of [u] to [a], split [u] into blocks via [split_blocks] (with
+    predicate [< a] or [a <] accordingly), cyclically rotate each block
+    via [cyc_last_to_front], and append [a].  See Stanley EC1 §1.3.4. *)
 Definition foata_step (a : nat) (u : seq nat) : seq nat :=
   match u with
   | [::] => [:: a]
@@ -76,7 +80,9 @@ Definition foata_step (a : nat) (u : seq nat) : seq nat :=
       flatten (map cyc_last_to_front (split_blocks P u)) ++ [:: a]
   end.
 
-(* The Foata bijection on words: process input left to right. *)
+(** [foata w] is Foata's first fundamental bijection at the word level:
+    iterate [foata_step] left-to-right starting from the empty word.
+    Satisfies [inv_seq (foata w) = maj_seq w] (Theorem [foata_inv_eq_maj]). *)
 Definition foata (w : seq nat) : seq nat :=
   foldl (fun u a => foata_step a u) [::] w.
 
@@ -84,20 +90,23 @@ Definition foata (w : seq nat) : seq nat :=
 (* §B. Seq-level inv and maj                                                 *)
 (* ========================================================================= *)
 
-(* k is a descent position if w_k > w_{k+1}. *)
+(** [is_desc_seq w k] holds iff position [k] is a descent of [w], i.e.
+    [w_k > w_{k+1}]. *)
 Definition is_desc_seq (w : seq nat) (k : nat) : bool :=
   nth 0 w k > nth 0 w k.+1.
 
-(* maj_seq w = sum over descent positions k of (k+1) (1-indexed). *)
+(** [maj_seq w] is the major index of [w] at the seq level: sum of
+    1-indexed descent positions [k+1] over [is_desc_seq w k]. *)
 Definition maj_seq (w : seq nat) : nat :=
   \sum_(k <- iota 0 (size w).-1 | is_desc_seq w k) k.+1.
 
-(* inv_seq w = number of pairs (i, j) with i < j < size w but w_i > w_j. *)
+(** [inv_seq w] is the inversion count of [w] at the seq level: number of
+    pairs [(i, j)] with [i < j < size w] and [w_i > w_j]. *)
 Definition inv_seq (w : seq nat) : nat :=
   \sum_(j <- iota 0 (size w))
     \sum_(i <- iota 0 j | nth 0 w i > nth 0 w j) 1.
 
-(* count_gt a w = number of letters of w greater than a. *)
+(** [count_gt a w] is the number of letters of [w] strictly greater than [a]. *)
 Definition count_gt (a : nat) (w : seq nat) : nat :=
   count (fun y => a < y) w.
 
@@ -122,6 +131,8 @@ Definition count_gt (a : nat) (w : seq nat) : nat :=
    Either direction yields equidistribution of inv and maj over S_n.
    We prove the relation in the first form.                                  *)
 
+(** Sanity check on Stanley's running example
+    [w = 3,1,4,5,9,2,6]: [inv_seq (foata w) = maj_seq w = 6]. *)
 Lemma sanity_inv_eq_maj :
   inv_seq (foata [:: 3; 1; 4; 5; 9; 2; 6])
   = maj_seq [:: 3; 1; 4; 5; 9; 2; 6].
@@ -131,6 +142,7 @@ rewrite Hf /inv_seq /maj_seq /=.
 by rewrite !big_cons !big_nil /is_desc_seq /=.
 Qed.
 
+(** Sanity check on [w = 2,3,1] (no-op fixed point of [foata]). *)
 Lemma sanity_inv_eq_maj2 :
   inv_seq (foata [:: 2; 3; 1]) = maj_seq [:: 2; 3; 1].
 Proof.
@@ -138,6 +150,7 @@ have -> : foata [:: 2; 3; 1] = [:: 2; 3; 1] by [].
 by rewrite /inv_seq /maj_seq /= !big_cons !big_nil /is_desc_seq /=.
 Qed.
 
+(** Sanity check on [w = 3,1,2]: [foata w = 1,3,2]. *)
 Lemma sanity_inv_eq_maj3 :
   inv_seq (foata [:: 3; 1; 2]) = maj_seq [:: 3; 1; 2].
 Proof.
@@ -149,7 +162,7 @@ Qed.
 (* §D. Basic invariants of the building blocks                              *)
 (* ========================================================================= *)
 
-(* Cyclic rotation preserves the multiset of letters. *)
+(** [cyc_last_to_front] preserves the multiset of letters. *)
 Lemma cyc_last_to_front_perm_eq s :
   perm_eq (cyc_last_to_front s) s.
 Proof.
@@ -158,15 +171,18 @@ have -> : x :: s = belast x s ++ [:: last x s] by rewrite lastI cats1.
 by rewrite -cat1s perm_catC.
 Qed.
 
+(** [cyc_last_to_front] preserves length. *)
 Lemma cyc_last_to_front_size s :
   size (cyc_last_to_front s) = size s.
 Proof. by rewrite (perm_size (cyc_last_to_front_perm_eq _)). Qed.
 
+(** [cyc_last_to_front] preserves uniqueness. *)
 Lemma cyc_last_to_front_uniq s :
   uniq (cyc_last_to_front s) = uniq s.
 Proof. exact: perm_uniq (cyc_last_to_front_perm_eq _). Qed.
 
-(* Concatenating the blocks back yields the original. *)
+(** Flattening the blocks of [split_blocks_aux] yields [cur ++ s]; the
+    accumulator-aware version of [split_blocks_flatten]. *)
 Lemma split_blocks_aux_flatten P cur s :
   flatten (split_blocks_aux P cur s) = cur ++ s.
 Proof.
@@ -177,11 +193,13 @@ elim: s cur => [|x rest IH] cur /=.
   + by rewrite IH cat_rcons.
 Qed.
 
+(** Concatenating the blocks of [split_blocks P s] recovers [s]. *)
 Lemma split_blocks_flatten P s :
   flatten (split_blocks P s) = s.
 Proof. by rewrite /split_blocks split_blocks_aux_flatten. Qed.
 
-(* Permutation invariance: rotating each block produces a perm-eq result. *)
+(** Rotating each block via [cyc_last_to_front] preserves the multiset
+    of the flattened sequence. *)
 Lemma perm_eq_flatten_map_cyc (bs : seq (seq nat)) :
   perm_eq (flatten (map cyc_last_to_front bs)) (flatten bs).
 Proof.
@@ -189,6 +207,8 @@ elim: bs => [|b bs IH] //=.
 exact: perm_cat (cyc_last_to_front_perm_eq _) IH.
 Qed.
 
+(** [foata_step a u] is a permutation of [rcons u a]: the step rearranges
+    letters but preserves the multiset (with [a] inserted at the end). *)
 Lemma foata_step_perm_eq a u :
   perm_eq (foata_step a u) (rcons u a).
 Proof.
@@ -202,6 +222,7 @@ rewrite -[in X in perm_eq _ X](split_blocks_flatten
 exact: perm_eq_flatten_map_cyc.
 Qed.
 
+(** [foata_step] grows the word length by exactly one. *)
 Lemma foata_step_size a u :
   size (foata_step a u) = (size u).+1.
 Proof.
@@ -209,6 +230,7 @@ have Hp := foata_step_perm_eq a u.
 by rewrite (perm_size Hp) size_rcons.
 Qed.
 
+(** [foata_step] preserves uniqueness when the new letter is fresh. *)
 Lemma foata_step_uniq a u :
   a \notin u -> uniq u -> uniq (foata_step a u).
 Proof.
@@ -221,6 +243,8 @@ Qed.
 (* §E. Foata invariants: size, perm_eq, uniq                                *)
 (* ========================================================================= *)
 
+(** [foata w] is a permutation of [w]: the bijection preserves the
+    multiset of letters. *)
 Lemma foata_perm_eq w : perm_eq (foata w) w.
 Proof.
 rewrite /foata.
@@ -235,16 +259,18 @@ have Hp := foata_step_perm_eq a acc.
 by rewrite -cats1 in Hp.
 Qed.
 
+(** [foata] preserves length. *)
 Lemma foata_size w : size (foata w) = size w.
 Proof. by rewrite (perm_size (foata_perm_eq _)). Qed.
 
+(** [foata] preserves uniqueness. *)
 Lemma foata_uniq w : uniq w -> uniq (foata w).
 Proof.
 move=> Hu.
 by rewrite (perm_uniq (foata_perm_eq _)).
 Qed.
 
-(* The bound on letters is preserved. *)
+(** [foata] preserves any uniform upper bound on the letters. *)
 Lemma foata_all_lt w n :
   all (fun x => x < n) w -> all (fun x => x < n) (foata w).
 Proof.
@@ -255,8 +281,8 @@ Qed.
 
 (* ----- E.1 Recursion of inv_seq under rcons ----- *)
 
-(* The classical: appending a letter a at the end of w increases inv by
-   the number of letters in w greater than a. *)
+(** Classical recursion: appending letter [a] at the end of [w] increases
+    [inv_seq] by [count_gt a w], the number of letters of [w] above [a]. *)
 Lemma inv_seq_rcons w a :
   inv_seq (rcons w a) = inv_seq w + count_gt a w.
 Proof.
@@ -286,7 +312,7 @@ congr (_ + _).
   by rewrite count_map.
 Qed.
 
-(* count_gt is preserved by perm_eq (since it's just count). *)
+(** [count_gt] only depends on the multiset (preserved under [perm_eq]). *)
 Lemma count_gt_perm_eq a w1 w2 :
   perm_eq w1 w2 -> count_gt a w1 = count_gt a w2.
 Proof.
@@ -299,10 +325,10 @@ Qed.
 
 (* ----- E.2 Recursion of maj_seq under rcons ----- *)
 
-(* Appending a letter a at the end of nonempty w increases maj by
-   (size w) iff the previous last letter was greater than a (i.e., a new
-   descent appears at position size_w - 1, contributing 1-indexed size_w).
-   Otherwise maj is unchanged.                                              *)
+(** Appending letter [a] to nonempty [w] adds [size w] to [maj_seq] iff
+    the previous last letter exceeds [a] (creating a new descent at position
+    [size w - 1], with 1-indexed contribution [size w]); otherwise [maj_seq]
+    is unchanged. *)
 Lemma maj_seq_rcons w a :
   w != [::] ->
   maj_seq (rcons w a)
@@ -335,7 +361,7 @@ congr (_ + _).
   by case: (_ < _) => //=; rewrite ?muln1 ?muln0.
 Qed.
 
-(* Each foata_step appends `a` at the end. *)
+(** [foata_step a u] always ends with [a]. *)
 Lemma foata_step_last d a u :
   last d (foata_step a u) = a.
 Proof.
@@ -344,8 +370,8 @@ case: u => [|x u] //=.
 by rewrite last_cat /=.
 Qed.
 
-(* Last letter of foata equals last letter of input (when nonempty). *)
-(* ----- Auxiliary: foata respects rcons. ----- *)
+(** [foata] commutes with right-extension: [foata (rcons w a) =
+    foata_step a (foata w)].  Used for induction on [w] from the right. *)
 Lemma foata_rcons w a :
   foata (rcons w a) = foata_step a (foata w).
 Proof.
@@ -354,6 +380,8 @@ elim/last_ind: w => [|w b IH] //=.
 by rewrite -!cats1 -catA /= !foldl_cat /=.
 Qed.
 
+(** Last letter of [foata (a :: w)] equals last letter of [a :: w]
+    (i.e. [last a w]). *)
 Lemma foata_last d a w :
   last d (foata (a :: w)) = last a w.
 Proof.
@@ -371,8 +399,8 @@ move=> ->.
 by [].
 Qed.
 
-(* The "general" version useful in the rcons induction: when w is non-empty,
-   last (foata w) = last w (with any default; the result is the same). *)
+(** General form for the rcons induction: when [w] is non-empty,
+    [last (foata w) = last w] for any default. *)
 Lemma foata_last_eq d w :
   w != [::] -> last d (foata w) = last d w.
 Proof.
@@ -384,30 +412,35 @@ Qed.
 (* §F. Helper: inv_seq of a concatenation                                   *)
 (* ========================================================================= *)
 
-(* "Cross-inversions" between two sequences: the number of pairs (i, j)
-   with the i-th letter of s1 > the j-th letter of s2.  These are the
-   inversions of (s1 ++ s2) that straddle the join point.                  *)
+(** [cross_inv s1 s2] counts cross-inversions between [s1] and [s2]:
+    pairs [(i, j)] with [s1_i > s2_j].  Equals the inversions of
+    [s1 ++ s2] that straddle the join point. *)
 Definition cross_inv (s1 s2 : seq nat) : nat :=
   \sum_(b <- s2) count_gt b s1.
 
+(** [cross_inv] is zero on the right when [s2] is empty. *)
 Lemma cross_inv_nil_r s1 : cross_inv s1 [::] = 0.
 Proof. by rewrite /cross_inv big_nil. Qed.
 
+(** [cross_inv] is zero on the left when [s1] is empty. *)
 Lemma cross_inv_nil_l s2 : cross_inv [::] s2 = 0.
 Proof.
 rewrite /cross_inv /count_gt /=.
 by rewrite big1 // => b _.
 Qed.
 
+(** [cross_inv] recursion when an element is appended on the right. *)
 Lemma cross_inv_rcons s1 s2 a :
   cross_inv s1 (rcons s2 a) = cross_inv s1 s2 + count_gt a s1.
 Proof. by rewrite /cross_inv -cats1 big_cat /= big_cons big_nil addn0. Qed.
 
+(** [cross_inv] recursion when an element is prepended on the right side. *)
 Lemma cross_inv_cons s1 b s2 :
   cross_inv s1 (b :: s2) = count_gt b s1 + cross_inv s1 s2.
 Proof. by rewrite /cross_inv big_cons. Qed.
 
-(* The basic decomposition: inv of a cat = left + right + cross. *)
+(** Decomposition of [inv_seq] over concatenation: left inversions, right
+    inversions, and cross-inversions. *)
 Lemma inv_seq_cat s1 s2 :
   inv_seq (s1 ++ s2) = inv_seq s1 + inv_seq s2 + cross_inv s1 s2.
 Proof.
@@ -424,16 +457,17 @@ rewrite -!addnA; congr (_ + _).
 by rewrite addnA addnC addnA addnC.
 Qed.
 
-(* count_gt of a cons. *)
+(** [count_gt] recursion under cons. *)
 Lemma count_gt_cons a b s :
   count_gt a (b :: s) = (nat_of_bool (a < b)) + count_gt a s.
 Proof. by rewrite /count_gt /=. Qed.
 
+(** [count_gt] is additive under concatenation. *)
 Lemma count_gt_cat a s1 s2 :
   count_gt a (s1 ++ s2) = count_gt a s1 + count_gt a s2.
 Proof. by rewrite /count_gt count_cat. Qed.
 
-(* Cross-inversions, like count, distributes over cat in s1. *)
+(** [cross_inv] distributes over concatenation in the left argument. *)
 Lemma cross_inv_cat_l s1 s1' s2 :
   cross_inv (s1 ++ s1') s2 = cross_inv s1 s2 + cross_inv s1' s2.
 Proof.
@@ -441,12 +475,12 @@ rewrite /cross_inv -big_split /=.
 by apply: eq_bigr => b _; rewrite count_gt_cat.
 Qed.
 
-(* Cross-inversions, like sum, distributes over cat in s2. *)
+(** [cross_inv] distributes over concatenation in the right argument. *)
 Lemma cross_inv_cat_r s1 s2 s2' :
   cross_inv s1 (s2 ++ s2') = cross_inv s1 s2 + cross_inv s1 s2'.
 Proof. by rewrite /cross_inv big_cat. Qed.
 
-(* Cross-inversions only depend on the multiset of s2. *)
+(** [cross_inv] only depends on the multiset of its right argument. *)
 Lemma cross_inv_perm_eq_r s1 s2 s2' :
   perm_eq s2 s2' -> cross_inv s1 s2 = cross_inv s1 s2'.
 Proof.
@@ -455,7 +489,8 @@ rewrite /cross_inv.
 by rewrite (perm_big _ Hp).
 Qed.
 
-(* Cross-inversions only depend on the multiset of s1 (since count_gt does). *)
+(** [cross_inv] only depends on the multiset of its left argument
+    (since [count_gt] does). *)
 Lemma cross_inv_perm_eq_l s1 s1' s2 :
   perm_eq s1 s1' -> cross_inv s1 s2 = cross_inv s1' s2.
 Proof.
@@ -464,10 +499,11 @@ rewrite /cross_inv.
 by apply: eq_bigr => b _; apply: count_gt_perm_eq.
 Qed.
 
-(* count_lt: number of letters strictly less than a. *)
+(** [count_lt a w] is the number of letters of [w] strictly less than [a]. *)
 Definition count_lt (a : nat) (w : seq nat) : nat :=
   count (fun y => y < a) w.
 
+(** [count_lt] is invariant under [perm_eq]. *)
 Lemma count_lt_perm_eq a w1 w2 :
   perm_eq w1 w2 -> count_lt a w1 = count_lt a w2.
 Proof.
@@ -478,12 +514,13 @@ move/perm_size.
 by rewrite !size_filter.
 Qed.
 
+(** [count_lt] is additive under concatenation. *)
 Lemma count_lt_cat a s1 s2 :
   count_lt a (s1 ++ s2) = count_lt a s1 + count_lt a s2.
 Proof. by rewrite /count_lt count_cat. Qed.
 
-(* Helper: if each block is perm-eq to its image under f, then the flattened
-   sequences are perm-eq. *)
+(** If each block is [perm_eq] to its image under [f], the flattened
+    images are [perm_eq] to the flattened originals. *)
 Lemma perm_eq_flatten_map_pred (f : seq nat -> seq nat) bs :
   (forall b, b \in bs -> perm_eq (f b) b) ->
   perm_eq (flatten (map f bs)) (flatten bs).
@@ -494,8 +531,9 @@ apply: perm_cat.
 by apply: IH => c Hc; apply: Hf; rewrite in_cons Hc orbT.
 Qed.
 
-(* The block-rotation lemma: if every block is replaced by a perm-eq one,
-   the global inv_seq diff equals the sum of per-block diffs.  *)
+(** Block-rotation accounting: if every block is replaced by a [perm_eq]
+    image, the change in [inv_seq] of the flatten equals the sum of per-block
+    changes (cross-inversions are unaffected since they only see multisets). *)
 Lemma inv_seq_flatten_swap_eq (f : seq nat -> seq nat) bs :
   (forall b, b \in bs -> perm_eq (f b) b) ->
   inv_seq (flatten (map f bs)) + \sum_(b <- bs) inv_seq b
@@ -528,7 +566,7 @@ rewrite [IFbs + (IB + Sb)]addnCA [IBs + (IFb + SFb)]addnCA.
 by rewrite HSrec addnCA.
 Qed.
 
-(* For a non-empty block b = b' ++ [l], cyc_last_to_front gives l :: b'. *)
+(** Computational form: [cyc_last_to_front (rcons b' l) = l :: b']. *)
 Lemma cyc_last_to_front_rcons b' l :
   cyc_last_to_front (rcons b' l) = l :: b'.
 Proof.
@@ -537,7 +575,8 @@ case: b' => [|x b'] /=.
 by rewrite last_rcons belast_rcons.
 Qed.
 
-(* Express inv_seq of l :: b' = inv_seq (b' ++ [l]) shifted by count_lt l b' - count_gt l b'. *)
+(** Inversions shift when [l] moves from the end to the front of [b']:
+    [inv_seq (l :: b') - inv_seq (rcons b' l) = count_lt l b' - count_gt l b']. *)
 Lemma inv_seq_cons_eq_rcons_shift l b' :
   inv_seq (l :: b') + count_gt l b' = inv_seq (rcons b' l) + count_lt l b'.
 Proof.
@@ -557,7 +596,9 @@ set IL := inv_seq [:: l].
 by rewrite -addnA -[in RHS]addnA [IL + X]addnC; congr (_ + _); rewrite addnC.
 Qed.
 
-(* Per-block diff for case x<a: l < a, all of b' > a > l => all_b' > l. *)
+(** Per-block inversion change in the [last u < a] case: rotating drops
+    [size b'] inversions when the small letter [l < a] moves to the front
+    past the [b' > a] block.  Used by [foata_step_inv_lt]. *)
 Lemma cyc_diff_block_lt a b' l :
   l < a -> all (fun x => a < x) b' ->
   inv_seq (cyc_last_to_front (rcons b' l)) + size b' = inv_seq (rcons b' l).
@@ -579,7 +620,9 @@ have := inv_seq_cons_eq_rcons_shift l b'.
 by rewrite HCG HCL addn0 => ->.
 Qed.
 
-(* Per-block diff for case x>a: l > a, all of b' < a < l => all_b' < l. *)
+(** Per-block inversion change in the [a < last u] case: rotating adds
+    [size b'] inversions when the large letter [a < l] moves to the front
+    past the [b' < a] block.  Used by [foata_step_inv_gt]. *)
 Lemma cyc_diff_block_gt a b' l :
   a < l -> all (fun x => x < a) b' ->
   inv_seq (cyc_last_to_front (rcons b' l)) = inv_seq (rcons b' l) + size b'.
@@ -602,7 +645,7 @@ have := inv_seq_cons_eq_rcons_shift l b'.
 by rewrite HCG HCL addn0 => <-.
 Qed.
 
-(* Structural lemma about split_blocks_aux: every produced block is non-empty. *)
+(** Every block produced by [split_blocks_aux] is non-empty. *)
 Lemma split_blocks_aux_all_nonempty P cur s :
   all (fun b => b != [::]) (split_blocks_aux P cur s).
 Proof.
@@ -613,6 +656,7 @@ case Hp : (P x) => /=.
 exact: IH.
 Qed.
 
+(** Every block produced by [split_blocks] is non-empty. *)
 Lemma split_blocks_all_nonempty P s :
   all (fun b => b != [::]) (split_blocks P s).
 Proof. exact: split_blocks_aux_all_nonempty. Qed.
@@ -628,8 +672,9 @@ Proof. exact: split_blocks_aux_all_nonempty. Qed.
    form `rcons b' l` where all of b' is not-P, and the last letter l
    satisfies P, EXCEPT possibly the last block. *)
 
-(* Predicate: a block b is "well-formed for P" if it is non-empty, its last
-   letter satisfies P, and all its non-last letters do NOT satisfy P. *)
+(** [wf_block P b] holds when [b] is non-empty, its last letter satisfies
+    [P], and all non-last letters do not.  Captures the well-formedness
+    of blocks output by [split_blocks] (except possibly the last). *)
 Definition wf_block (P : pred nat) (b : seq nat) : bool :=
   match b with
   | [::] => false
@@ -637,7 +682,7 @@ Definition wf_block (P : pred nat) (b : seq nat) : bool :=
       P (last x rest) && all (fun y => ~~ P y) (belast x rest)
   end.
 
-(* Convenient form: if b = rcons b' l, then wf_block holds iff P l && all (~~P) b'. *)
+(** [wf_block P (rcons b' l)] is equivalent to [P l && all (~~ P) b']. *)
 Lemma wf_block_rcons P b' l :
   wf_block P (rcons b' l) = P l && all (fun y => ~~ P y) b'.
 Proof.
@@ -646,8 +691,9 @@ case: b' => [|x b'] /=.
 by rewrite last_rcons belast_rcons.
 Qed.
 
-(* Structural property: in split_blocks_aux P cur s, if cur consists of
-   not-P letters and last s satisfies P, every produced block is wf_block. *)
+(** Structural invariant of [split_blocks_aux]: when [cur] is all not-[P]
+    and the last letter of [s] satisfies [P], every produced block is a
+    [wf_block]. *)
 Lemma split_blocks_aux_wf (P : pred nat) s :
   s != [::] -> P (last 0 s) ->
   forall cur,
@@ -675,12 +721,15 @@ case Hp: (P x).
   + by rewrite all_rcons Hp.
 Qed.
 
+(** Every block of [split_blocks P s] is a [wf_block] when [s] is non-empty
+    and its last letter satisfies [P]. *)
 Lemma split_blocks_wf (P : pred nat) s :
   s != [::] -> P (last 0 s) ->
   all (wf_block P) (split_blocks P s).
 Proof. by move=> ? ?; apply: split_blocks_aux_wf. Qed.
 
-(* Helper: number of blocks equals count P s when last s satisfies P. *)
+(** Number of blocks of [split_blocks_aux P cur s] equals [count P s], when
+    [s] is non-empty and ends with a [P]-letter. *)
 Lemma split_blocks_aux_size_when_last_P (P : pred nat) s :
   s != [::] -> P (last 0 s) ->
   forall cur, size (split_blocks_aux P cur s) = count P s.
@@ -707,12 +756,15 @@ case Hp: (P x) => /=.
   exact: HsP.
 Qed.
 
+(** Number of blocks of [split_blocks P s] equals [count P s] (assuming
+    last letter of [s] satisfies [P]). *)
 Lemma split_blocks_size_eq (P : pred nat) s :
   s != [::] -> P (last 0 s) ->
   size (split_blocks P s) = count P s.
 Proof. by move=> ? ?; apply: split_blocks_aux_size_when_last_P. Qed.
 
-(* For a wf_block, expose b = rcons b' l. *)
+(** Decomposition: any [wf_block P b] is of the form [rcons b' l] with
+    [P l] and [b'] all not-[P]. *)
 Lemma wf_block_decomp P b :
   wf_block P b ->
   exists b' l, [/\ b = rcons b' l, P l, all (fun y => ~~ P y) b'
@@ -726,7 +778,8 @@ exists (belast x rest), (last x rest); split.
 - by rewrite size_belast.
 Qed.
 
-(* For uniq u with a ∉ u, size u = count_lt a u + count_gt a u. *)
+(** For [uniq u] with [a \notin u], size of [u] splits as
+    [count_lt a u + count_gt a u] (no letter equals [a]). *)
 Lemma size_count_lt_gt a u :
   uniq u -> a \notin u -> size u = count_lt a u + count_gt a u.
 Proof.
@@ -742,7 +795,8 @@ case: (ltngtP x a) => //= Heq.
 by exfalso; move: Hau; rewrite -Heq Hx.
 Qed.
 
-(* Sum of (size b - 1) over wf_blocks = size flatten - num blocks. *)
+(** Sum of [(size b).-1] over [wf_block]s equals the total length minus
+    the number of blocks. *)
 Lemma sum_size_belast_wf P bs :
   all (wf_block P) bs ->
   \sum_(b <- bs) (size b).-1 = size (flatten bs) - size bs.
@@ -769,7 +823,9 @@ Qed.
    We split into two cases (last u < a, and last u > a) and treat each separately.
 *)
 
-(* Helper: cyc_diff aggregated over wf_blocks — case "x<a" / P=(y<a). *)
+(** Aggregated per-block inversion change in the [last u < a] case
+    ([P = (y < a)]): summed cyc-rotation drop equals total internal sizes.
+    Used by [foata_step_inv_lt]. *)
 Lemma sum_inv_cyc_lt_blocks a bs :
   all (wf_block (fun y => y < a)) bs ->
   (* Strong hyp: every non-last letter of every block is > a (not just >=). *)
@@ -804,7 +860,9 @@ rewrite -addnA [SI + (size b' + SS)]addnCA.
 by rewrite addnA HE IHs'.
 Qed.
 
-(* Helper: cyc_diff aggregated over wf_blocks — case "x>a" / P=(a<y). *)
+(** Aggregated per-block inversion change in the [a < last u] case
+    ([P = (a < y)]): summed cyc-rotation gain equals total internal sizes.
+    Used by [foata_step_inv_gt]. *)
 Lemma sum_inv_cyc_gt_blocks a bs :
   all (wf_block (fun y => a < y)) bs ->
   all (fun b => match b with
@@ -838,8 +896,9 @@ rewrite HE IHs'.
 by rewrite -!addnA; congr (IB + _); rewrite addnCA.
 Qed.
 
-(* The structural strong form of the wf_block: combined with uniq u + a ∉ u,
-   the not-P letters in each block become strict inequalities. *)
+(** Strong form of [split_blocks_wf] in the [< a] case: under [uniq u]
+    and [a \notin u], every non-last letter in every block is strictly
+    [> a] (not just not [< a]). *)
 Lemma split_blocks_lt_strict a u :
   uniq u -> a \notin u ->
   u != [::] -> last 0 u < a ->
@@ -874,6 +933,8 @@ apply/andP; split.
 - by rewrite leqNgt.
 Qed.
 
+(** Strong form of [split_blocks_wf] in the [a <] case: every non-last
+    letter is strictly [< a]. *)
 Lemma split_blocks_gt_strict a u :
   uniq u -> a \notin u ->
   u != [::] -> a < last 0 u ->
@@ -908,7 +969,8 @@ apply/andP; split.
 - by rewrite leqNgt.
 Qed.
 
-(* The case "last u < a" of foata_step_inv. *)
+(** Case [last u < a] of [foata_step_inv]: appending [a] when last
+    letter is smaller leaves [inv_seq] unchanged. *)
 Lemma foata_step_inv_lt a u :
   u != [::] -> uniq u -> a \notin u -> last 0 u < a ->
   inv_seq (foata_step a u) = inv_seq u.
@@ -970,7 +1032,8 @@ rewrite Hsumss in Hkey.
 exact: Hkey.
 Qed.
 
-(* The case "last u > a" of foata_step_inv. *)
+(** Case [a < last u] of [foata_step_inv]: appending [a] when last letter
+    is larger increases [inv_seq] by [size u]. *)
 Lemma foata_step_inv_gt a u :
   u != [::] -> uniq u -> a \notin u -> a < last 0 u ->
   inv_seq (foata_step a u) = inv_seq u + size u.
@@ -1030,7 +1093,8 @@ rewrite -addnA -[count_lt a (x :: u) + _]Hsize_u.
 by [].
 Qed.
 
-(* The combined invariant. *)
+(** Combined per-step invariant: [foata_step] adds [size u] to [inv_seq]
+    iff a new descent appears (i.e. [a < last u]).  Mirrors [maj_seq_rcons]. *)
 Lemma foata_step_inv a u :
   u != [::] -> uniq u -> a \notin u ->
   inv_seq (foata_step a u)
@@ -1052,6 +1116,9 @@ Qed.
 (* §H. The main equidistribution theorem                                    *)
 (* ========================================================================= *)
 
+(** Headline equidistribution at the seq level: [inv_seq (foata w) =
+    maj_seq w] for [uniq w].  Proven by induction on [w] from the right
+    using [foata_step_inv] and [maj_seq_rcons]. *)
 Theorem foata_inv_eq_maj w :
   uniq w -> inv_seq (foata w) = maj_seq w.
 Proof.
@@ -1082,17 +1149,20 @@ Qed.
 (* §H'. Inverse Foata map (sequence level)                                  *)
 (* ========================================================================= *)
 
-(* cyc_first_to_back: undo of cyc_last_to_front. *)
+(** [cyc_first_to_back s] moves the first letter of [s] to the back.
+    Inverse of [cyc_last_to_front]. *)
 Definition cyc_first_to_back (s : seq nat) : seq nat :=
   match s with
   | [::] => [::]
   | x :: rest => rcons rest x
   end.
 
+(** [cyc_first_to_back] preserves length. *)
 Lemma cyc_first_to_back_size s :
   size (cyc_first_to_back s) = size s.
 Proof. by case: s => //= ? ?; rewrite size_rcons. Qed.
 
+(** [cyc_first_to_back] preserves the multiset. *)
 Lemma cyc_first_to_back_perm_eq s :
   perm_eq (cyc_first_to_back s) s.
 Proof.
@@ -1100,11 +1170,12 @@ case: s => [|x s] //=.
 by rewrite -cats1 -cat1s perm_catC.
 Qed.
 
+(** [cyc_first_to_back] preserves uniqueness. *)
 Lemma cyc_first_to_back_uniq s :
   uniq (cyc_first_to_back s) = uniq s.
 Proof. exact: perm_uniq (cyc_first_to_back_perm_eq _). Qed.
 
-(* cyc_first_to_back is the left inverse of cyc_last_to_front. *)
+(** [cyc_first_to_back] is the left inverse of [cyc_last_to_front]. *)
 Lemma cyc_first_to_backK s :
   cyc_first_to_back (cyc_last_to_front s) = s.
 Proof.
@@ -1112,7 +1183,7 @@ case: s => [|x s] //=.
 by rewrite -lastI.
 Qed.
 
-(* cyc_last_to_front is the left inverse of cyc_first_to_back. *)
+(** [cyc_last_to_front] is the left inverse of [cyc_first_to_back]. *)
 Lemma cyc_last_to_frontK s :
   cyc_last_to_front (cyc_first_to_back s) = s.
 Proof.
@@ -1124,9 +1195,8 @@ rewrite belast_rcons /=.
 by [].
 Qed.
 
-(* split_blocks_inv P s: split a sequence into blocks each STARTING with a
-   P-element. Equivalent: cuts the sequence right BEFORE each P-element
-   (after the first). *)
+(** [split_blocks_inv_aux P cur s] is the tail-recursive worker for
+    [split_blocks_inv]: cuts before each [P]-letter rather than after. *)
 Fixpoint split_blocks_inv_aux (P : nat -> bool) (cur : seq nat) (s : seq nat) :
   seq (seq nat) :=
   match s with
@@ -1139,9 +1209,13 @@ Fixpoint split_blocks_inv_aux (P : nat -> bool) (cur : seq nat) (s : seq nat) :
       else split_blocks_inv_aux P (rcons cur x) rest
   end.
 
+(** [split_blocks_inv P s] cuts [s] into blocks each STARTING with a
+    [P]-letter (cutting right before each [P]-letter after the first).
+    Inverse-direction analogue of [split_blocks]. *)
 Definition split_blocks_inv (P : nat -> bool) (s : seq nat) : seq (seq nat) :=
   split_blocks_inv_aux P [::] s.
 
+(** Accumulator-aware flatten property for [split_blocks_inv_aux]. *)
 Lemma split_blocks_inv_aux_flatten P cur s :
   flatten (split_blocks_inv_aux P cur s) = cur ++ s.
 Proof.
@@ -1154,6 +1228,7 @@ elim: s cur => [|x rest IH] cur /=.
   + by rewrite IH cat_rcons.
 Qed.
 
+(** Concatenating the blocks of [split_blocks_inv P s] recovers [s]. *)
 Lemma split_blocks_inv_flatten P s :
   flatten (split_blocks_inv P s) = s.
 Proof. by rewrite /split_blocks_inv split_blocks_inv_aux_flatten. Qed.
@@ -1161,8 +1236,8 @@ Proof. by rewrite /split_blocks_inv split_blocks_inv_aux_flatten. Qed.
 (* The key cancellation: split_blocks_inv P (flatten (map cyc_last_to_front bs))
    = map cyc_last_to_front bs, when bs are wf_blocks for P. *)
 
-(* First, useful: the rotation of a wf_block starts with a P-element and
-   has all other elements not-P. *)
+(** The rotation of a [wf_block] starts with a [P]-element and has all
+    other elements not-[P].  Used by [split_blocks_inv_cyc_wf]. *)
 Lemma cyc_last_to_front_wf (P : pred nat) b :
   wf_block P b ->
   if cyc_last_to_front b is x :: rest then
@@ -1182,6 +1257,8 @@ Qed.
    block (Px :: nots) ++ rest where nots are all not-P, treats the block
    as forming part of the output. *)
 
+(** Cons-step for [split_blocks_inv_aux] when the head satisfies [P]:
+    flush [cur] and start a new block seeded with [x]. *)
 Lemma split_blocks_inv_aux_cons_P (P : pred nat) cur x rest :
   P x ->
   split_blocks_inv_aux P cur (x :: rest)
@@ -1189,6 +1266,8 @@ Lemma split_blocks_inv_aux_cons_P (P : pred nat) cur x rest :
     ++ split_blocks_inv_aux P [:: x] rest.
 Proof. by move=> Hx /=; rewrite Hx; case: cur. Qed.
 
+(** Cons-step for [split_blocks_inv_aux] when the head does not satisfy
+    [P]: extend the current block by [x]. *)
 Lemma split_blocks_inv_aux_cons_notP (P : pred nat) cur x rest :
   ~~ P x ->
   split_blocks_inv_aux P cur (x :: rest)
@@ -1209,6 +1288,8 @@ Proof. by move=> /negbTE Hx /=; rewrite Hx. Qed.
 (* Reformulate: split_blocks_inv applied to flatten(map cyc bs) returns
    exactly map cyc bs, when bs are wf_blocks. *)
 
+(** When a prefix [nots] is all not-[P], it gets absorbed into the current
+    block accumulator. *)
 Lemma split_blocks_inv_aux_app_notP (P : pred nat) cur nots rest :
   all (fun y => ~~ P y) nots ->
   split_blocks_inv_aux P cur (nots ++ rest)
@@ -1224,6 +1305,8 @@ Qed.
 (* Combined: feeding split_blocks_inv_aux with cur (= [::] or starts with P)
    and a wf-block-rotated sequence (l :: nots) ++ tail. *)
 
+(** Feeding [split_blocks_inv_aux] with a wf-block-rotated [l :: nots ++ tail]
+    reduces to a recursive call seeded with [[:: l]]. *)
 Lemma split_blocks_inv_aux_one_block (P : pred nat) l nots tail :
   P l -> all (fun y => ~~ P y) nots ->
   split_blocks_inv_aux P [::] ((l :: nots) ++ tail)
@@ -1234,6 +1317,9 @@ Proof. by move=> Hl _ /=; rewrite Hl. Qed.
    sequence whose first letter is P (or empty) produces `[:: l :: nots]`
    prepended to the recursive result. *)
 
+(** Single rotated block [l :: nots] followed by [rest] starting with a
+    [P]-letter (or empty) produces [[:: l :: nots]] prepended to the
+    recursive split of [rest]. *)
 Lemma split_blocks_inv_aux_block_then_P (P : pred nat) l nots rest :
   P l -> all (fun y => ~~ P y) nots ->
   (forall x, x \in rest -> True) ->
@@ -1256,8 +1342,9 @@ case: rest => [|y rest'].
   by case: nots Hnots => [|? ?] //=; rewrite cats0.
 Qed.
 
-(* The big cancellation: split_blocks_inv P (flatten (map cyc_last_to_front bs))
-   = map cyc_last_to_front bs, when bs are wf_blocks for P. *)
+(** Big cancellation: applying [split_blocks_inv P] to the flatten of
+    rotated [wf_block]s recovers the rotated blocks themselves.  Key step
+    in proving [foata_step_undoK]. *)
 Lemma split_blocks_inv_cyc_wf (P : pred nat) bs :
   bs != [::] ->
   all (wf_block P) bs ->
@@ -1290,8 +1377,9 @@ case Hbsnil: (bs == [::]).
   by rewrite IHs.
 Qed.
 
-(* foata_step_undo: inverse of foata_step. (Named to avoid clash with
-   the inv-recursion lemma `foata_step_inv` that lives in §G.) *)
+(** [foata_step_undo s] inverts a single [foata_step]: peels the trailing
+    letter [a] and rotates each [split_blocks_inv] block back via
+    [cyc_first_to_back]. *)
 Definition foata_step_undo (s : seq nat) : (nat * seq nat) :=
   let a := last 0 s in
   let r := belast (head 0 s) (behead s) in
@@ -1302,7 +1390,7 @@ Definition foata_step_undo (s : seq nat) : (nat * seq nat) :=
       (a, flatten (map cyc_first_to_back (split_blocks_inv P r)))
   end.
 
-(* Helper: split_blocks_inv only depends on the predicate extensionally. *)
+(** [split_blocks_inv_aux] only depends on the predicate extensionally. *)
 Lemma split_blocks_inv_aux_eq (P Q : pred nat) cur s :
   P =1 Q -> split_blocks_inv_aux P cur s = split_blocks_inv_aux Q cur s.
 Proof.
@@ -1312,6 +1400,7 @@ rewrite (HPQ x).
 by case: (Q x); case: cur; rewrite ?IH.
 Qed.
 
+(** [split_blocks_inv] only depends on the predicate extensionally. *)
 Lemma split_blocks_inv_eq (P Q : pred nat) s :
   P =1 Q -> split_blocks_inv P s = split_blocks_inv Q s.
 Proof.
@@ -1319,7 +1408,8 @@ move=> HPQ.
 by rewrite /split_blocks_inv (split_blocks_inv_aux_eq _ _ HPQ).
 Qed.
 
-(* The cancellation lemma: foata_step_undo (foata_step a u) = (a, u). *)
+(** Cancellation: [foata_step_undo] is the left inverse of [foata_step]
+    on uniq inputs with a fresh letter. *)
 Lemma foata_step_undoK a u :
   u != [::] -> uniq u -> a \notin u ->
   foata_step_undo (foata_step a u) = (a, u).
@@ -1424,8 +1514,8 @@ have Heq : [seq (cyc_first_to_back \o cyc_last_to_front) i | i <- bs]
 by rewrite Heq map_id.
 Qed.
 
-(* foata_inv: invert the entire foata function by repeatedly applying
-   foata_step_undo. *)
+(** [foata_inv_aux n s] inverts [n] iterations of [foata_step] by
+    repeatedly applying [foata_step_undo]. *)
 Fixpoint foata_inv_aux (n : nat) (s : seq nat) : seq nat :=
   match n with
   | 0 => [::]
@@ -1434,10 +1524,13 @@ Fixpoint foata_inv_aux (n : nat) (s : seq nat) : seq nat :=
       rcons (foata_inv_aux n r) a
   end.
 
+(** [foata_inv s] is the seq-level inverse of [foata]: repeatedly peels
+    [foata_step]s for [size s] iterations. *)
 Definition foata_inv (s : seq nat) : seq nat :=
   foata_inv_aux (size s) s.
 
-(* foata_inv (foata w) = w for uniq w. *)
+(** Length-indexed cancellation: [foata_inv_aux n (foata w) = w] for
+    [size w = n] and [uniq w]. *)
 Lemma foata_invK_aux n w :
   size w = n -> uniq w ->
   foata_inv_aux n (foata w) = w.
@@ -1466,6 +1559,7 @@ case Hw'_nil: (w' == [::]).
   by rewrite IHw.
 Qed.
 
+(** [foata_inv] is the left inverse of [foata] on uniq sequences. *)
 Lemma foata_invK w :
   uniq w -> foata_inv (foata w) = w.
 Proof.
@@ -1474,7 +1568,7 @@ rewrite /foata_inv foata_size.
 exact: foata_invK_aux.
 Qed.
 
-(* foata is injective on uniq sequences. *)
+(** [foata] is injective on uniq sequences (immediate from [foata_invK]). *)
 Lemma foata_inj_uniq w1 w2 :
   uniq w1 -> uniq w2 -> foata w1 = foata w2 -> w1 = w2.
 Proof.
@@ -1490,7 +1584,7 @@ Qed.
 
 Section Equidistribution.
 
-(* Convert perm-level maj to seq-level maj_seq. *)
+(** Bridge: perm-level [maj] equals seq-level [maj_seq] of [perm_to_seq]. *)
 Lemma maj_eq_maj_seq n (s : {perm 'I_n.+1}) :
   maj s = maj_seq (perm_to_seq s).
 Proof.
@@ -1510,14 +1604,17 @@ Section FoataPerm.
 
 Variable n : nat.
 
+(** [foata (perm_to_seq s)] has size [n.+1]; needed to build [foata_perm]. *)
 Lemma foata_perm_to_seq_size (s : {perm 'I_n.+1}) :
   size (foata (perm_to_seq s)) = n.+1.
 Proof. by rewrite foata_size perm_to_seq_size. Qed.
 
+(** [foata (perm_to_seq s)] is uniq; needed to build [foata_perm]. *)
 Lemma foata_perm_to_seq_uniq (s : {perm 'I_n.+1}) :
   uniq (foata (perm_to_seq s)).
 Proof. by apply: foata_uniq; exact: perm_to_seq_uniq. Qed.
 
+(** [foata (perm_to_seq s)] is bounded by [n.+1]; needed to build [foata_perm]. *)
 Lemma foata_perm_to_seq_bnd (s : {perm 'I_n.+1}) :
   all (fun x => x < n.+1) (foata (perm_to_seq s)).
 Proof.
@@ -1526,17 +1623,20 @@ rewrite (perm_mem (foata_perm_eq _)) => Hx.
 exact: (allP (perm_to_seq_bnd s)).
 Qed.
 
+(** [foata_perm s] is the Foata bijection lifted to [{perm 'I_n.+1}]:
+    apply [foata] at the seq level, then re-package as a permutation. *)
 Definition foata_perm (s : {perm 'I_n.+1}) : {perm 'I_n.+1} :=
   seq_to_perm (foata_perm_to_seq_size s) (foata_perm_to_seq_uniq s)
               (foata_perm_to_seq_bnd s).
 
+(** Commutation: [perm_to_seq] of [foata_perm s] is [foata] of [perm_to_seq s]. *)
 Lemma perm_to_seq_foata_perm (s : {perm 'I_n.+1}) :
   perm_to_seq (foata_perm s) = foata (perm_to_seq s).
 Proof. by rewrite /foata_perm perm_to_seq_seq_to_perm. Qed.
 
 End FoataPerm.
 
-(* Convert perm-level inv to seq-level inv_seq. *)
+(** Bridge: perm-level [inv] equals seq-level [inv_seq] of [perm_to_seq]. *)
 Lemma inv_eq_inv_seq n (s : {perm 'I_n.+1}) :
   inv s = inv_seq (perm_to_seq s).
 Proof.
@@ -1566,13 +1666,9 @@ have ->: Ordinal Hj' = j by apply: val_inj.
 by case Hij: (i < j); rewrite andbC //=.
 Qed.
 
-(* The intermediate identity: at the perm level, foata_perm sends
-   maj-classes to inv-classes (inv (foata_perm s) = maj s).
-
-   Injectivity (foata_perm_inj) follows from foata_invK (cancellation of
-   foata via foata_inv built from foata_step_undo); on the finite set
-   {perm 'I_n.+1}, injective implies surjective, giving the equidistribution
-   #|{s | inv s == k}| = #|{s | maj s == k}| (Theorem inv_maj_equidistr). *)
+(** Headline perm-level identity: [inv (foata_perm s) = maj s], i.e.
+    [foata_perm] sends maj-classes to inv-classes.  Direct lift of
+    [foata_inv_eq_maj] via [maj_eq_maj_seq] and [inv_eq_inv_seq]. *)
 Lemma foata_perm_inv_maj n (s : {perm 'I_n.+1}) :
   inv (foata_perm s) = maj s.
 Proof.
@@ -1581,8 +1677,9 @@ rewrite foata_inv_eq_maj; last exact: perm_to_seq_uniq.
 by rewrite -maj_eq_maj_seq.
 Qed.
 
-(* foata is injective on uniq sequences (cancellation lemma above). *)
-(* foata_perm is injective. *)
+(** [foata_perm] is injective; follows from [foata_inj_uniq] (cancellation
+    via [foata_invK]).  On the finite set [{perm 'I_n.+1}] this implies
+    surjective, used to prove [inv_maj_equidistr]. *)
 Lemma foata_perm_inj n : injective (@foata_perm n).
 Proof.
 move=> s1 s2 Heq.
@@ -1594,7 +1691,10 @@ have HF : foata (perm_to_seq s1) = foata (perm_to_seq s2).
 apply: foata_inj_uniq HF; exact: perm_to_seq_uniq.
 Qed.
 
-(* Headline equidistribution theorem. *)
+(** MacMahon's equidistribution theorem (Stanley EC1 §1.3.4): the
+    statistics [inv] and [maj] are equidistributed on [{perm 'I_n.+1}].
+    Proved via the bijection [foata_perm], which satisfies
+    [inv (foata_perm s) = maj s] and is injective hence bijective. *)
 Theorem inv_maj_equidistr n k :
   #|[set s : {perm 'I_n.+1} | inv s == k]|
   = #|[set s : {perm 'I_n.+1} | maj s == k]|.

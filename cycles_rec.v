@@ -49,7 +49,8 @@ Section H1.
 Variable n : nat.
 Variable s : {perm 'I_n}.
 
-(* Iterating the lifted perm at ord_max stays at ord_max. *)
+(** Iterating [perm.lift_perm ord_max ord_max s] at [ord_max] stays at
+    [ord_max].  Used in [porbit_lift_perm_id_max]. *)
 Lemma lift_perm_id_iter i :
   ((perm.lift_perm ord_max ord_max s) ^+ i)%g ord_max = ord_max.
 Proof.
@@ -57,7 +58,8 @@ elim: i => [|i IH]; first by rewrite expg0 perm1.
 by rewrite expgSr permM IH perm.lift_perm_id.
 Qed.
 
-(* The orbit of ord_max under the lifted perm is the singleton {ord_max}. *)
+(** The [porbit] of [ord_max] under [perm.lift_perm ord_max ord_max s] is
+    the singleton [{ord_max}]. *)
 Lemma porbit_lift_perm_id_max :
   porbit (perm.lift_perm ord_max ord_max s) ord_max = [set ord_max].
 Proof.
@@ -67,7 +69,9 @@ apply/porbitP/eqP.
 - by move=> ->; exists 0; rewrite expg0 perm1.
 Qed.
 
-(* Iteration on lifted points commutes with lift. *)
+(** Iteration on lifted points commutes with [lift ord_max]: applying
+    [(perm.lift_perm ord_max ord_max s)^+i] at [lift ord_max k] is the
+    lift of [(s^+i) k]. *)
 Lemma lift_perm_id_iter_lift i (k : 'I_n) :
   ((perm.lift_perm ord_max ord_max s) ^+ i)%g (lift ord_max k)
   = lift ord_max ((s ^+ i)%g k).
@@ -76,8 +80,8 @@ elim: i k => [|i IH] k; first by rewrite !expg0 !perm1.
 by rewrite !expgSr !permM IH perm.lift_perm_lift.
 Qed.
 
-(* The orbit of [lift ord_max k] under the lifted perm is the lift
-   of the orbit of k under s. *)
+(** The [porbit] of [lift ord_max k] under the lifted perm is the
+    [lift ord_max]-image of the [porbit] of [k] under [s]. *)
 Lemma porbit_lift_perm_id_lift (k : 'I_n) :
   porbit (perm.lift_perm ord_max ord_max s) (lift ord_max k)
   = (lift ord_max) @: (porbit s k).
@@ -89,8 +93,9 @@ apply/setP=> y; apply/porbitP/imsetP.
   by exists i; rewrite lift_perm_id_iter_lift.
 Qed.
 
-(* Decomposition of the porbits set into singleton {ord_max} and
-   the image of the porbits of s under [lift ord_max]. *)
+(** Decomposition of [porbits (perm.lift_perm ord_max ord_max s)] into
+    the singleton orbit [{ord_max}] and the [lift ord_max]-images of
+    the orbits of [s].  Used in [cycle_count_lift_perm_id]. *)
 Lemma porbits_lift_perm_id :
   porbits (perm.lift_perm ord_max ord_max s)
   = ([set [set ord_max] : {set 'I_n.+1}] :|:
@@ -112,7 +117,9 @@ apply/imsetP/orP.
     by rewrite porbit_lift_perm_id_lift.
 Qed.
 
-(* H1 proper: extending s with ord_max as a fixed point adds one cycle. *)
+(** H1 proper: extending [s] with [ord_max] as a fixed point adds exactly
+    one cycle.  Building block for the [j = ord_max] class of the
+    Stirling fiber bijection (see [stirling_fiber.v]). *)
 Lemma cycle_count_lift_perm_id :
   cycle_count (perm.lift_perm ord_max ord_max s) = (cycle_count s).+1.
 Proof.

@@ -39,6 +39,8 @@ Proof. by vm_compute. Qed.
 (* ----- M5.4 window_size at the last index = 1 ----------------------------- *)
 (* Used in the LR_pred_is_endpoint proof (root case).                       *)
 
+(** Fuel-bounded variant: [window_size] at the last index of a non-empty
+    [w] equals 1.  Used to prove the leaf-status of the last vertex. *)
 Lemma window_size_last_fuel :
   forall fuel w, size w <= fuel -> 0 < size w ->
   window_size_fuel fuel (size w).-1 w = 1.
@@ -67,6 +69,7 @@ have -> : size s0 - j - 1 = (size (drop j s0)).-1
 exact: IH Hfuel_ok H0ds.
 Qed.
 
+(** Last vertex has window size 1, i.e. is always an endpoint. *)
 Lemma window_size_last w :
   0 < size w ->
   window_size (size w).-1 w = 1.
@@ -77,6 +80,8 @@ Qed.
 
 (* ----- M5.3 Tree-level versions of window_size, has_left_child, is_internal *)
 
+(** [window_size_t i t] is the tree-level analogue of [window_size]:
+    recursion on the [mmtree] [t] using the in-order index [i]. *)
 Fixpoint window_size_t (i : nat) (t : mmtree nat) : nat :=
   match t with
   | Leaf => 0
@@ -86,6 +91,8 @@ Fixpoint window_size_t (i : nat) (t : mmtree nat) : nat :=
       else window_size_t (i - (size (mmtree_to_seq l)).+1) r
   end.
 
+(** [has_left_child_t i t] is the tree-level analogue of [has_left_child]:
+    direct structural recursion on the [mmtree]. *)
 Fixpoint has_left_child_t (i : nat) (t : mmtree nat) : bool :=
   match t with
   | Leaf => false
@@ -95,6 +102,7 @@ Fixpoint has_left_child_t (i : nat) (t : mmtree nat) : bool :=
       else has_left_child_t (i - (size (mmtree_to_seq l)).+1) r
   end.
 
+(** Tree-level analogue of [is_internal]. *)
 Definition is_internal_t (i : nat) (t : mmtree nat) : bool :=
   (i < size (mmtree_to_seq t)) && (1 < window_size_t i t).
 
@@ -103,16 +111,19 @@ Arguments has_left_child_t : simpl never.
 
 (* ----- Cons-style equations for the tree-level functions ------------------ *)
 
+(** Cons-style equation: index in left subtree forwards to [l]. *)
 Lemma window_size_t_Node_lt (l : mmtree nat) x r i :
   i < size (mmtree_to_seq l) ->
   window_size_t i (Node l x r) = window_size_t i l.
 Proof. by rewrite /window_size_t -/window_size_t => ->. Qed.
 
+(** At the root index, the window covers the root and the right subtree. *)
 Lemma window_size_t_Node_eq l x (r : mmtree nat) :
   window_size_t (size (mmtree_to_seq l)) (Node l x r) =
     (size (mmtree_to_seq r)).+1.
 Proof. by rewrite /window_size_t -/window_size_t ltnn eqxx. Qed.
 
+(** Index above the root forwards to the right subtree with shifted index. *)
 Lemma window_size_t_Node_gt (l : mmtree nat) x r i :
   size (mmtree_to_seq l) < i ->
   window_size_t i (Node l x r) =
@@ -126,16 +137,19 @@ have Hi2 : (i == size (mmtree_to_seq l)) = false
 by rewrite /window_size_t -/window_size_t Hi1 Hi2.
 Qed.
 
+(** Cons-style equation for [has_left_child_t]: index in left subtree. *)
 Lemma has_left_child_t_Node_lt (l : mmtree nat) x r i :
   i < size (mmtree_to_seq l) ->
   has_left_child_t i (Node l x r) = has_left_child_t i l.
 Proof. by rewrite /has_left_child_t -/has_left_child_t => ->. Qed.
 
+(** Root has a left child iff the left subtree is non-empty. *)
 Lemma has_left_child_t_Node_eq l x (r : mmtree nat) :
   has_left_child_t (size (mmtree_to_seq l)) (Node l x r) =
     (0 < size (mmtree_to_seq l)).
 Proof. by rewrite /has_left_child_t -/has_left_child_t ltnn eqxx. Qed.
 
+(** Index above the root forwards [has_left_child_t] to right subtree. *)
 Lemma has_left_child_t_Node_gt (l : mmtree nat) x r i :
   size (mmtree_to_seq l) < i ->
   has_left_child_t i (Node l x r) =
@@ -149,11 +163,13 @@ have Hi2 : (i == size (mmtree_to_seq l)) = false
 by rewrite /has_left_child_t -/has_left_child_t Hi1 Hi2.
 Qed.
 
+(** In-order seq of [Node l x r] has size [|l| + |r| + 1]. *)
 Lemma size_mmtree_to_seq_node (l : mmtree nat) (x : nat) (r : mmtree nat) :
   size (mmtree_to_seq (Node l x r)) =
     size (mmtree_to_seq l) + (size (mmtree_to_seq r)).+1.
 Proof. by rewrite /= size_cat /= addnS. Qed.
 
+(** Position 0 (leftmost vertex) never has a left child. *)
 Lemma has_left_child_t_0 : forall t, has_left_child_t 0 t = false.
 Proof.
 elim => [|l IHl x r _] //=.
@@ -167,6 +183,8 @@ Qed.
 
 (* ----- Agreement: tree-level matches seq-level on valid mmtrees ---------- *)
 
+(** Bridge: tree-level [window_size_t] agrees with seq-level [window_size]
+    on the in-order traversal of any valid mmtree. *)
 Lemma window_size_t_eq : forall t i,
   valid_mm t ->
   window_size i (mmtree_to_seq t) = window_size_t i t.
@@ -185,6 +203,7 @@ case: (ltngtP i (size (mmtree_to_seq l))) => Hi.
   by rewrite -addnBA // subnn addn0.
 Qed.
 
+(** Bridge: tree-level and seq-level [has_left_child] agree. *)
 Lemma has_left_child_t_eq : forall t i,
   valid_mm t ->
   has_left_child i (mmtree_to_seq t) = has_left_child_t i t.
@@ -201,6 +220,7 @@ case: (ltngtP i (size (mmtree_to_seq l))) => Hi.
   by rewrite HiE (hlc_bridge_root Hmm) has_left_child_t_Node_eq.
 Qed.
 
+(** Bridge: tree-level and seq-level [is_internal] agree. *)
 Lemma is_internal_t_eq : forall t i,
   valid_mm t ->
   is_internal i (mmtree_to_seq t) = is_internal_t i t.
@@ -211,6 +231,8 @@ Qed.
 
 (* ----- Tree-level: endpoint => next has left child ---------------------- *)
 
+(** Tree-level: an endpoint at position [k] is immediately followed (at
+    [k.+1]) by a vertex with a left child.  Used to bound [S_w_seq]. *)
 Lemma endpoint_implies_next_t : forall t k,
   valid_mm t ->
   k.+1 < size (mmtree_to_seq t) ->
@@ -276,6 +298,8 @@ Qed.
 
 (* ----- Tree-level: LR_pred_is_endpoint ---------------------------------- *)
 
+(** Tree-level: the predecessor of an LR-vertex (D-vertex) is an endpoint.
+    Key structural property used in the bit-recovery lemmas. *)
 Lemma LR_pred_is_endpoint_t : forall t i,
   valid_mm t ->
   0 < i -> is_internal_t i t -> has_left_child_t i t ->
@@ -365,6 +389,7 @@ Qed.
 
 (* ----- Seq-level corollaries ----------------------------------------- *)
 
+(** Seq-level corollary of [endpoint_implies_next_t] via the mmtree bridge. *)
 Lemma endpoint_implies_next_has_left_child :
   forall (k : nat) (w : seq nat),
     uniq w -> k.+1 < size w -> ~~ is_internal k w -> has_left_child k.+1 w.
@@ -380,6 +405,9 @@ apply: endpoint_implies_next_t => //.
 - by rewrite -(is_internal_t_eq _ Hv) Hroundtrip.
 Qed.
 
+(** Seq-level corollary of [LR_pred_is_endpoint_t]: D-vertex predecessor is
+    always an endpoint.  Used by the bit-recovery proofs in
+    [psi_cdindex_core.v]. *)
 Lemma LR_pred_is_endpoint :
   forall (i : nat) (w : seq nat),
     uniq w -> 0 < i -> is_internal i w ->

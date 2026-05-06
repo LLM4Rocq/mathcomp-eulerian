@@ -30,18 +30,26 @@ Unset Printing Implicit Defensive.
 (* SA. perm_to_seq: bijection between {perm 'I_n} and seqs of vals          *)
 (* ========================================================================= *)
 
+(** [perm_to_seq s] -- bridge from [{perm 'I_n}] to [seq nat]: the
+    list [[val (s 0); val (s 1); ...; val (s (n-1))]]. *)
 Definition perm_to_seq n (s : {perm 'I_n}) : seq nat :=
   [seq val (s i) | i <- enum 'I_n].
 
+(** [perm_to_seq_size] -- the seq view of a permutation has length
+    [n]. *)
 Lemma perm_to_seq_size n (s : {perm 'I_n}) : size (perm_to_seq s) = n.
 Proof. by rewrite /perm_to_seq size_map size_enum_ord. Qed.
 
+(** [perm_to_seq_uniq] -- the seq view of a permutation has no
+    duplicates (since [s] is injective). *)
 Lemma perm_to_seq_uniq n (s : {perm 'I_n}) : uniq (perm_to_seq s).
 Proof.
 rewrite /perm_to_seq map_inj_uniq ?enum_uniq //.
 move=> x y /= /val_inj; exact: perm_inj.
 Qed.
 
+(** [nth_perm_to_seq] -- accessing [perm_to_seq s] at index [k]
+    yields [val (s (Ordinal Hk))]. *)
 Lemma nth_perm_to_seq n (s : {perm 'I_n}) k (Hk : k < n) :
   nth 0 (perm_to_seq s) k = val (s (Ordinal Hk)).
 Proof.
@@ -50,6 +58,8 @@ congr (val (s _)).
 by apply: val_inj => /=; rewrite nth_enum_ord.
 Qed.
 
+(** [perm_to_seq_inj] -- the [perm_to_seq] map is injective: distinct
+    permutations yield distinct value lists. *)
 Lemma perm_to_seq_inj n : injective (@perm_to_seq n).
 Proof.
 move=> s1 s2 Heq.
@@ -65,6 +75,9 @@ Qed.
 (* SB. Descent equivalence: is_descent <-> is_descent_seq                    *)
 (* ========================================================================= *)
 
+(** [is_descent_perm_seq] -- descent equivalence: [is_descent s i]
+    (perm side) equals [is_descent_seq (perm_to_seq s) (val i)] (seq
+    side). *)
 Lemma is_descent_perm_seq n (s : {perm 'I_n.+1}) (i : 'I_n) :
   is_descent s i = is_descent_seq (perm_to_seq s) (val i).
 Proof.
@@ -80,13 +93,18 @@ Qed.
 (* SC. descent_set <-> char_mono correspondence                              *)
 (* ========================================================================= *)
 
+(** [descent_to_bvec D] -- boolean-vector representation of a descent
+    set, indexed by [enum 'I_n]: the [i]-th entry is [(i \in D)]. *)
 Definition descent_to_bvec n (D : {set 'I_n}) : seq bool :=
   [seq (i \in D) | i <- enum 'I_n].
 
+(** [size_descent_to_bvec] -- the boolean vector has length [n]. *)
 Lemma size_descent_to_bvec n (D : {set 'I_n}) :
   size (descent_to_bvec D) = n.
 Proof. by rewrite /descent_to_bvec size_map size_enum_ord. Qed.
 
+(** [nth_descent_to_bvec] -- accessing [descent_to_bvec D] at [k]
+    yields [(Ordinal Hk \in D)]. *)
 Lemma nth_descent_to_bvec n (D : {set 'I_n}) k (Hk : k < n) :
   nth false (descent_to_bvec D) k = (Ordinal Hk \in D).
 Proof.
@@ -95,7 +113,10 @@ congr (_ \in D).
 by apply: val_inj => /=; rewrite nth_enum_ord.
 Qed.
 
-(* char_mono of perm_to_seq equals the descent boolean vector *)
+(** [char_mono_perm_to_seq] -- the seq-side [char_mono] of
+    [perm_to_seq s] equals the perm-side boolean vector of
+    [descent_set s]. Bridges [psi_cdindex] descent patterns to perm
+    descent sets. *)
 Lemma char_mono_perm_to_seq n (s : {perm 'I_n.+1}) :
   char_mono (perm_to_seq s) = descent_to_bvec (descent_set s).
 Proof.
@@ -112,6 +133,8 @@ rewrite inE.
 by symmetry; exact: is_descent_perm_seq.
 Qed.
 
+(** [descent_to_bvec_inj] -- two descent sets giving the same
+    boolean vector must be equal. *)
 Lemma descent_to_bvec_inj n : injective (@descent_to_bvec n).
 Proof.
 move=> D1 D2 Heq.
@@ -131,6 +154,8 @@ Qed.
 
 (* -- SD2. psi commutativity with apply_psis ------------------------------ *)
 
+(** [psi_apply_psis_comm] -- the single [psi i] commutes with the
+    iterated [apply_psis ss] (on uniq seqs), via [psi_comm]. *)
 Lemma psi_apply_psis_comm i ss w :
   uniq w ->
   apply_psis ss (psi i w) = psi i (apply_psis ss w).
@@ -141,6 +166,9 @@ rewrite (psi_comm j i Hu).
 exact: IH (uniq_psi _ Hu).
 Qed.
 
+(** [apply_psis_rev] -- since each [psi i] is involutive and they
+    commute, [apply_psis] is independent of the order of the
+    operations: [rev ss] gives the same result as [ss]. *)
 Lemma apply_psis_rev ss w :
   uniq w ->
   apply_psis (rev ss) w = apply_psis ss w.
@@ -150,6 +178,8 @@ elim: ss w Hu => [|i ss IH] w Hu //=.
 by rewrite rev_cons -cats1 apply_psis_cat /= IH // psi_apply_psis_comm.
 Qed.
 
+(** [apply_psis_revK] -- applying [ss] then [rev ss] cancels back to
+    [w] (each [psi i] is involutive). *)
 Lemma apply_psis_revK ss w :
   uniq w ->
   apply_psis (rev ss) (apply_psis ss w) = w.
@@ -161,6 +191,8 @@ rewrite IH; last exact: uniq_psi.
 exact: psi_involutive.
 Qed.
 
+(** [apply_psis_cancel] -- [apply_psis ss] is its own inverse:
+    applying [ss] twice cancels back to [w]. *)
 Lemma apply_psis_cancel ss w :
   uniq w ->
   apply_psis ss (apply_psis ss w) = w.
@@ -170,6 +202,9 @@ rewrite -{1}(apply_psis_rev ss (uniq_apply_psis ss Hu)).
 exact: apply_psis_revK.
 Qed.
 
+(** [powerset_internal_apply_psis] -- the internal-vertex powerset
+    used to enumerate the M-class is invariant under [apply_psis];
+    consequence of [internal_vertices_apply_psis]. *)
 Lemma powerset_internal_apply_psis ops w :
   uniq w ->
   powerset_internal (apply_psis ops w) =
@@ -180,6 +215,9 @@ by rewrite /powerset_internal
    internal_vertices_apply_psis.
 Qed.
 
+(** [class_char_monos_uniq] -- the descent patterns of the M-class
+    members of [w] are pairwise distinct (combines [fact3] with
+    [uniq_expand_cde]). *)
 Lemma class_char_monos_uniq w :
   uniq w ->
   uniq [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
@@ -190,9 +228,10 @@ rewrite -(sort_uniq leq_seqb) Hfact sort_uniq.
 exact: uniq_expand_cde.
 Qed.
 
-(* Within the M-class, char_mono is injective: two class members
-   with the same descent pattern must be the same sequence.
-   Follows from fact3 + uniq_expand_cde. *)
+(** [char_mono_class_inj] -- M-class injectivity: within the M-class
+    of [w], two class members with the same descent pattern are
+    actually the same sequence. Follows from [fact3] and
+    [uniq_expand_cde]. *)
 Lemma char_mono_class_inj w ss1 ss2 :
   uniq w ->
   ss1 \in powerset_internal w ->
@@ -246,6 +285,9 @@ Qed.
 (* SE. Descent positions / omega bridge for boolean vectors                  *)
 (* ========================================================================= *)
 
+(** [desc_positions_bvec] -- the descent positions extracted from the
+    boolean vector [descent_to_bvec D] coincide with [set_to_seq D]
+    (both sorted-asc lists of positions of [D]). *)
 Lemma desc_positions_bvec n (D : {set 'I_n}) :
   [seq i <- iota 0 n | nth false (descent_to_bvec D) i] =
   set_to_seq D.
@@ -281,14 +323,21 @@ Hypothesis Hsz : size w = n.
 Hypothesis Huniq : uniq w.
 Hypothesis Hbnd : all (fun x => x < n) w.
 
+(** [seq_nth_bound] -- under the section hypotheses (uniqness, bound,
+    size), every entry of [w] read at an ordinal index is itself
+    bounded by [n]. *)
 Lemma seq_nth_bound (i : 'I_n) : nth 0 w (val i) < n.
 Proof.
 have Hi : val i < size w by rewrite Hsz; exact: ltn_ord.
 exact: (allP Hbnd _ (mem_nth 0 Hi)).
 Qed.
 
+(** [seq_to_fun i] -- the underlying function [i |-> nth 0 w (val i)]
+    on ordinals, used to lift a uniq bounded seq to a permutation. *)
 Definition seq_to_fun (i : 'I_n) : 'I_n := Ordinal (seq_nth_bound i).
 
+(** [seq_to_fun_inj] -- [seq_to_fun] is injective (uses uniqueness of
+    [w]). *)
 Lemma seq_to_fun_inj : injective seq_to_fun.
 Proof.
 move=> i j Heq.
@@ -300,8 +349,12 @@ suff -> : nth 0 w (val i) = nth 0 w (val j) by [].
 by have := congr1 val Heq.
 Qed.
 
+(** [seq_to_perm] -- the permutation built from [seq_to_fun]; inverse
+    of [perm_to_seq] for uniq, [n]-bounded seqs of length [n]. *)
 Definition seq_to_perm : {perm 'I_n} := perm (@seq_to_fun_inj).
 
+(** [seq_to_perm_nth] -- the value of [seq_to_perm] at [i] reads off
+    the [val i]-th entry of [w]. *)
 Lemma seq_to_perm_nth (i : 'I_n) :
   val (seq_to_perm i) = nth 0 w (val i).
 Proof. by rewrite permE. Qed.
@@ -312,10 +365,15 @@ End SeqToPerm.
 (* SG. Round-trip and helper lemmas                                          *)
 (* ========================================================================= *)
 
+(** [perm_to_seq_bnd] -- every entry of [perm_to_seq s] is strictly
+    less than [n]. *)
 Lemma perm_to_seq_bnd n (s : {perm 'I_n}) :
   all (fun x => x < n) (perm_to_seq s).
 Proof. apply/allP => x /mapP [i _ ->]; exact: ltn_ord. Qed.
 
+(** [perm_to_seq_seq_to_perm] -- round-trip identity:
+    [perm_to_seq (seq_to_perm w) = w] for uniq, bounded seqs of size
+    [n]. *)
 Lemma perm_to_seq_seq_to_perm n (w : seq nat)
   (Hsz : size w = n) (Hu : uniq w) (Hb : all (fun x => x < n) w) :
   perm_to_seq (seq_to_perm Hsz Hu Hb) = w.
@@ -329,6 +387,8 @@ have Hord : nth (Ordinal Hk) (enum 'I_n) k = Ordinal Hk
 by rewrite Hord /= permE /seq_to_fun.
 Qed.
 
+(** [seq_to_perm_perm_to_seq] -- other-direction round-trip:
+    [seq_to_perm (perm_to_seq s) = s] for any [s : {perm 'I_n}]. *)
 Lemma seq_to_perm_perm_to_seq n (s : {perm 'I_n}) :
   seq_to_perm (perm_to_seq_size s) (perm_to_seq_uniq s) (perm_to_seq_bnd s) = s.
 Proof.
@@ -336,6 +396,9 @@ apply: (perm_to_seq_inj (n:=n)).
 by rewrite perm_to_seq_seq_to_perm.
 Qed.
 
+(** [all_bnd_apply_psis] -- the boundedness predicate
+    [all (< n)] is preserved by [apply_psis] (uses
+    [perm_eq_apply_psis]). *)
 Lemma all_bnd_apply_psis n ss w :
   all (fun x => x < n) w -> uniq w ->
   all (fun x => x < n) (apply_psis ss w).
@@ -344,6 +407,8 @@ move=> Hbnd Hu; apply/allP => x Hx.
 by apply: (allP Hbnd); rewrite -(perm_mem (perm_eq_apply_psis ss w)).
 Qed.
 
+(** [apply_psis_size_eq] -- [apply_psis] preserves size: if [size w =
+    n] then [size (apply_psis ss w) = n]. *)
 Lemma apply_psis_size_eq n ss (w : seq nat) :
   size w = n -> size (apply_psis ss w) = n.
 Proof. move=> <-; exact: size_apply_psis. Qed.
@@ -352,6 +417,8 @@ Proof. move=> <-; exact: size_apply_psis. Qed.
 (* SH. expand_cde produces distinct elements                                 *)
 (* ========================================================================= *)
 
+(** [uniq_expand_cde] -- [expand_cde] produces a list of pairwise
+    distinct boolean vectors (key for M-class injectivity). *)
 Lemma uniq_expand_cde letters : uniq (expand_cde letters).
 Proof.
 elim: letters => [|[||] l IH] //=.
@@ -369,6 +436,9 @@ Qed.
 (* SI. M-class helpers: membership, uniqueness                               *)
 (* ========================================================================= *)
 
+(** [nil_in_powerset_internal] -- the empty list is always a member
+    of [powerset_internal w] (the M-class always contains [w]
+    itself). *)
 Lemma nil_in_powerset_internal w : [::] \in powerset_internal w.
 Proof.
 rewrite /powerset_internal.
@@ -379,6 +449,9 @@ apply: IH.
 rewrite mem_cat; apply/orP; left; exact: Hin.
 Qed.
 
+(** [char_mono_in_expand_cde] -- the descent pattern of [w] itself
+    appears in [expand_cde (phi_w w)] (corresponding to [ss = nil]
+    in the [fact3] enumeration). *)
 Lemma char_mono_in_expand_cde w :
   uniq w ->
   char_mono w \in expand_cde (phi_w w).
@@ -396,9 +469,15 @@ Qed.
 (* SJ. find_ss: search for class member with given descent pattern           *)
 (* ========================================================================= *)
 
+(** [find_ss w bv] -- search for an [ss] in [powerset_internal w]
+    such that [apply_psis ss w] has descent pattern [bv]; returns the
+    first match (or [::] if none). *)
 Definition find_ss (w : seq nat) (bv : seq bool) : seq nat :=
   head [::] [seq ss <- powerset_internal w | char_mono (apply_psis ss w) == bv].
 
+(** [find_ss_spec] -- whenever [bv] is a descent pattern realized in
+    the M-class of [w], [find_ss w bv] returns a valid witness:
+    in [powerset_internal w] and yielding the requested pattern. *)
 Lemma find_ss_spec w bv :
   uniq w ->
   bv \in expand_cde (phi_w w) ->
@@ -424,6 +503,9 @@ Qed.
 (* SK. class_map: map a perm to the class member with a given descent        *)
 (* ========================================================================= *)
 
+(** [class_map bv sigma] -- map a permutation [sigma] to the M-class
+    member with descent pattern [bv], packaged back as a perm. The
+    core injection used in the proof of [omega_proper_beta_lt]. *)
 Definition class_map n (bv : seq bool) (sigma : {perm 'I_n}) : {perm 'I_n} :=
   let w := perm_to_seq sigma in
   let ss := find_ss w bv in
@@ -431,6 +513,8 @@ Definition class_map n (bv : seq bool) (sigma : {perm 'I_n}) : {perm 'I_n} :=
               (uniq_apply_psis ss (perm_to_seq_uniq sigma))
               (all_bnd_apply_psis ss (perm_to_seq_bnd sigma) (perm_to_seq_uniq sigma)).
 
+(** [perm_to_seq_class_map] -- [perm_to_seq] of [class_map bv sigma]
+    is exactly [apply_psis (find_ss ... bv) (perm_to_seq sigma)]. *)
 Lemma perm_to_seq_class_map n bv (sigma : {perm 'I_n}) :
   perm_to_seq (class_map bv sigma) =
   apply_psis (find_ss (perm_to_seq sigma) bv) (perm_to_seq sigma).
@@ -440,10 +524,16 @@ Proof. by rewrite /class_map perm_to_seq_seq_to_perm. Qed.
 (* SL. omega bridge helpers                                                  *)
 (* ========================================================================= *)
 
+(** [omega_seq_mem_eq] -- the [psi_cdindex] [omega_seq] and the local
+    [omega_seq_local] (in [beta_bridge]) agree on memberships
+    (definitionally identical). *)
 Lemma omega_seq_mem_eq (s : seq nat) k :
   (k \in omega_seq s) = (k \in omega_seq_local s).
 Proof. by rewrite /omega_seq /omega_seq_local. Qed.
 
+(** [omega_set_seq_bridge_bounded] -- bridge in the bounded form: for
+    [k < m], [k \in omega_seq (set_to_seq D)] iff [Ordinal Hkm \in
+    omega_set D]. *)
 Lemma omega_set_seq_bridge_bounded m (D : {set 'I_m.+1}) (k : nat) (Hkm : k < m) :
   (k \in omega_seq (set_to_seq D)) = ((Ordinal Hkm) \in omega_set D).
 Proof.
@@ -451,6 +541,9 @@ rewrite omega_seq_mem_eq.
 by rewrite (omega_set_seq_local_bridge D (Ordinal Hkm)).
 Qed.
 
+(** [omega_seq_subset_bounded] -- a subset relation on omega-sets
+    transports to membership at the seq level for any list of
+    bounded indices. *)
 Lemma omega_seq_subset_bounded m (D E : {set 'I_m.+1}) (ks : seq nat) :
   omega_set D \subset omega_set E ->
   all (fun k => k < m) ks ->
@@ -469,6 +562,9 @@ Qed.
 (* SM. S_w_seq bound: elements are < (size w).-2                             *)
 (* ========================================================================= *)
 
+(** [index_lt_sorted] -- in a uniq sorted list, order on values
+    coincides with order on positions: [x < y] iff [index x s <
+    index y s]. *)
 Lemma index_lt_sorted (s : seq nat) (x y : nat) :
   sorted leq s -> uniq s -> x \in s -> y \in s ->
   (x < y) = (index x s < index y s).
@@ -494,6 +590,8 @@ apply/idP/idP.
   by rewrite ltnn in Hlt.
 Qed.
 
+(** [window_size_bound] -- the [psi_cdindex] window size at position
+    [i] is bounded by [size w - i]. *)
 Lemma window_size_bound i w :
   window_size i w <= size w - i.
 Proof.
@@ -502,6 +600,8 @@ have [_ H] := window_size_fuel_bound i (leqnn (size w)).
 exact: H.
 Qed.
 
+(** [S_w_seq_all_lt] -- elements of [S_w_seq w] (the support indices
+    of the omega map) are bounded by [(size w).-2]. *)
 Lemma S_w_seq_all_lt w :
   2 <= size w ->
   all (fun k => k < (size w).-2) (S_w_seq w).
@@ -537,6 +637,13 @@ Qed.
    5. Conclude beta D < beta E by proper_card
 *)
 
+(** [omega_proper_beta_lt] -- Stanley EC1 (2nd ed.) Proposition 1.6.4
+    at the finset level: a strict inclusion [omega_set D \proper
+    omega_set E] of omega-sets implies the strict inequality
+    [beta D < beta E] of descent counts. Headline result of this
+    file; proof injects {sigma | descent D} into {tau | descent E}
+    via the M-class [class_map] and exhibits a strict witness via
+    [strict_witness_exists]. *)
 Lemma omega_proper_beta_lt : forall m (D E : {set 'I_m.+1}),
   omega_set D \proper omega_set E ->
   beta D < beta E.
@@ -1015,9 +1122,10 @@ Qed.
 (* SG. beta_swap_lt_caseA (fully proved from omega_proper_beta_lt)           *)
 (* ========================================================================= *)
 
-(* Case A of the beta-swap lemma: i,j in D with j = i+1, and either j+1 in D
-   or j is the last position. The omega sets satisfy a proper inclusion
-   (toggle_at_j_omega_strict_superset), so omega_proper_beta_lt applies. *)
+(** [beta_swap_lt_caseA] -- Case A of the beta-swap lemma: when
+    [i,j \in D] with [j = i+1] and the successor of [j] (if defined)
+    is also in [D], toggling [j] strictly increases [beta]. Combines
+    [toggle_at_j_omega_strict_superset] with [omega_proper_beta_lt]. *)
 Lemma beta_swap_lt_caseA : forall n (D : {set 'I_n}) (i j : 'I_n),
   val j = (val i).+1 -> i \in D -> j \in D ->
   (forall q : 'I_n, val q = (val j).+1 -> q \in D) ->

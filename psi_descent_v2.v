@@ -17,9 +17,14 @@ Unset Printing Implicit Defensive.
 
 (* ===== Descent predicate (unchanged) ======================================= *)
 
+(** [is_descent_seq w k] is the descent predicate: [k] is a descent of
+    [w] iff [w_k > w_{k+1}].  Sequence-level mirror of Stanley's
+    [Des(w) = { i : w_i > w_{i+1} }]. *)
 Definition is_descent_seq (w : seq nat) (k : nat) : bool :=
   nth 0 w k > nth 0 w k.+1.
 
+(** [is_descent_seq_ex] : the descent set of [[3;1;4;7;5;9;2;6]] is
+    [{0, 3, 5}], a concrete sanity check. *)
 Example is_descent_seq_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   [seq k <- iota 0 7 | is_descent_seq w k] = [:: 0; 3; 5].
@@ -27,6 +32,9 @@ Proof. by []. Qed.
 
 (* ===== has_left_child (unchanged from original) ============================ *)
 
+(** [has_left_child_fuel fuel i s] tests, by fuel-bounded recursion on
+    [mm_pos], whether the vertex at in-order position [i] of [M(s)] has a
+    left child (equivalent to it being an LR vertex). *)
 Fixpoint has_left_child_fuel (fuel : nat) (i : nat) (s : seq nat) : bool :=
   match fuel with
   | 0 => false
@@ -41,9 +49,14 @@ Fixpoint has_left_child_fuel (fuel : nat) (i : nat) (s : seq nat) : bool :=
       end
   end.
 
+(** [has_left_child i w] : the vertex at in-order position [i] of [M(w)]
+    has a left child.  Used to dispatch the descent-effect of [psi_i]
+    into LR (with left child) and R (right-child only) cases. *)
 Definition has_left_child (i : nat) (w : seq nat) : bool :=
   has_left_child_fuel (size w) i w.
 
+(** [has_left_child_fuel_0] : the vertex at in-order position [0] never
+    has a left child (it is the leftmost vertex). *)
 Lemma has_left_child_fuel_0 : forall fuel s,
   has_left_child_fuel fuel 0 s = false.
 Proof.
@@ -51,9 +64,13 @@ elim=> [//|fuel IH] [//|a s0].
 by simpl; case: ifP => Hlt; [apply: IH | case: ifP].
 Qed.
 
+(** [has_left_child_0] : top-level corollary of [has_left_child_fuel_0]
+    -- position [0] never has a left child. *)
 Lemma has_left_child_0 s : has_left_child 0 s = false.
 Proof. exact: has_left_child_fuel_0. Qed.
 
+(** [has_left_child_fuel_monotone] : independence of fuel above the input
+    size, the [has_left_child] analogue of [window_size_fuel_monotone]. *)
 Lemma has_left_child_fuel_monotone fuel1 fuel2 i s :
   size s <= fuel1 -> fuel1 <= fuel2 ->
   has_left_child_fuel fuel2 i s = has_left_child_fuel fuel1 i s.
@@ -80,6 +97,8 @@ case: ifP => _ //.
 by apply: IH.
 Qed.
 
+(** [has_left_child_cons] : structural unfolding of [has_left_child] on
+    a [cons] by the [mm_pos] split, mirroring [window_size_cons]. *)
 Lemma has_left_child_cons i a s0 :
   let s := a :: s0 in
   let j := mm_pos s in
@@ -102,14 +121,19 @@ case: ifP => _ //.
 abstract (apply: has_left_child_fuel_monotone => //).
 Qed.
 
+(** [has_left_child_false] : position 2 in [[3;1;4;7;5;9;2;6]] is an R
+    vertex (no left child). *)
 Example has_left_child_false :
   has_left_child 2 [:: 3; 1; 4; 7; 5; 9; 2; 6] = false.
 Proof. by []. Qed.
 
+(** [has_left_child_true] : position 5 in the same word is an LR vertex. *)
 Example has_left_child_true :
   has_left_child 5 [:: 3; 1; 4; 7; 5; 9; 2; 6] = true.
 Proof. by []. Qed.
 
+(** [rank_shift_interior_order_ex] : numerical witness that [rank_shift_seq]
+    preserves interior order on [[4;7;5]]. *)
 Example rank_shift_interior_order_ex :
   let L := [:: 4; 7; 5] in
   (nth 0 L 1 > nth 0 L 2) = (nth 0 (rank_shift_seq L) 1 > nth 0 (rank_shift_seq L) 2).
@@ -119,6 +143,9 @@ Proof. by []. Qed.
 (* A tree is valid_mm if at each node, the root sits at the mm_pos           *)
 (* position of the in-order traversal.                                       *)
 
+(** [valid_mm t] : the tree [t] is a valid min-max tree, i.e. at every
+    [Node l x r] the root sits at [mm_pos] of the in-order traversal.
+    Specifies the trees in the image of [mmtree_of_seq_mm]. *)
 Fixpoint valid_mm (t : mmtree nat) : Prop :=
   match t with
   | Leaf => True
@@ -128,7 +155,8 @@ Fixpoint valid_mm (t : mmtree nat) : Prop :=
       valid_mm l /\ valid_mm r
   end.
 
-(* mmtree_of_seq_mm produces valid trees *)
+(** [valid_mm_build] : every output of [mmtree_of_seq_mm] satisfies
+    [valid_mm], the structural invariant used by [tree_structure]. *)
 Lemma valid_mm_build : forall s, valid_mm (mmtree_of_seq_mm s).
 Proof.
 rewrite /mmtree_of_seq_mm.
@@ -181,9 +209,13 @@ Hypothesis Hmm : mm_pos s = size sl.
 
 (* -- take/drop simplification under mm_pos -- *)
 
+(** [take_mm_eq] : at the [mm_pos] split, [take (size sl) s] recovers the
+    left-subtree in-order [sl]. *)
 Lemma take_mm_eq : take (size sl) s = sl.
 Proof. by rewrite /s take_cat ltnn subnn take0 cats0. Qed.
 
+(** [drop_mm_eq] : dual of [take_mm_eq] -- [drop (size sl).+1 s] is the
+    right-subtree in-order [sr]. *)
 Lemma drop_mm_eq : drop (size sl).+1 s = sr.
 Proof.
 rewrite /s drop_cat ltnNge leqnSn /=.
@@ -192,6 +224,9 @@ Qed.
 
 (* -- window_size bridge -- *)
 
+(** [ws_bridge_left] : on a valid node [s = sl ++ x :: sr], when [i] is
+    in the left subtree, [window_size i s] reduces to [window_size i sl].
+    Bridge between flat and structural recursion. *)
 Lemma ws_bridge_left i :
   i < size sl ->
   window_size i s = window_size i sl.
@@ -204,6 +239,8 @@ have -> : mm_pos (a :: s0) = size sl by rewrite -Hs.
 by rewrite Hi -Hs take_mm_eq.
 Qed.
 
+(** [ws_bridge_root] : at the root of the subtree, the M-window has size
+    [size s - size sl] (root + right subtree). *)
 Lemma ws_bridge_root :
   window_size (size sl) s = size s - size sl.
 Proof.
@@ -214,6 +251,9 @@ have -> : mm_pos (a :: s0) = size sl by rewrite -Hs.
 by rewrite ltnn eqxx.
 Qed.
 
+(** [ws_bridge_right] : when [i] is in the right subtree, [window_size i s]
+    reduces to [window_size (i - size sl - 1) sr] -- the right-subtree
+    descent step. *)
 Lemma ws_bridge_right i :
   size sl < i ->
   window_size i s = window_size (i - size sl - 1) sr.
@@ -231,6 +271,7 @@ Qed.
 
 (* -- window_at bridge -- *)
 
+(** [wa_bridge_left] : the [window_at] analogue of [ws_bridge_left]. *)
 Lemma wa_bridge_left i :
   i < size sl ->
   window_at i s = window_at i sl.
@@ -243,6 +284,8 @@ have -> : mm_pos (a :: s0) = size sl by rewrite -Hs.
 by rewrite Hi -Hs take_mm_eq.
 Qed.
 
+(** [wa_bridge_root] : at the root, [window_at] is the suffix
+    [drop (size sl) s] (root + right-subtree labels). *)
 Lemma wa_bridge_root :
   window_at (size sl) s = drop (size sl) s.
 Proof.
@@ -253,6 +296,7 @@ have -> : mm_pos (a :: s0) = size sl by rewrite -Hs.
 by rewrite ltnn eqxx.
 Qed.
 
+(** [wa_bridge_right] : the [window_at] analogue of [ws_bridge_right]. *)
 Lemma wa_bridge_right i :
   size sl < i ->
   window_at i s = window_at (i - size sl - 1) sr.
@@ -270,6 +314,8 @@ Qed.
 
 (* -- has_left_child bridge -- *)
 
+(** [hlc_bridge_left] : [has_left_child] structural bridge analogous to
+    [ws_bridge_left]. *)
 Lemma hlc_bridge_left i :
   i < size sl ->
   has_left_child i s = has_left_child i sl.
@@ -282,6 +328,8 @@ have -> : mm_pos (a :: s0) = size sl by rewrite -Hs.
 by rewrite Hi -Hs take_mm_eq.
 Qed.
 
+(** [hlc_bridge_root] : at the root, [has_left_child] is true iff there
+    is a nonempty left subtree. *)
 Lemma hlc_bridge_root :
   has_left_child (size sl) s = (0 < size sl).
 Proof.
@@ -292,6 +340,8 @@ have -> : mm_pos (a :: s0) = size sl by rewrite -Hs.
 by rewrite ltnn eqxx.
 Qed.
 
+(** [hlc_bridge_right] : [has_left_child] structural bridge analogous to
+    [ws_bridge_right]. *)
 Lemma hlc_bridge_right i :
   size sl < i ->
   has_left_child i s = has_left_child (i - size sl - 1) sr.
@@ -465,6 +515,10 @@ Qed.
 
 (* ===== tree_props definition (unchanged) =================================== *)
 
+(** [tree_props i w] is the conjunction of five structural properties at
+    in-order position [i]: post-window extremum, two pre-window-vs-window
+    inequalities, the descent flip, and the no-left-child extremum.
+    Bundled to share a single structural induction. *)
 Definition tree_props (i : nat) (w : seq nat) :=
   (i + window_size i w < size w ->
     (nth 0 w (i + window_size i w)
@@ -501,6 +555,8 @@ Definition tree_props (i : nat) (w : seq nat) :=
        > nth 0 (sort leq (window_at i w))
                (window_size i w).-1)).
 
+(** [pred_sub_add] : an arithmetic identity used to align in-order
+    indices when descending into the right subtree. *)
 Lemma pred_sub_add i j :
   j < i -> 0 < i - j - 1 ->
   (i - j - 1).-1 + j.+1 = i.-1.
@@ -519,6 +575,9 @@ Qed.
 (*   - No fuel_monotone proofs are generated inline                         *)
 (*   - Base cases reference opaque local lemmas                             *)
 
+(** [tree_structure_via_tree] : [tree_props] holds for every position [i]
+    of the in-order traversal of any valid min-max tree.  Proved by
+    structural induction on [t], dispatching on [i] vs the root index. *)
 Lemma tree_structure_via_tree t :
   valid_mm t -> uniq (mmtree_to_seq t) ->
   forall i, tree_props i (mmtree_to_seq t).
@@ -1009,6 +1068,8 @@ Qed.
 
 (* ===== Derive tree_structure ============= *)
 
+(** [tree_structure] : [tree_props i w] for every uniq [w], obtained by
+    re-routing through [mmtree_of_seq_mm] and [tree_structure_via_tree]. *)
 Lemma tree_structure i w : uniq w -> tree_props i w.
 Proof.
 move=> Hu.
@@ -1019,6 +1080,10 @@ apply: tree_structure_via_tree.
 Qed.
 (* -- Derive the 5 individual lemmas as projections ----------------------- *)
 
+(** [post_window_extremum] : the entry just past the window is either
+    smaller than every window value or larger than every window value
+    -- the post-window position is a global extremum.  First projection
+    of [tree_props]. *)
 Lemma post_window_extremum i w :
   uniq w -> i + window_size i w < size w ->
   (nth 0 w (i + window_size i w)
@@ -1036,6 +1101,8 @@ Qed.
    Window = [4;7;5] at [2,5).
    Post-window element at position 5: w[5] = 9.
    max(window) = 7. 9 > 7 = true. *)
+(** [post_window_extremum_ex] : numerical witness of
+    [post_window_extremum] at position 2 in [[3;1;4;7;5;9;2;6]]. *)
 Example post_window_extremum_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   nth 0 w (2 + window_size 2 w) >
@@ -1043,6 +1110,9 @@ Example post_window_extremum_ex :
           (window_size 2 w).-1.
 Proof. by []. Qed.
 
+(** [pre_window_lt_max_when_min_head] : at an LR vertex whose head is the
+    window-min, the pre-window entry [w_{i-1}] is below the window-max.
+    Discharges the [head = min] branch of [exactly_one_descent_LR]. *)
 Lemma pre_window_lt_max_when_min_head :
   forall (i : nat) (w : seq nat),
   uniq w -> 0 < i -> has_left_child i w ->
@@ -1058,6 +1128,9 @@ by move=> i w Hu Hi0 Hlc Hws Hh;
 Qed.
 #[global] Opaque pre_window_lt_max_when_min_head.
 
+(** [pre_window_gt_min_when_max_head] : dual of
+    [pre_window_lt_max_when_min_head] -- at an LR vertex whose head is the
+    window-max, [w_{i-1}] is above the window-min. *)
 Lemma pre_window_gt_min_when_max_head :
   forall (i : nat) (w : seq nat),
   uniq w -> 0 < i -> has_left_child i w ->
@@ -1076,12 +1149,17 @@ Qed.
 (* Non-triviality: w = [3;1;4;7;5;9;2;6], i=5.
    Window = [9;2;6]. Head = 9 = max.
    min(window) = 2. w[4] = 5 > 2. *)
+(** [pre_window_gt_min_ex] : witness for [pre_window_gt_min_when_max_head]
+    at position 5 in [[3;1;4;7;5;9;2;6]]. *)
 Example pre_window_gt_min_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   nth 0 w 4 >
     nth 0 (sort leq (window_at 5 w)) 0.
 Proof. by []. Qed.
 
+(** [exactly_one_descent_LR] : at an LR vertex with nontrivial window,
+    exactly one of positions [i-1, i] is a descent of [w].  Used by the
+    descent-effect theorems in [psi_descent_thms.v]. *)
 Lemma exactly_one_descent_LR :
   forall (i : nat) (w : seq nat),
   uniq w -> 0 < i -> has_left_child i w ->
@@ -1097,12 +1175,17 @@ Qed.
    is_descent_seq w 4 = (5 > 9) = false.
    is_descent_seq w 5 = (9 > 2) = true.
    false (+) true = true. *)
+(** [exactly_one_descent_LR_ex] : numerical witness of
+    [exactly_one_descent_LR] at position 5 in [[3;1;4;7;5;9;2;6]]. *)
 Example exactly_one_descent_LR_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   is_descent_seq w 4 (+)
     is_descent_seq w 5.
 Proof. by []. Qed.
 
+(** [pre_window_extremum_R] : at an R vertex (no left child), the entry
+    [w_{i-1}] is itself a global extremum relative to the window.  R-case
+    counterpart of the LR pre-window lemmas. *)
 Lemma pre_window_extremum_R i w :
   uniq w -> 0 < i -> ~~ has_left_child i w ->
   1 < window_size i w ->

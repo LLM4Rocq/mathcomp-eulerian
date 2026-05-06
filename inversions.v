@@ -22,32 +22,36 @@ Section Inversions.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+1}).
 
-(* Position pair (i, j) is an inversion of s when i < j but s i > s j. *)
+(** [is_inv s i j] holds when the pair [(i, j)] is an inversion of [s],
+    i.e. [i < j] but [s i > s j].  Stanley EC1 §1.3.3. *)
 Definition is_inv s (i j : 'I_n.+1) : bool :=
   (i < j) && (s j < s i).
 
-(* The inversion set: pairs (i, j) such that s makes them out-of-order. *)
+(** [inv_set s] is the set of inversions of [s]: pairs [(i, j)] with
+    [i < j] but [s i > s j]. *)
 Definition inv_set s : {set 'I_n.+1 * 'I_n.+1} :=
   [set ij | is_inv s ij.1 ij.2].
 
-(* The inversion count.  Stanley writes inv(w). *)
+(** [inv s] is the inversion count of [s], i.e. [#|inv_set s|].
+    Stanley's [inv(w)]. *)
 Definition inv s : nat := #|inv_set s|.
 
+(** Membership in [inv_set s] reduces to [is_inv s i j]. *)
 Lemma mem_inv_set s i j :
   ((i, j) \in inv_set s) = is_inv s i j.
 Proof. by rewrite inE. Qed.
 
-(* The identity permutation has no inversions. *)
+(** The identity permutation has no inversions: [inv 1 = 0]. *)
 Lemma inv_id : inv (1 : {perm 'I_n.+1}) = 0.
 Proof.
 apply/eqP; rewrite /inv cards_eq0; apply/eqP/setP=> [[i j]].
 by rewrite !inE /is_inv !perm1 ltnNge leq_eqVlt orbC; case: ltngtP.
 Qed.
 
-(* ----- A.1 Double-sum form of inv ----- *)
-(* Stepping stone: rewrite the cardinality of inv_set as a nested
-   sum over (j, i) with i < j, which matches the seq-level double-sum
-   form of inv_seq.  Used in foata.v to prove inv_eq_inv_seq.        *)
+(** Bridge lemma: [inv s] expressed as the nested double-sum
+    [\sum_j \sum_(i < j) (s j < s i)].  Bridges the [inv_set]
+    cardinality form to the seq-level double-sum form of [inv_seq],
+    used in [foata.v] to prove [inv_eq_inv_seq]. *)
 Lemma inv_double_sum s :
   inv s = \sum_(j : 'I_n.+1) \sum_(i : 'I_n.+1 | i < j) (s j < s i).
 Proof.
@@ -75,11 +79,13 @@ Section MajorIndex.
 Variable n : nat.
 Implicit Types (s : {perm 'I_n.+1}).
 
-(* maj(s) = sum of (1-indexed) descent positions.  Stanley §1.3.3.
-   Our descent_set s : {set 'I_n} is 0-indexed; (val i).+1 maps to
-   Stanley's 1-indexed positions in {1, ..., n}.                           *)
+(** [maj s] is the major index: the sum of the (1-indexed) descent
+    positions of [s].  Stanley EC1 §1.3.3.  Our [descent_set s] is
+    0-indexed in ['I_n]; we shift by 1 to recover Stanley's
+    1-indexed positions in [{1, ..., n}]. *)
 Definition maj s : nat := \sum_(i in descent_set s) (val i).+1.
 
+(** The identity permutation has zero major index: [maj 1 = 0]. *)
 Lemma maj_id : maj (1 : {perm 'I_n.+1}) = 0.
 Proof.
 rewrite /maj big_pred0 // => i.
@@ -94,6 +100,8 @@ End MajorIndex.
 (* 'C(m, 2)                                                                  *)
 (* ========================================================================= *)
 
+(** The number of strictly-ordered pairs in ['I_m * 'I_m] is the binomial
+    coefficient ['C(m, 2)].  Used to bound [inv] and [maj]. *)
 Lemma card_ord_pair m :
   #|[set ij : 'I_m * 'I_m | ij.1 < ij.2]| = 'C(m, 2).
 Proof.
@@ -133,6 +141,8 @@ Implicit Types (s : {perm 'I_n.+1}).
 
 (* ----- D.1 The bound inv s <= 'C(n+1, 2) ----- *)
 
+(** Bound: [inv s <= 'C(n+1, 2)] for [s : {perm 'I_n.+1}], since
+    inversions are a subset of all strictly-ordered pairs. *)
 Lemma inv_le s : inv s <= 'C(n.+1, 2).
 Proof.
 rewrite /inv -(card_ord_pair n.+1).
@@ -143,6 +153,8 @@ Qed.
 
 (* ----- D.2 Helper: full sum of (val i + 1) over 'I_n equals 'C(n+1, 2) ----- *)
 
+(** Helper: [\sum_(i : 'I_n) (val i).+1 = 'C(n+1, 2)].  Used to bound
+    [maj]. *)
 Lemma sum_succ_ord_eq_bin2 :
   \sum_(i : 'I_n) (val i).+1 = 'C(n.+1, 2).
 Proof.
@@ -155,6 +167,8 @@ Qed.
 
 (* ----- D.3 The bound maj s <= 'C(n+1, 2) ----- *)
 
+(** Bound: [maj s <= 'C(n+1, 2)] for [s : {perm 'I_n.+1}], by comparing
+    descent-position sum to the full sum of [(val i).+1] over ['I_n]. *)
 Lemma maj_le s : maj s <= 'C(n.+1, 2).
 Proof.
 rewrite /maj -sum_succ_ord_eq_bin2.
@@ -163,12 +177,15 @@ exact: leq_addr.
 Qed.
 
 (* ----- D.4 Co-inversion set: pairs (i,j) with i<j and s i < s j ----- *)
-(* Since s is a permutation, every pair (i,j) with i<j is either an
-   inversion or a co-inversion (exactly one). *)
 
+(** [coinv_set s] is the co-inversion set of [s]: pairs [(i, j)] with
+    [i < j] and [s i < s j].  Since [s] is a permutation, every
+    strictly-ordered pair is either an inversion or a co-inversion. *)
 Definition coinv_set s : {set 'I_n.+1 * 'I_n.+1} :=
   [set ij : 'I_n.+1 * 'I_n.+1 | (ij.1 < ij.2) && (s ij.1 < s ij.2)].
 
+(** Order-reversal property of [rev_ord]: [rev_ord a < rev_ord b] iff
+    [b < a].  Used in the [inv] reversal identity. *)
 Lemma rev_ord_lt (a b : 'I_n.+1) : (rev_ord a < rev_ord b) = (b < a).
 Proof.
 have Ha : a < n.+1 := ltn_ord a.
@@ -176,6 +193,8 @@ rewrite /=.
 by rewrite ltn_sub2lE.
 Qed.
 
+(** Split: every strictly-ordered pair is either an inversion or a
+    co-inversion, so [inv s + #|coinv_set s| = 'C(n+1, 2)]. *)
 Lemma card_split_ord_pair s :
   inv s + #|coinv_set s| = 'C(n.+1, 2).
 Proof.
@@ -194,6 +213,8 @@ Qed.
 
 (* ----- D.5 inv (rev_perm s) bijects with coinv_set s ----- *)
 
+(** The inversions of [rev_perm s] are in bijection with the
+    co-inversions of [s] via [(i, j) |-> (rev_ord j, rev_ord i)]. *)
 Lemma inv_rev_perm_eq_coinv s :
   inv (rev_perm s) = #|coinv_set s|.
 Proof.
@@ -216,6 +237,8 @@ Qed.
 
 (* ----- D.6 The reversal identity for inv ----- *)
 
+(** Reversal identity for [inv]: [inv (rev_perm s) = 'C(n+1, 2) - inv s].
+    Stanley EC1 §1.3.3. *)
 Lemma inv_rev_perm s :
   inv (rev_perm s) = 'C(n.+1, 2) - inv s.
 Proof.
@@ -234,6 +257,10 @@ Qed.
    of rev_perm sits at the rev_ord-image of the *complement*, so the
    "1-indexed position" sum picks up an offset of n+1 per descent of s):
                                                                           *)
+(** Reversal identity for [maj]:
+    [maj (rev_perm s) + (n+1) * des s = 'C(n+1, 2) + maj s].
+    The naive [maj (rev_perm s) = 'C(n+1, 2) - maj s] is FALSE; the
+    correct identity carries a [(n+1) * des s] offset (Stanley EC1). *)
 Lemma maj_rev_perm s :
   maj (rev_perm s) + (n.+1) * des s = 'C(n.+1, 2) + maj s.
 Proof.

@@ -10,6 +10,8 @@ Unset Printing Implicit Defensive.
 
 (* ----- M4.3 helpers -------------------------------------------------------- *)
 
+(** [sorted_uniq_nth_ltn] : on a uniq sorted sequence, value order at two
+    indices is the same as index order; ranking helper for [psi_comm]. *)
 Lemma sorted_uniq_nth_ltn (s : seq nat) (i j : nat) :
   sorted leq s -> uniq s -> i < size s -> j < size s ->
   (nth 0 s i < nth 0 s j) = (i < j).
@@ -28,6 +30,9 @@ apply/idP/idP => [Hlt | Hlt].
   by rewrite ltn_neqAle Hne Hle.
 Qed.
 
+(** [shift_preserves_ltn] : the modular shift by [delta] preserves the
+    [<] relation on ranks within the appropriate non-extremum sub-range.
+    Modular-arithmetic core of interior order preservation. *)
 Lemma shift_preserves_ltn (rp rq k delta : nat) :
   0 < k -> rp < k -> rq < k ->
   ((delta = k.-1 /\ 0 < rp /\ 0 < rq) \/
@@ -68,6 +73,9 @@ Qed.
 (* non-head rank range. Proof: modular arithmetic on index in sorted L.     *)
 (* Justification: M4_DESCENT_EFFECT_INFORMAL.md section 2 (Case 2).         *)
 
+(** [rank_shift_preserves_interior_order] : at non-head positions [p, q]
+    the rank-shift on [L] is order-preserving (no wrap-around).  Used to
+    propagate descent comparisons through [psi]. *)
 Lemma rank_shift_preserves_interior_order :
   forall (L : seq nat) (p q : nat),
   uniq L -> 1 < size L ->
@@ -149,6 +157,9 @@ Opaque rank_shift_seqE nth_rank_shift_seq.
 Opaque rank_shift_perm_eq size_rank_shift_seq2.
 Opaque psi_id_oor size_psi window_size_bound.
 
+(** [window_size_psi] : applying [psi j] does not change [window_size i]
+    at any other position [i] -- generalization of [window_size_psi_self]
+    to cross positions, foundational for [psi_comm]. *)
 Lemma window_size_psi :
   forall (j i : nat) (w : seq nat),
   uniq w ->
@@ -308,8 +319,8 @@ Qed.
 
 Opaque window_size_psi.
 
-(* Window-at stability: psi_j preserves window_at at position i              *)
-(* when the windows at i and j are disjoint (i + ws_i <= j).                 *)
+(** [window_at_psi_disjoint] : [psi j] preserves [window_at i] verbatim
+    when the windows at [i] and [j] are disjoint (i.e. [i + ws_i <= j]). *)
 Lemma window_at_psi_disjoint i j w :
   uniq w ->
   i + window_size i w <= j ->
@@ -337,7 +348,9 @@ rewrite !nth_take ?nth_drop //.
   by rewrite ltn_add2l.
 Qed.
 
-(* Disjoint commutativity (WLOG i + ws_i <= j).                              *)
+(** [psi_comm_disjoint_lr] : disjoint commutativity in the directed form
+    [i + ws_i <= j]; combinatorially trivial since the windows act on
+    non-overlapping slices of [w]. *)
 Lemma psi_comm_disjoint_lr i j (w : seq nat) :
   uniq w ->
   i + window_size i w <= j ->
@@ -428,6 +441,8 @@ Qed.
 
 Opaque psi_comm_disjoint_lr.
 
+(** [psi_comm_disjoint] : symmetric form of [psi_comm_disjoint_lr] --
+    [psi i] and [psi j] commute whenever the two M-windows are disjoint. *)
 Lemma psi_comm_disjoint : forall i j (w : seq nat),
   uniq w ->
   (i + window_size i w <= j \/ j + window_size j w <= i) ->
@@ -438,7 +453,8 @@ move=> i j w Hu [Hdisj | Hdisj].
 by symmetry; apply: psi_comm_disjoint_lr.
 Qed.
 
-(* Non-triviality: positions 2 and 6 have disjoint windows [2,5) and [6,8). *)
+(** [psi_comm_disjoint_ex] : witness of disjoint commutativity at
+    positions 2 and 6 in [[3;1;4;7;5;9;2;6]]. *)
 Example psi_comm_disjoint_ex :
   psi 2 (psi 6 [:: 3; 1; 4; 7; 5; 9; 2; 6]) =
   psi 6 (psi 2 [:: 3; 1; 4; 7; 5; 9; 2; 6]).
@@ -457,6 +473,9 @@ Proof. by []. Qed.
 (* Also depends on M2_SUBTASKS.md T4-T5 (mm_pos stability / window           *)
 (* stability), which are the mathematical crux of both M2 and M3.            *)
 
+(** [window_size_psi_ancestor] : nested specialization of
+    [window_size_psi] -- when [W_j] sits inside [W_i], applying [psi i]
+    preserves [window_size j]. *)
 Lemma window_size_psi_ancestor : forall i j (w : seq nat),
   uniq w ->
   i < j -> j + window_size j w <= i + window_size i w ->
@@ -465,6 +484,8 @@ Proof. move=> i j w Hu _ _; exact: window_size_psi. Qed.
 
 Opaque window_size_psi_ancestor.
 
+(** [window_size_psi_ancestor_ex] : concrete witness of the nested
+    window-size invariance, on positions 1 (ancestor) and 5 (descendant). *)
 Example window_size_psi_ancestor_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   window_size 5 (psi 1 w) = window_size 5 w.
@@ -487,7 +508,8 @@ Proof. by []. Qed.
 (* of sort order, and modular arithmetic. The assembly is ~25 LOC but needs  *)
 (* all the window-stability sub-lemmas.                                       *)
 
-(* Helper: sort commutes with an order-preserving injection.             *)
+(** [sort_map_mono] : [sort leq] commutes with a monotone injection on
+    the elements of [L]; structural helper for [psi_map_comm]. *)
 Lemma sort_map_mono (f : nat -> nat) (L : seq nat) :
   uniq L ->
   (forall x y, x \in L -> y \in L ->
@@ -524,7 +546,8 @@ rewrite leq_eqVlt => /orP [/eqP -> | Hlt].
 by apply: ltnW; rewrite -Hmon.
 Qed.
 
-(* Helper: index commutes with locally injective maps.                    *)
+(** [index_map_inj_in] : [index] commutes with a locally injective map
+    [f], a structural helper for the rank-shift transfer. *)
 Lemma index_map_inj_in (f : nat -> nat) (s : seq nat)
     (x : nat) :
   uniq s -> {in s &, injective f} -> x \in s ->
@@ -546,7 +569,8 @@ move=> u v Hu_in Hv_in; apply: Hinj;
   by rewrite in_cons ?Hu_in ?Hv_in orbT.
 Qed.
 
-(* Helper: monotonicity implies local injectivity.                       *)
+(** [mono_inj_in] : a [<]-monotone function on a finite set is injective
+    there; trivial corollary used in [psi_map_comm]. *)
 Lemma mono_inj_in (f : nat -> nat) (L : seq nat) :
   uniq L ->
   (forall x y, x \in L -> y \in L ->
@@ -561,7 +585,8 @@ case: (ltngtP x y) => // Hlt.
   by rewrite Hfxy ltnn.
 Qed.
 
-(* Helper: rank_shift_seq commutes with a monotone injection.             *)
+(** [rank_shift_map_comm] : [rank_shift_seq] commutes with any monotone
+    injection on the elements of [L]; algebraic core of [psi_map_comm]. *)
 Lemma rank_shift_map_comm (f : nat -> nat) (L : seq nat) :
   uniq L -> 1 < size L ->
   (forall x y, x \in L -> y \in L ->
@@ -626,7 +651,9 @@ Opaque index_map_inj_in.
 Opaque mono_inj_in.
 Opaque rank_shift_map_comm.
 
-(* Helper: psi commutes with any comparison-preserving map.               *)
+(** [psi_map_comm] : [psi k] commutes with any comparison-preserving
+    relabelling [f].  Reduces nested commutativity to interior-only
+    rank-shift commutativity. *)
 Lemma psi_map_comm (f : nat -> nat) (s : seq nat) k :
   uniq s ->
   (forall x y, x \in s -> y \in s ->
@@ -687,9 +714,9 @@ Qed.
 
 Opaque psi_map_comm.
 
-(* Key commutativity lemma: rank_shift_seq commutes with psi at           *)
-(* interior positions. When mm_pos d = 0 and k > 0:                       *)
-(*   rank_shift_seq (psi k d) = psi k (rank_shift_seq d).                *)
+(** [rank_shift_psi_comm] : when [d] is rooted at the head ([mm_pos d = 0])
+    and [k > 0], [rank_shift_seq] commutes with [psi k].  Algebraic core
+    of [psi_comm_nested]. *)
 Lemma rank_shift_psi_comm d k :
   uniq d -> 1 < size d -> mm_pos d = 0 -> 0 < k ->
   rank_shift_seq (psi k d) = psi k (rank_shift_seq d).
@@ -799,6 +826,9 @@ Qed.
 
 Opaque rank_shift_psi_comm.
 
+(** [psi_comm_nested] : nested commutativity -- when [W_j] sits inside
+    [W_i], [psi i] and [psi j] commute.  Combines window-stability and
+    [rank_shift_psi_comm]. *)
 Lemma psi_comm_nested :
   forall i j (w : seq nat),
   uniq w ->
@@ -1303,7 +1333,8 @@ case: (ltngtP i m) => [Him | Hmi | Hieqm].
   by rewrite Hrd_eq Hh1 Ht1.
 Qed.
 
-(* Non-triviality: positions 1 and 5 are nested (W_5 inside W_1). *)
+(** [psi_comm_nested_ex] : witness of nested commutativity at positions
+    1 and 5 in [[3;1;4;7;5;9;2;6]]. *)
 Example psi_comm_nested_ex :
   psi 1 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) =
   psi 5 (psi 1 [:: 3; 1; 4; 7; 5; 9; 2; 6]).
@@ -1311,6 +1342,9 @@ Proof. by []. Qed.
 
 (* ----- M3.5 Main theorem: commutativity of psi --------------------------- *)
 
+(** [psi_comm] is the M3 commutativity theorem (Stanley Fact #1, half 1):
+    the operators [psi i] all pairwise commute on uniq inputs.  Proved by
+    [window_trichotomy] dispatching to disjoint or nested commutativity. *)
 Theorem psi_comm : forall i j (w : seq nat),
   uniq w -> psi i (psi j w) = psi j (psi i w).
 Proof.
@@ -1330,13 +1364,14 @@ case: (window_trichotomy Hi Hj Hij') => [Hdisj | Hdisj | [[Hn1 Hn2] | [Hn1 Hn2]]
 - by symmetry; apply: psi_comm_nested.
 Qed.
 
-(* Non-triviality: nested windows with genuinely different results than id. *)
+(** [psi_comm_ex] : computational witness of [psi_comm] on a nested pair. *)
 Example psi_comm_ex :
   psi 1 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) =
   psi 5 (psi 1 [:: 3; 1; 4; 7; 5; 9; 2; 6]).
 Proof. by vm_compute. Qed.
 
-(* The composed result is not the original (psi genuinely acts). *)
+(** [psi_comm_nontrivial] : the composed [psi 1 . psi 5] genuinely acts
+    (the result differs from the input). *)
 Example psi_comm_nontrivial :
   psi 1 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) = [:: 3; 9; 2; 6; 4; 1; 5; 7].
 Proof. by vm_compute. Qed.

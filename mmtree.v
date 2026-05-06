@@ -32,6 +32,8 @@ Unset Printing Implicit Defensive.
 
 Section MMTree.
 
+(** [mmtree T] is the labelled binary tree datatype underlying Stanley's
+    min-max tree construction [M(w)] for sequences with labels in [T]. *)
 Inductive mmtree (T : Type) : Type :=
   | Leaf : mmtree T
   | Node : mmtree T -> T -> mmtree T -> mmtree T.
@@ -39,20 +41,21 @@ Inductive mmtree (T : Type) : Type :=
 Arguments Leaf {T}.
 Arguments Node {T} _ _ _.
 
-(* In-order traversal: left ++ root :: right.                                  *)
+(** [mmtree_to_seq t] is the in-order traversal of [t]: left subtree, then
+    root, then right subtree. *)
 Fixpoint mmtree_to_seq {T : Type} (t : mmtree T) : seq T :=
   match t with
   | Leaf => [::]
   | Node l x r => mmtree_to_seq l ++ x :: mmtree_to_seq r
   end.
 
-(* Least-index-of-minimum split point.                                         *)
-(* For an empty sequence returns 0 (unused, the empty case is handled          *)
-(* separately).  For a nonempty sequence returns the least index j such that   *)
-(* `nth d s j` equals the minimum of s, which is < size s.                     *)
+(** [min_pos s] is the least index [j] in [s] at which the minimum of [s]
+    occurs; returns 0 on the empty sequence (vacuous case). *)
 Definition min_pos (s : seq nat) : nat :=
   index (foldr minn (head 0 s) (behead s)) s.
 
+(** [min_in] states that [foldr minn a s] always lies in the sequence
+    [a :: s]; used to bound [min_pos] within range. *)
 Lemma min_in s a : foldr minn a s \in a :: s.
 Proof.
 elim: s a => [| b s IH] a /=.
@@ -64,6 +67,8 @@ case: leqP => _; first by rewrite eqxx orbT.
 have := IH a; rewrite inE => /orP [->|->] //; by rewrite !orbT.
 Qed.
 
+(** [min_pos_lt] : on a nonempty sequence the split index [min_pos s] is in
+    range, ensuring the recursion in [mmtree_of_seq_fuel] is well-defined. *)
 Lemma min_pos_lt s : s <> [::] -> min_pos s < size s.
 Proof.
 case: s => [// | a s _]; rewrite /min_pos.
@@ -72,9 +77,9 @@ have -> : behead (a :: s) = s by [].
 by rewrite index_mem; exact: min_in.
 Qed.
 
-(* Fuel-based construction.  Fuel = size of the sequence suffices because      *)
-(* each recursive call strictly shrinks size (see `size_take` and `size_drop` *)
-(* bounds below).                                                              *)
+(** [mmtree_of_seq_fuel fuel s] is the fuel-bounded M1 tree construction:
+    splits [s] at [min_pos s], recursing on the take/drop halves.  Fuel
+    equal to [size s] suffices since each recursion strictly shrinks. *)
 Fixpoint mmtree_of_seq_fuel (fuel : nat) (s : seq nat) : mmtree nat :=
   match fuel with
   | 0 => Leaf
@@ -89,14 +94,14 @@ Fixpoint mmtree_of_seq_fuel (fuel : nat) (s : seq nat) : mmtree nat :=
       end
   end.
 
+(** [mmtree_of_seq s] runs [mmtree_of_seq_fuel] with fuel [size s], the
+    M1 (minimum-only) variant of Stanley's min-max tree construction. *)
 Definition mmtree_of_seq (s : seq nat) : mmtree nat :=
   mmtree_of_seq_fuel (size s) s.
 
-(* Round-trip.  The key fact: with j = min_pos s and s nonempty,               *)
-(*   take j s ++ nth 0 s j :: drop j.+1 s = s,                                 *)
-(* which is just `cat_take_drop` + `nth_drop`.                                 *)
-(* We state and prove the theorem for the fuel version with enough fuel.       *)
-
+(** [mmtree_of_seq_fuel_correct] : the fuel-bounded construction round-trips
+    in-order, i.e. [mmtree_to_seq] inverts [mmtree_of_seq_fuel] when fuel
+    bounds the sequence size. *)
 Lemma mmtree_of_seq_fuel_correct :
   forall fuel s, size s <= fuel ->
     mmtree_to_seq (mmtree_of_seq_fuel fuel s) = s.
@@ -124,6 +129,8 @@ congr (_ ++ _).
 by rewrite (drop_nth 0 Hj).
 Qed.
 
+(** [mmtree_of_seqK] is the M1 round-trip theorem: in-order traversal
+    inverts [mmtree_of_seq] for every input sequence. *)
 Theorem mmtree_of_seqK : forall s, mmtree_to_seq (mmtree_of_seq s) = s.
 Proof.
 move=> s; rewrite /mmtree_of_seq; apply: mmtree_of_seq_fuel_correct.
@@ -133,9 +140,12 @@ Qed.
 (* --- Non-triviality example (docs/internal/AXIOMS_TODO.md §5, item 1 & §4 constraint) ---- *)
 (* Concrete sequence from the brief.                                           *)
 
+(** [ex_seq] is the concrete test sequence used to demonstrate that the
+    construction yields a genuinely branching tree. *)
 Definition ex_seq := [:: 3; 1; 4; 1; 5; 9; 2; 6].
 
-(* The tree is genuinely branching: not a Leaf, and its root has two subtrees. *)
+(** [ex_nontrivial] checks that [mmtree_of_seq ex_seq] is genuinely
+    branching (not a leaf and not a chain). *)
 Example ex_nontrivial :
   match mmtree_of_seq ex_seq with
   | Leaf => false
@@ -145,12 +155,13 @@ Example ex_nontrivial :
   end = true.
 Proof. by []. Qed.
 
-(* Round-trip on the concrete example.                                         *)
+(** [ex_roundtrip] is the round-trip [mmtree_of_seqK] applied to [ex_seq]. *)
 Example ex_roundtrip :
   mmtree_to_seq (mmtree_of_seq ex_seq) = ex_seq.
 Proof. exact: mmtree_of_seqK. Qed.
 
-(* Boolean evaluation of the round-trip, verifying `Compute` reduction works.  *)
+(** [ex_roundtrip_compute] is the boolean version of [ex_roundtrip],
+    verifying that [Compute] reduces the round-trip to [true]. *)
 Example ex_roundtrip_compute :
   (mmtree_to_seq (mmtree_of_seq ex_seq) == ex_seq) = true.
 Proof. by []. Qed.

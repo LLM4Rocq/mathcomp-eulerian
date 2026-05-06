@@ -23,6 +23,9 @@ Unset Printing Implicit Defensive.
 
 (* ===== Tree shape definition ============================================ *)
 
+(** [mmtree_shape_fuel fuel s] is the fuel-bounded shape encoding of the
+    min-max tree of [s]: head = [mm_pos s], tail = shape of left subtree
+    concatenated with shape of right subtree. *)
 Fixpoint mmtree_shape_fuel (fuel : nat) (s : seq nat) : seq nat :=
   match fuel with
   | 0 => [::]
@@ -39,11 +42,15 @@ Fixpoint mmtree_shape_fuel (fuel : nat) (s : seq nat) : seq nat :=
 
 Arguments mmtree_shape_fuel : simpl never.
 
+(** [mmtree_shape s] is the canonical shape encoding of the min-max tree of
+    [s], obtained by saturating the fuel at [size s].  Two sequences with
+    equal shape have isomorphic min-max trees. *)
 Definition mmtree_shape (s : seq nat) : seq nat :=
   mmtree_shape_fuel (size s) s.
 
 (* ===== Structural lemmas ================================================ *)
 
+(** [mmtree_shape_fuel] is independent of the fuel once it is large enough. *)
 Lemma mmtree_shape_fuel_monotone fuel1 fuel2 s :
   size s <= fuel1 -> fuel1 <= fuel2 ->
   mmtree_shape_fuel fuel2 s = mmtree_shape_fuel fuel1 s.
@@ -67,9 +74,12 @@ have Hdrop_sz : size (drop j.+1 s) <= f1.
 by rewrite (IH f2 _ Htake_sz Hle) (IH f2 _ Hdrop_sz Hle).
 Qed.
 
+(** Shape of the empty sequence is empty. *)
 Lemma mmtree_shape_nil : mmtree_shape [::] = [::].
 Proof. by rewrite /mmtree_shape /mmtree_shape_fuel. Qed.
 
+(** Cons unfolding: shape of [a :: s0] = [mm_pos] then shapes of left and
+    right subtrees, mirroring the tree-construction recursion. *)
 Lemma mmtree_shape_cons a s0 :
   let s := a :: s0 in
   let j := mm_pos s in
@@ -92,6 +102,7 @@ Qed.
 (* peak memory bounded.                                                    *)
 Opaque mmtree_shape_fuel mmtree_shape.
 
+(** Shape encoding has the same length as the underlying sequence. *)
 Lemma size_mmtree_shape : forall s, size (mmtree_shape s) = size s.
 Proof.
 suff H : forall n s, size s <= n -> size (mmtree_shape s) = size s.
@@ -117,6 +128,9 @@ Qed.
 
 (* ===== Order-iso preservation (the ONE heavy proof, ~0.6 GB peak) ======= *)
 
+(** Headline structural lemma: order-isomorphic sequences (same size, both
+    uniq, same comparison pattern) produce the same tree shape.  This is the
+    single heavy proof underlying the per-property invariance lemmas below. *)
 Lemma mmtree_shape_order_iso (s1 s2 : seq nat) :
   size s1 = size s2 -> uniq s1 -> uniq s2 ->
   (forall p q, p < size s1 -> q < size s1 ->
@@ -171,6 +185,7 @@ Opaque mmtree_shape_order_iso.
 
 (* ===== Decomposition: same shape ⇒ same root + same subtree shapes ====== *)
 
+(** Left-cancellation for [++] when prefixes have equal size. *)
 Lemma seq_cat_left_eq (T : eqType) (s1 s2 t1 t2 : seq T) :
   size s1 = size t1 -> s1 ++ s2 = t1 ++ t2 -> s1 = t1.
 Proof.
@@ -181,6 +196,7 @@ rewrite take_size_cat // in Htake.
 by rewrite Htake Hsz take_size_cat.
 Qed.
 
+(** Right-cancellation for [++] when prefixes have equal size. *)
 Lemma seq_cat_right_eq (T : eqType) (s1 s2 t1 t2 : seq T) :
   size s1 = size t1 -> s1 ++ s2 = t1 ++ t2 -> s2 = t2.
 Proof.
@@ -191,6 +207,8 @@ rewrite drop_size_cat // in Hdrop.
 by rewrite Hdrop Hsz drop_size_cat.
 Qed.
 
+(** Inverse of [mmtree_shape_cons]: equal shapes split into equal roots and
+    equal subtree shapes, providing a structural recursion principle. *)
 Lemma mmtree_shape_decompose s1 s2 :
   size s1 = size s2 ->
   s1 <> [::] ->
@@ -221,6 +239,8 @@ Qed.
 
 (* ===== Property invariance under shape equality ========================= *)
 
+(** [has_left_child] depends only on the tree shape: equal shapes give equal
+    [has_left_child] at every index. *)
 Lemma has_left_child_of_shape : forall (s1 s2 : seq nat) i,
   size s1 = size s2 ->
   mmtree_shape s1 = mmtree_shape s2 ->
@@ -267,6 +287,7 @@ case: (ltngtP i m) => Him.
   by [].
 Qed.
 
+(** [window_size] depends only on the tree shape. *)
 Lemma window_size_of_shape : forall (s1 s2 : seq nat) i,
   size s1 = size s2 ->
   mmtree_shape s1 = mmtree_shape s2 ->
@@ -318,6 +339,9 @@ Opaque has_left_child_of_shape window_size_of_shape.
 (* ===== Compatibility wrapper: order-iso ⇒ has_left_child equality ====== *)
 (* Used by perm_seq_bridge.v and psi_cdindex_witness.v under this name.    *)
 
+(** Compatibility wrapper used downstream: order-isomorphic uniq sequences
+    give equal [has_left_child] at every index.  Composes
+    [has_left_child_of_shape] with [mmtree_shape_order_iso]. *)
 Lemma has_left_child_order_iso (s1 s2 : seq nat) i :
   size s1 = size s2 -> uniq s1 -> uniq s2 ->
   (forall p q, p < size s1 -> q < size s1 ->
@@ -337,6 +361,9 @@ Opaque has_left_child_order_iso.
 (* on (j vs m), with non-root cases using take_mm_psi/drop_mm_psi and the  *)
 (* root case (j = m) using mmtree_shape_order_iso for the rotated tail.   *)
 
+(** Heavy lemma: applying [psi j] does not change the tree shape (for uniq
+    [w]).  Proved by case-splitting on [j] vs [m = mm_pos w] and reducing
+    the root case to [mmtree_shape_order_iso] on the rotated tail. *)
 Lemma mmtree_shape_psi : forall (j : nat) (w : seq nat), uniq w ->
   mmtree_shape (psi j w) = mmtree_shape w.
 Proof.
@@ -453,6 +480,8 @@ Opaque mmtree_shape_psi.
 
 (* ===== The 5-line corollary the refactor was for ======================= *)
 
+(** Headline corollary: [psi j] preserves [has_left_child].  Five-line
+    proof composing [has_left_child_of_shape] with [mmtree_shape_psi]. *)
 Lemma has_left_child_psi j i w :
   uniq w -> has_left_child i (psi j w) = has_left_child i w.
 Proof.

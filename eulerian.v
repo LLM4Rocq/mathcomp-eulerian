@@ -10,7 +10,8 @@ Unset Printing Implicit Defensive.
 (* Eulerian numbers                                                          *)
 (* ========================================================================= *)
 
-(* eulerian n k = number of permutations of 'I_n.+1 with exactly k descents. *)
+(** [eulerian n k] is the Eulerian number [A(n+1, k)]: the number of permutations
+    of ['I_n.+1] with exactly [k] descents. Stanley's [A(n+1, k)] (Stanley EC1, S1.4). *)
 Definition eulerian (n k : nat) : nat :=
   #|[set s : {perm 'I_n.+1} | des s == k]|.
 
@@ -20,6 +21,8 @@ Definition eulerian (n k : nat) : nat :=
 
 Section EulerianBasic.
 
+(** Row sum: summing [eulerian n k] over [k <= n] gives the cardinality of
+    [{perm 'I_n.+1}]. Partition of permutations by descent count. *)
 Lemma eulerian_row_sum n : \sum_(k < n.+1) eulerian n k = #|{perm 'I_n.+1}|.
 Proof.
 rewrite /eulerian -sum1_card.
@@ -28,9 +31,12 @@ apply: eq_bigr => k _; rewrite -sum1_card; apply: eq_bigl => s; rewrite inE.
 by rewrite -val_eqE /= inordK // ltnS des_le.
 Qed.
 
+(** Row sum equals [(n+1)!]: combines [eulerian_row_sum] with [|S_{n+1}| = (n+1)!]. *)
 Lemma eulerian_row_sum_fact n : \sum_(k < n.+1) eulerian n k = n.+1`!.
 Proof. by rewrite eulerian_row_sum card_Sn. Qed.
 
+(** Out-of-range vanishing: [eulerian n k = 0] when [k > n], since no permutation
+    has more than [n] descents. *)
 Lemma eulerian_out_of_range n k : n < k -> eulerian n k = 0.
 Proof.
 move=> nk; apply/eqP; rewrite cards_eq0; apply/eqP/setP => s.
@@ -38,6 +44,7 @@ rewrite !inE; apply/negbTE; rewrite neq_ltn.
 by rewrite (leq_ltn_trans (des_le s) nk).
 Qed.
 
+(** Only the identity has zero descents. Used to prove [eulerian n 0 = 1]. *)
 Lemma des0_id n (s : {perm 'I_n.+1}) : des s = 0 -> s = 1%g.
 Proof.
 move=> Hds.
@@ -67,6 +74,7 @@ move/eqP: Hsum; rewrite (bigD1 i) //= addn_eq0 subn_eq0 => /andP[/eqP Hi _].
 by apply/eqP; rewrite eqn_leq Hle /= -subn_eq0 Hi.
 Qed.
 
+(** Boundary value: [eulerian n 0 = 1], counting only the identity. *)
 Lemma eulerian_n_0 n : eulerian n 0 = 1.
 Proof.
 rewrite /eulerian -(cards1 (1%g : {perm 'I_n.+1})); apply: eq_card => s.
@@ -79,12 +87,16 @@ End EulerianBasic.
 (* Symmetry: eulerian n k = eulerian n (n - k)                               *)
 (* ========================================================================= *)
 
+(** Reversal is injective on permutations (left cancellation by [rev_perm_ord]). *)
 Lemma rev_perm_inj n : injective (@rev_perm n).
 Proof. by move=> s1 s2; rewrite /rev_perm; exact: mulgI. Qed.
 
+(** Reversal is an involution: [rev_perm (rev_perm s) = s]. *)
 Lemma rev_perm_involutive n : involutive (@rev_perm n).
 Proof. by move=> s; apply/permP => j; rewrite !rev_permE rev_ordK. Qed.
 
+(** Symmetry of Eulerian numbers: [A(n+1, k) = A(n+1, n-k)] (Stanley EC1, S1.4).
+    Proved via the reversal involution on [{perm 'I_n.+1}]. *)
 Lemma eulerian_symm n k : k <= n -> eulerian n k = eulerian n (n - k).
 Proof.
 move=> kn; rewrite /eulerian.
@@ -96,6 +108,7 @@ apply/imsetP/idP.
   by rewrite inE des_rev_perm Hs subKn.
 Qed.
 
+(** Boundary value: [eulerian n n = 1], counting only the reversal permutation. *)
 Lemma eulerian_n_n n : eulerian n n = 1.
 Proof. by rewrite (eulerian_symm (leqnn n)) subnn eulerian_n_0. Qed.
 
@@ -115,9 +128,11 @@ Proof. by rewrite (eulerian_symm (leqnn n)) subnn eulerian_n_0. Qed.
 (* Helpers on widen_ord (leqnSn n.+1) : 'I_n.+1 -> 'I_n.+2                   *)
 (* ------------------------------------------------------------------------- *)
 
+(** [widen_ord (leqnSn n.+1) : 'I_n.+1 -> 'I_n.+2] is injective. *)
 Lemma widenSn_inj n : injective (widen_ord (leqnSn n.+1)).
 Proof. by move=> i1 i2 H; apply/val_inj; exact: (congr1 val H). Qed.
 
+(** Widening from ['I_n.+1] to ['I_n.+2] never reaches [ord_max]. *)
 Lemma widenSn_neq_ord_max n (j : 'I_n.+1) :
   widen_ord (leqnSn n.+1) j != (ord_max : 'I_n.+2).
 Proof.
@@ -131,19 +146,24 @@ Qed.
 Section InsertMax.
 Variables (n : nat) (t : {perm 'I_n.+1}) (p : 'I_n.+2).
 
+(** Underlying function of [insert_max_perm t p]: sends [p] to [ord_max] and
+    elsewhere lifts [t] via [widen_ord]. *)
 Definition insert_max_fun (i : 'I_n.+2) : 'I_n.+2 :=
   match unlift p i with
   | Some j => widen_ord (leqnSn _) (t j)
   | None => ord_max
   end.
 
+(** [insert_max_fun] sends position [p] to [ord_max]. *)
 Lemma insert_max_fun_p : insert_max_fun p = ord_max.
 Proof. by rewrite /insert_max_fun unlift_none. Qed.
 
+(** [insert_max_fun] on lifted positions widens [t]. *)
 Lemma insert_max_fun_lift (j : 'I_n.+1) :
   insert_max_fun (lift p j) = widen_ord (leqnSn _) (t j).
 Proof. by rewrite /insert_max_fun liftK. Qed.
 
+(** [insert_max_fun] is injective: combine injectivity of [widen] and [t]. *)
 Lemma insert_max_fun_inj : injective insert_max_fun.
 Proof.
 move=> i1 i2; rewrite /insert_max_fun.
@@ -154,14 +174,20 @@ case: (unliftP p i1) => [j1 ->|->]; case: (unliftP p i2) => [j2 ->|->].
 - by [].
 Qed.
 
+(** [insert_max_perm t p] is the permutation of ['I_n.+2] obtained from
+    [t : {perm 'I_n.+1}] by inserting the value [ord_max] at position [p].
+    Underlies the bijection [{perm 'I_n.+2} ~= {perm 'I_n.+1} x 'I_n.+2]. *)
 Definition insert_max_perm : {perm 'I_n.+2} := perm insert_max_fun_inj.
 
+(** Equivalence with the underlying [insert_max_fun] for rewriting. *)
 Lemma insert_max_permE i : insert_max_perm i = insert_max_fun i.
 Proof. by rewrite permE. Qed.
 
+(** [insert_max_perm t p] sends [p] to [ord_max], the inserted maximum value. *)
 Lemma insert_max_perm_at_p : insert_max_perm p = ord_max.
 Proof. by rewrite insert_max_permE insert_max_fun_p. Qed.
 
+(** [insert_max_perm t p] on lifted positions widens [t]. *)
 Lemma insert_max_perm_lift (j : 'I_n.+1) :
   insert_max_perm (lift p j) = widen_ord (leqnSn _) (t j).
 Proof. by rewrite insert_max_permE insert_max_fun_lift. Qed.
@@ -176,15 +202,19 @@ Section ExtractMax.
 Variables (n : nat) (s : {perm 'I_n.+2}) (p : 'I_n.+2).
 Hypothesis (sp : s p = ord_max).
 
+(** Off-position values of [s] avoid [ord_max] when [s p = ord_max], by injectivity. *)
 Fact extract_max_ne (j : 'I_n.+1) : s (lift p j) != (ord_max : 'I_n.+2).
 Proof.
 rewrite -sp; apply/eqP => /perm_inj /eqP.
 by rewrite eq_sym (negbTE (neq_lift _ _)).
 Qed.
 
+(** Underlying function of [extract_max_perm]: removes the value [ord_max]
+    (located at position [p]) and reindexes the remaining values onto ['I_n.+1]. *)
 Definition extract_max_fun (j : 'I_n.+1) : 'I_n.+1 :=
   odflt j (unlift ord_max (s (lift p j))).
 
+(** Defining equation: widening [extract_max_fun j] recovers [s (lift p j)]. *)
 Lemma extract_max_funE (j : 'I_n.+1) :
   widen_ord (leqnSn n.+1) (extract_max_fun j) = s (lift p j).
 Proof.
@@ -194,17 +224,22 @@ case: (unliftP ord_max (s (lift p j))) => [k ->|H] /=.
 - by move: (extract_max_ne j); rewrite H eqxx.
 Qed.
 
+(** [extract_max_fun] is injective. *)
 Lemma extract_max_fun_inj : injective extract_max_fun.
 Proof.
 move=> j1 j2 /(congr1 (widen_ord (leqnSn n.+1))).
 rewrite !extract_max_funE => /perm_inj /lift_inj //.
 Qed.
 
+(** [extract_max_perm sp] is the permutation of ['I_n.+1] obtained from
+    [s : {perm 'I_n.+2}] (with [s p = ord_max]) by deleting the value [ord_max]. *)
 Definition extract_max_perm : {perm 'I_n.+1} := perm extract_max_fun_inj.
 
+(** Equivalence with the underlying [extract_max_fun] for rewriting. *)
 Lemma extract_max_permE j : extract_max_perm j = extract_max_fun j.
 Proof. by rewrite permE. Qed.
 
+(** Defining equation: widening [extract_max_perm j] recovers [s (lift p j)]. *)
 Lemma extract_max_widen (j : 'I_n.+1) :
   widen_ord (leqnSn n.+1) (extract_max_perm j) = s (lift p j).
 Proof. by rewrite extract_max_permE extract_max_funE. Qed.
@@ -218,6 +253,7 @@ End ExtractMax.
 Section InsertExtractBij.
 Variable n : nat.
 
+(** Left inverse: extracting the max from a freshly inserted permutation recovers [t]. *)
 Lemma extract_insert_max (t : {perm 'I_n.+1}) (p : 'I_n.+2) :
   extract_max_perm (insert_max_perm_at_p t p) = t.
 Proof.
@@ -225,6 +261,7 @@ apply/permP => j; apply: (@widenSn_inj n).
 by rewrite (extract_max_widen (insert_max_perm_at_p _ _)) insert_max_perm_lift.
 Qed.
 
+(** Right inverse: inserting the extracted max back at position [p] recovers [s]. *)
 Lemma insert_extract_max (s : {perm 'I_n.+2}) (p : 'I_n.+2)
     (sp : s p = ord_max) :
   insert_max_perm (extract_max_perm sp) p = s.
@@ -243,6 +280,8 @@ End InsertExtractBij.
 Section DesInsertMax.
 Variables (n : nat) (t : {perm 'I_n.+1}).
 
+(** Inserting [ord_max] at position [0] adds exactly one descent (a fresh
+    descent is created at position [0] from the new max value). *)
 Lemma des_insert_max_ord0 :
   des (insert_max_perm t ord0) = (des t).+1.
 Proof.
@@ -270,6 +309,8 @@ case: (unliftP ord0 i) => [j ->|->].
   by rewrite insert_max_perm_at_p insert_max_perm_lift /=; apply: ltn_ord.
 Qed.
 
+(** Inserting [ord_max] at position [ord_max] (the rightmost position) does not
+    change the descent count. *)
 Lemma des_insert_max_ord_max :
   des (insert_max_perm t (ord_max : 'I_n.+2)) = des t.
 Proof.
@@ -310,6 +351,8 @@ case: (unliftP ord_max i) => [j ->|->].
     by move: (ltn_ord j); rewrite -eqn ltnn.
 Qed.
 
+(** Inserting [ord_max] at an interior position above [j] adds a descent iff [j]
+    was an ascent in [t]. Key combinatorial lemma for the Eulerian recurrence. *)
 Lemma des_insert_max_interior (j : 'I_n) :
   des (insert_max_perm t (lift ord0 (widen_ord (leqnSn n) j))) =
     des t + ~~ is_descent t j.
@@ -374,6 +417,8 @@ End DesInsertMax.
 (* Bijection on fibers: {σ : σ^{-1} ord_max = p} ≃ {perm 'I_n.+1}           *)
 (* ------------------------------------------------------------------------- *)
 
+(** The inverse of [insert_max_perm t p] sends [ord_max] back to [p]:
+    identifies the fiber of position-of-max under insertion. *)
 Lemma insert_max_perm_fiber n (p : 'I_n.+2) (t : {perm 'I_n.+1}) :
   ((insert_max_perm t p)^-1)%g ord_max = p.
 Proof.
@@ -381,6 +426,7 @@ apply: (@perm_inj _ (insert_max_perm t p)).
 by rewrite permKV insert_max_perm_at_p.
 Qed.
 
+(** The pairing map [(t, p) |-> insert_max_perm t p] is injective. *)
 Lemma insert_max_perm_pair_inj n :
   injective (fun tp : {perm 'I_n.+1} * 'I_n.+2 => insert_max_perm tp.1 tp.2).
 Proof.
@@ -393,6 +439,8 @@ have := congr1 (fun s : {perm 'I_n.+2} => s (lift p2 i)) E.
 by rewrite !insert_max_perm_lift.
 Qed.
 
+(** The pairing map [(t, p) |-> insert_max_perm t p] is surjective: every
+    permutation of ['I_n.+2] arises by inserting the max at some position. *)
 Lemma insert_max_perm_pair_surj n (s : {perm 'I_n.+2}) :
   exists tp : {perm 'I_n.+1} * 'I_n.+2, s = insert_max_perm tp.1 tp.2.
 Proof.
@@ -406,6 +454,7 @@ Qed.
 (* Cardinality of descent / ascent sets                                      *)
 (* ------------------------------------------------------------------------- *)
 
+(** The descent count [des t] equals the sum of descent indicators over positions. *)
 Lemma sum_descent n (t : {perm 'I_n.+1}) :
   \sum_(j : 'I_n) is_descent t j = des t.
 Proof.
@@ -413,6 +462,7 @@ rewrite /des /descent_set -sum1dep_card [RHS]big_mkcond /=.
 by apply: eq_bigr => j _; case: (is_descent t j).
 Qed.
 
+(** The ascent count [n - des t] equals the sum of ascent indicators over positions. *)
 Lemma sum_ascent n (t : {perm 'I_n.+1}) :
   \sum_(j : 'I_n) ~~ is_descent t j = n - des t.
 Proof.
@@ -426,6 +476,8 @@ Qed.
 (* Main recurrence                                                           *)
 (* ------------------------------------------------------------------------- *)
 
+(** Proof-irrelevant variant of [extract_insert_max], threading any equality proof
+    [insert_max_perm t p p = ord_max] rather than the canonical one. *)
 Lemma extract_insert_maxPI n (t : {perm 'I_n.+1}) (p : 'I_n.+2)
   (sp : insert_max_perm t p p = ord_max) :
   extract_max_perm sp = t.
@@ -434,6 +486,8 @@ apply/permP => j; apply: (@widenSn_inj n).
 by rewrite extract_max_widen insert_max_perm_lift.
 Qed.
 
+(** The pairing map [(t, p) |-> insert_max_perm t p] is a bijection
+    [{perm 'I_n.+1} x 'I_n.+2] ~= [{perm 'I_n.+2}]. Foundation of the recurrence. *)
 Lemma insert_max_perm_bij n :
   bijective (fun tp : {perm 'I_n.+1} * 'I_n.+2 => insert_max_perm tp.1 tp.2).
 Proof.
@@ -455,6 +509,9 @@ Qed.
 (* Main recurrence                                                            *)
 (* ------------------------------------------------------------------------- *)
 
+(** Eulerian recurrence (Stanley EC1, S1.4):
+    [A(n+2, k+1) = (k+2) A(n+1, k+1) + (n+1-k) A(n+1, k)].
+    Proved via the insert-max bijection. *)
 Lemma eulerian_rec n k :
   eulerian n.+1 k.+1 = k.+2 * eulerian n k.+1 + (n.+1 - k) * eulerian n k.
 Proof.
@@ -496,8 +553,8 @@ Qed.
 (*   x^(n+1) = \sum_(k < n+1) eulerian n k * C(x+k, n+1)                      *)
 (* ========================================================================= *)
 
-(* Key algebraic identity (valid for k <= n): *)
-(*   x * C(x+k, n+1) = (k+1) * C(x+k, n+2) + (n+1-k) * C(x+k+1, n+2)         *)
+(** Key algebraic identity for Worpitzky's induction step (valid for [k <= n]):
+    [x * C(x+k, n+1) = (k+1) C(x+k, n+2) + (n+1-k) C(x+k+1, n+2)]. *)
 Lemma worpitzky_binom_id x k n : k <= n ->
   x * 'C(x + k, n.+1) =
     k.+1 * 'C(x + k, n.+2) + (n.+1 - k) * 'C(x + k.+1, n.+2).
@@ -512,6 +569,9 @@ case: (leqP n.+1 (x + k)) => h.
 - by rewrite !bin_small ?muln0 //; exact: (leq_trans h (leqnSn _)).
 Qed.
 
+(** Worpitzky's identity (Stanley EC1, S1.4):
+    [x^(n+1) = sum_(k < n+1) A(n+1, k) * C(x+k, n+1)].
+    Proved by induction on [n] using [eulerian_rec] and [worpitzky_binom_id]. *)
 Lemma worpitzky n x :
   x ^ n.+1 = \sum_(k < n.+1) eulerian n k * 'C(x + k, n.+1).
 Proof.
@@ -548,12 +608,13 @@ Local Open Scope ring_scope.
 (* Alternating binomial convolution identity.                                *)
 (* \sum_j (-1)^j C(n+2, j) C(t-j, n+1) = [t == n+1]                          *)
 
-(* Signed Pascal extension: works uniformly even when subtraction saturates. *)
+(** Signed Pascal extension: a saturated-arithmetic-friendly form of Pascal's
+    rule, valid for all [t] (including [t = 0], where [t.-1 = 0]). *)
 Lemma binS' t n : 'C(t, n.+2) = 'C(t.-1, n.+2) + 'C(t.-1, n.+1).
 Proof. by case: t => [|t]//=; rewrite binS. Qed.
 
-(* Key recurrence for the alternating sum: g(N+1, u) = g(N, u.-1).           *)
-(* Proved via Pascal applied to both binomial factors plus reindex.          *)
+(** Key recurrence for the alternating binomial sum: [g(N+1, u) = g(N, u.-1)].
+    Proved via Pascal applied to both binomial factors plus a reindex. *)
 Lemma aux_id_step (N u : nat) :
   \sum_(j < N.+4) (-1 : int) ^ j *+ 'C(N.+3, j) *+ 'C(u - j, N.+2) =
   \sum_(j < N.+3) (-1 : int) ^ j *+ 'C(N.+2, j) *+ 'C(u.-1 - j, N.+1).
@@ -578,6 +639,9 @@ have aux v : ((v - i).-1 = v.-1 - i)%N by case: v => [|v']//=; rewrite -subnS.
 by rewrite (binS' (u - i) N) (aux u) mulrnDr addrAC subrr add0r.
 Qed.
 
+(** Alternating binomial convolution identity:
+    [sum_j (-1)^j C(n+2, j) C(t-j, n+1) = [t == n+1]].
+    Used in the inversion step of [eulerian_explicit]. *)
 Lemma aux_id (n t : nat) :
   \sum_(j < n.+3) (-1) ^ j *+ 'C(n.+2, j) *+ 'C(t - j, n.+1) =
   (t == n.+1)%:Z.
@@ -617,6 +681,9 @@ Qed.
 (*     = eulerian n (n-k)%:Z                                                  *)
 (*     = eulerian n k       [eulerian_symm].                                  *)
 
+(** Eulerian explicit formula (Stanley EC1, S1.4):
+    [A(n+1, k) = sum_(j <= k) (-1)^j C(n+2, j) (k+1-j)^(n+1)].
+    Proved by Worpitzky inversion against [aux_id]. *)
 Lemma eulerian_explicit n k :
   (eulerian n k)%:Z =
     \sum_(j < k.+1) (-1) ^ j *+ 'C(n.+2, j) *+ (k.+1 - j) ^ n.+1.

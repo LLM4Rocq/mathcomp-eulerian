@@ -10,10 +10,13 @@ Unset Printing Implicit Defensive.
 
 (* ===== M4.8 Helpers for main descent-effect theorems ====================== *)
 
+(** [window_at_uniq] : uniqueness propagates from [w] to [window_at i w]. *)
 Lemma window_at_uniq i w :
   uniq w -> uniq (window_at i w).
 Proof. by move=> Hu; rewrite /window_at take_uniq // drop_uniq. Qed.
 
+(** [size_window_at] : in-range, [size (window_at i w) = window_size i w];
+    the slice fits exactly. *)
 Lemma size_window_at i w :
   i < size w -> size (window_at i w) = window_size i w.
 Proof.
@@ -23,7 +26,8 @@ case: ltnP => // Hge.
 by apply/eqP; rewrite eqn_leq Hge window_size_bound.
 Qed.
 
-(* nth in window_at = nth in w, offset by i. *)
+(** [nth_window_at] : indexing into [window_at i w] is offset by [i]
+    relative to indexing into [w]. *)
 Lemma nth_window_at i w j :
   i < size w -> j < window_size i w ->
   nth 0 (window_at i w) j = nth 0 w (i + j).
@@ -33,7 +37,8 @@ by rewrite /window_at (nth_take _ Hj) nth_drop
    addnC.
 Qed.
 
-(* Element of L is between min(sort L) and max(sort L). *)
+(** [elem_in_range] : every entry of [L] is bounded between the sorted
+    extremes of [L].  Tag-along helper for [cmp_out_of_range]. *)
 Lemma elem_in_range (L : seq nat) (j : nat) :
   j < size L ->
   nth 0 (sort leq L) 0 <= nth 0 L j /\
@@ -70,7 +75,9 @@ split.
     by move=> H; rewrite -ltnS (prednK Hpos).
 Qed.
 
-(* When head of window is min, not a descent at i. *)
+(** [head_min_not_descent] : if the window head is the window-min, then
+    [i] is not a descent of [w].  Connects head-extremum to descent
+    polarity. *)
 Lemma head_min_not_descent i w :
   uniq w -> 1 < window_size i w ->
   head 0 (window_at i w) =
@@ -92,7 +99,8 @@ by have [] := elem_in_range (j:=1) HszL1.
 Qed.
 #[global] Opaque head_min_not_descent.
 
-(* When head of window is max, descent at i. *)
+(** [head_max_is_descent] : dual of [head_min_not_descent] -- if the
+    window head is the window-max, then [i] is a descent of [w]. *)
 Lemma head_max_is_descent i w :
   uniq w -> 1 < window_size i w ->
   head 0 (window_at i w) =
@@ -133,7 +141,9 @@ by rewrite ltn_predL ltnW.
 Qed.
 #[global] Opaque head_max_is_descent.
 
-(* Element of rank_shift_seq L is between min and max of sorted L. *)
+(** [elem_rs_in_range] : every entry of [rank_shift_seq L] is bounded
+    between the sorted extremes of [L]; rank-shift counterpart of
+    [elem_in_range]. *)
 Lemma elem_rs_in_range (L : seq nat) (j : nat) :
   j < size L ->
   nth 0 (sort leq L) 0 <=
@@ -182,7 +192,9 @@ split.
 Qed.
 #[global] Opaque elem_in_range elem_rs_in_range.
 
-(* When new head = max, descent at position 0 in rank_shift_seq. *)
+(** [rs_head_max_descent] : after the rank-shift sends the head to the
+    max, position [0] becomes a descent.  Used in the [psi_R_add] and
+    [psi_LR_swap1] cases of the descent-effect theorems. *)
 Lemma rs_head_max_descent (L : seq nat) :
   uniq L -> 1 < size L ->
   head 0 L = nth 0 (sort leq L) 0 ->
@@ -212,7 +224,8 @@ exact: Hne.
 Qed.
 #[global] Opaque rs_head_max_descent.
 
-(* When new head = min, no descent at position 0 in rank_shift_seq. *)
+(** [rs_head_min_no_descent] : dual of [rs_head_max_descent] -- after
+    rank-shift sends head to min, position [0] is no longer a descent. *)
 Lemma rs_head_min_no_descent (L : seq nat) :
   uniq L -> 1 < size L ->
   head 0 L = nth 0 (sort leq L) (size L).-1 ->
@@ -242,8 +255,9 @@ by rewrite eq_sym.
 Qed.
 #[global] Opaque rs_head_min_no_descent.
 
-(* Comparison with an out-of-range value is the same for any
-   element of L or rank_shift_seq L. *)
+(** [cmp_out_of_range] : when [v] lies outside the sorted range of [L],
+    the comparison [nth L j > v] is invariant under replacing [L] by
+    [rank_shift_seq L].  Used at right-boundary descent positions. *)
 Lemma cmp_out_of_range (L : seq nat) (v : nat)
     (j j' : nat) :
   j < size L -> j' < size L ->
@@ -266,7 +280,8 @@ move=> Hj Hj' [Hlt | Hgt].
   by rewrite (negbTE F1) (negbTE F2).
 Qed.
 
-(* Version with v on the left: (v > elem_L) = (v > elem_rs). *)
+(** [cmp_out_of_range_left] : the [cmp_out_of_range] variant with [v]
+    on the left of [>]; used at the left boundary [i-1]. *)
 Lemma cmp_out_of_range_left (L : seq nat) (v : nat)
     (j j' : nat) :
   j < size L -> j' < size L ->
@@ -304,6 +319,9 @@ Qed.
 (* all four descent-effect lemmas. Extracting them avoids quadrupling the     *)
 (* proof term and cuts ~60 GB peak memory to ~15-20 GB.                      *)
 
+(** [descent_psi_interior] : at strictly interior window positions [k],
+    [psi i] preserves the descent value (interior order is preserved by
+    rank-shift). *)
 Lemma descent_psi_interior i w k :
   uniq w -> 1 < window_size i w ->
   i < k -> k.+1 < i + window_size i w ->
@@ -348,6 +366,9 @@ rewrite -Hrio; congr (_ < _).
 Qed.
 #[global] Opaque descent_psi_interior.
 
+(** [descent_psi_rboundary] : at the right boundary [k = i + ws - 1],
+    [psi i] preserves the descent value, by [post_window_extremum] +
+    [cmp_out_of_range]. *)
 Lemma descent_psi_rboundary i w k :
   uniq w -> 1 < window_size i w ->
   i < k -> k.+1 = i + window_size i w ->
@@ -391,6 +412,9 @@ Qed.
 (* Left boundary helper for the R (no left child) case: the comparison
    at position i-1 is preserved by rank_shift because i-1 is outside
    the window and the window extremum separates it from all window values. *)
+(** [descent_psi_lboundary_R] : at the left boundary [i-1], for an R
+    vertex, [psi i] preserves the descent value.  Uses
+    [pre_window_extremum_R] + [cmp_out_of_range_left]. *)
 Lemma descent_psi_lboundary_R i w :
   uniq w -> 1 < window_size i w -> ~~ has_left_child i w ->
   0 < i ->
@@ -420,7 +444,9 @@ by rewrite (nth_window_at Hiw (ltnW Hws)) addn0.
 Qed.
 #[global] Opaque descent_psi_lboundary_R.
 
-(* Case R (right-child only), i not a descent: D(psi_i w) = D(w) u {i}. *)
+(** [descent_psi_R_add] : R-vertex case where [i] is not a descent --
+    applying [psi i] adds [i] to the descent set, leaving all other
+    positions unchanged.  Half of Stanley's Fact #2 (R case). *)
 Lemma descent_psi_R_add i w :
   uniq w -> 1 < window_size i w -> ~~ has_left_child i w ->
   ~~ is_descent_seq w i ->
@@ -470,7 +496,9 @@ case: (ltnP k i) => [Hk_lt_i | Hk_ge_i].
 Qed.
 #[global] Opaque descent_psi_R_add.
 
-(* Case R, i is a descent: D(psi_i w) = D(w) \ {i}. *)
+(** [descent_psi_R_remove] : R-vertex case where [i] is a descent --
+    applying [psi i] removes [i] from the descent set.  Other half of
+    Stanley's Fact #2 (R case). *)
 Lemma descent_psi_R_remove i w :
   uniq w -> 1 < window_size i w -> ~~ has_left_child i w ->
   is_descent_seq w i ->
@@ -520,7 +548,9 @@ case: (ltnP k i) => [Hk_lt_i | Hk_ge_i].
 Qed.
 #[global] Opaque descent_psi_R_remove.
 
-(* Case LR, i not a descent (so i-1 is): D(psi_i w) = (D(w) u {i}) \ {i-1}. *)
+(** [descent_psi_LR_swap1] : LR-vertex case where [i] is not a descent
+    (hence [i-1] is) -- applying [psi i] swaps the descent from [i-1]
+    to [i].  Stanley's Fact #2 (LR case, swap1). *)
 Lemma descent_psi_LR_swap1 i w :
   uniq w -> 1 < window_size i w -> has_left_child i w ->
   ~~ is_descent_seq w i ->
@@ -587,7 +617,9 @@ case: (ltnP k i) => [Hk_lt_i | Hk_ge_i].
 Qed.
 #[global] Opaque descent_psi_LR_swap1.
 
-(* Case LR, i is a descent (so i-1 is not): D(psi_i w) = (D(w) u {i-1}) \ {i}. *)
+(** [descent_psi_LR_swap2] : LR-vertex case where [i] is a descent
+    (hence [i-1] is not) -- applying [psi i] swaps the descent from [i]
+    to [i-1].  Stanley's Fact #2 (LR case, swap2). *)
 Lemma descent_psi_LR_swap2 i w :
   uniq w -> 1 < window_size i w -> has_left_child i w ->
   is_descent_seq w i ->
@@ -663,6 +695,8 @@ Qed.
    window_size 2 w = 3. has_left_child 2 w = false. ~~ is_descent_seq w 2 (4 < 7).
    psi 2 w = [3;1;7;5;4;9;2;6].
    D(psi 2 w) = {0,2,3,5} = D(w) u {2}. *)
+(** [descent_psi_R_add_ex] : witness of [descent_psi_R_add] -- applying
+    [psi 2] to [[3;1;4;7;5;9;2;6]] adds [2] to the descent set. *)
 Example descent_psi_R_add_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   [seq k <- iota 0 7 | is_descent_seq (psi 2 w) k] = [:: 0; 2; 3; 5].
@@ -672,6 +706,8 @@ Proof. by []. Qed.
    w' = [3;1;7;5;4;9;2;6]. is_descent_seq w' 2 = (7 > 5) = true.
    psi 2 w' = [3;1;4;7;5;9;2;6].
    D(psi 2 w') = {0,3,5} = D(w') \ {2}. *)
+(** [descent_psi_R_remove_ex] : witness of [descent_psi_R_remove] --
+    applying [psi 2] again undoes the previous addition. *)
 Example descent_psi_R_remove_ex :
   let w' := psi 2 [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   [seq k <- iota 0 7 | is_descent_seq (psi 2 w') k] = [:: 0; 3; 5].
@@ -681,6 +717,8 @@ Proof. by []. Qed.
    has_left_child 5 w = true. is_descent_seq w 5 = (9 > 2) = true.
    psi 5 w = [3;1;4;7;5;2;6;9].
    D(psi 5 w) = {0,3,4} = (D(w) u {4}) \ {5}. *)
+(** [descent_psi_LR_swap2_ex] : witness of [descent_psi_LR_swap2] at
+    position 5 in [[3;1;4;7;5;9;2;6]]. *)
 Example descent_psi_LR_swap2_ex :
   let w := [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   [seq k <- iota 0 7 | is_descent_seq (psi 5 w) k] = [:: 0; 3; 4].
@@ -690,6 +728,8 @@ Proof. by []. Qed.
    is_descent_seq w' 5 = (2 > 6) = false. ~~ is_descent_seq w' 5 = true.
    psi 5 w' = [3;1;4;7;5;9;2;6].
    D(psi 5 w') = {0,3,5} = (D(w') u {5}) \ {4}. *)
+(** [descent_psi_LR_swap1_ex] : witness of [descent_psi_LR_swap1] at
+    position 5 in [psi 5 [3;1;4;7;5;9;2;6]]. *)
 Example descent_psi_LR_swap1_ex :
   let w' := psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6] in
   [seq k <- iota 0 7 | is_descent_seq (psi 5 w') k] = [:: 0; 3; 5].
