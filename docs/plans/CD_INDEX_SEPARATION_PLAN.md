@@ -63,10 +63,14 @@ Pure perm↔seq machinery. Estimated ~500–600 LOC. Lemmas (verify by
   if yes, either move `char_mono`'s definition out of psi-land into
   `perm_seq_basics`, or keep the lemma in `perm_seq_cdindex`)*
 - Section `SeqToPerm`:
-  - `seq_nth_bound`, `seq_to_fun_inj`, `seq_to_perm_nth`
+  - `seq_nth_bound`, `seq_to_fun_inj`
   - `perm_to_seq_bnd`
-  - `perm_to_seq_seq_to_perm`, `seq_to_perm_perm_to_seq`
+  - `perm_to_seq_seq_to_perm`
 - `desc_positions_bvec`
+
+(The lemmas `seq_to_perm_nth` and `seq_to_perm_perm_to_seq`, originally
+listed here, were removed during the post-refactor dead-code audit
+because nothing referenced them.)
 
 ### 3b. Keep in `perm_seq_bridge.v` (rename → `perm_seq_cdindex.v`?)
 
@@ -79,8 +83,10 @@ Everything that touches `psi_*`. Estimated ~500–600 LOC. Lemmas:
 - `all_bnd_apply_psis`, `apply_psis_size_eq`
 - `uniq_expand_cde`, `nil_in_powerset_internal`, `char_mono_in_expand_cde`
 - `find_ss_spec`
-- The final headline result `omega_proper_beta_lt` (Stanley Prop 1.6.4)
-  and any `beta_swap_lt_caseA` derivations.
+- The final headline result `omega_proper_beta_lt` (Stanley Prop 1.6.4).
+  (`beta_swap_lt_caseA`, originally listed here as a derivation, was
+  removed during the post-refactor dead-code audit because nothing
+  referenced it.)
 
 ## 4. Mechanical steps
 
