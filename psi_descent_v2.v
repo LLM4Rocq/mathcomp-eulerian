@@ -10,18 +10,20 @@
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm.
+(* Re-export so that downstream psi_* files transitively get
+   [is_descent_seq] without each having to import perm_seq_basics. *)
+From mathcomp_eulerian Require Export perm_seq_basics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* ===== Descent predicate (unchanged) ======================================= *)
-
-(** [is_descent_seq w k] is the descent predicate: [k] is a descent of
-    [w] iff [w_k > w_{k+1}].  Sequence-level mirror of Stanley's
-    [Des(w) = { i : w_i > w_{i+1} }]. *)
-Definition is_descent_seq (w : seq nat) (k : nat) : bool :=
-  nth 0 w k > nth 0 w k.+1.
+(* ===== Descent predicate ================================================== *)
+(*                                                                            *)
+(* [is_descent_seq] was previously defined here; it now lives in              *)
+(* [perm_seq_basics.v] so that the §1.4 closure (foata, qfact, qeul, altsub)  *)
+(* can use it without importing the cd-index chain.  See                      *)
+(* [docs/plans/CD_INDEX_SEPARATION_PLAN.md].                                  *)
 
 (** [is_descent_seq_ex] : the descent set of [[3;1;4;7;5;9;2;6]] is
     [{0, 3, 5}], a concrete sanity check. *)

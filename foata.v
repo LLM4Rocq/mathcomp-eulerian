@@ -33,7 +33,7 @@
 *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
-From mathcomp_eulerian Require Import descent inversions perm_seq_bridge.
+From mathcomp_eulerian Require Import descent inversions perm_seq_basics.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

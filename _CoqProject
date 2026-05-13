@@ -6,6 +6,16 @@
 mmtree.v
 psi_core.v
 psi_comm.v
+# §1.4 closure first; perm_seq_basics is the psi-free perm <-> seq bridge.
+ordinal_reindex.v
+perm_compress.v
+descent.v
+eulerian.v
+beta.v
+beta_omega.v
+beta_bridge.v
+perm_seq_basics.v
+# psi_descent_v2 imports perm_seq_basics for [is_descent_seq].
 psi_descent_v2.v
 psi_descent_thms.v
 # Compatibility wrapper for psi_descent_v2.v + psi_descent_thms.v.
@@ -18,13 +28,8 @@ psi_cdindex_core.v
 psi_cdindex_witness.v
 psi_cdindex_support_defs.v
 psi_cdindex_support.v
-ordinal_reindex.v
-perm_compress.v
-descent.v
-eulerian.v
-beta.v
-beta_omega.v
-beta_bridge.v
+# perm_seq_bridge holds the cd-index half (uses psi_*); see
+# docs/plans/CD_INDEX_SEPARATION_PLAN.md.
 perm_seq_bridge.v
 beta_swap.v
 # reflection.v moved to experimental/ — contains 1 named admit
