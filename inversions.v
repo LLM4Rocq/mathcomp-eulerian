@@ -37,10 +37,6 @@ Definition inv_set s : {set 'I_n.+1 * 'I_n.+1} :=
 Definition inv s : nat := #|inv_set s|.
 
 (** Membership in [inv_set s] reduces to [is_inv s i j]. *)
-Lemma mem_inv_set s i j :
-  ((i, j) \in inv_set s) = is_inv s i j.
-Proof. by rewrite inE. Qed.
-
 (** The identity permutation has no inversions: [inv 1 = 0]. *)
 Lemma inv_id : inv (1 : {perm 'I_n.+1}) = 0.
 Proof.

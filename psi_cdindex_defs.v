@@ -100,10 +100,6 @@ Lemma apply_psis_nil w : apply_psis [::] w = w.
 Proof. by []. Qed.
 
 (** Cons unfolding: apply head [psi] then recurse. *)
-Lemma apply_psis_cons i ops w :
-  apply_psis (i :: ops) w = apply_psis ops (psi i w).
-Proof. by []. Qed.
-
 (** [apply_psis] preserves the length of [w]. *)
 Lemma size_apply_psis ops w : size (apply_psis ops w) = size w.
 Proof.
@@ -131,6 +127,3 @@ Lemma apply_psis_cat ops1 ops2 w :
 Proof. by rewrite /apply_psis foldl_cat. Qed.
 
 (** Snoc unfolding: trailing index is applied last. *)
-Lemma apply_psis_rcons ops i w :
-  apply_psis (rcons ops i) w = psi i (apply_psis ops w).
-Proof. by rewrite -cats1 apply_psis_cat. Qed.

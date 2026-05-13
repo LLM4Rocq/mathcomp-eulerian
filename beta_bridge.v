@@ -73,13 +73,6 @@ Qed.
 
 (** [set_to_seq_bound] -- every element of [set_to_seq D] is bounded
     above by [n]. *)
-Lemma set_to_seq_bound n (D : {set 'I_n}) (k : nat) :
-  k \in set_to_seq D -> k < n.
-Proof.
-rewrite mem_set_to_seq => /mapP [i _ ->].
-exact: ltn_ord.
-Qed.
-
 (* ========================================================================= *)
 (* SB. omega_set / omega_seq correspondence                                  *)
 (* ========================================================================= *)

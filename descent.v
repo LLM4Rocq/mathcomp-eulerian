@@ -29,10 +29,6 @@ Definition des s : nat := #|descent_set s|.
 Definition asc s : nat := n - des s.
 
 (** Equivalence with the underlying boolean for rewriting. *)
-Lemma is_descentE s i :
-  is_descent s i = (s (widen_ord (leqnSn n) i) > s (lift ord0 i)).
-Proof. by []. Qed.
-
 (** Membership in [descent_set s] is just [is_descent s i]; rewrites [inE] form. *)
 Lemma mem_descent_set s i : (i \in descent_set s) = is_descent s i.
 Proof. by rewrite inE. Qed.
@@ -64,13 +60,6 @@ Variable n : nat.
 (** Descents at interior positions are preserved by [drop_perm]: for
     [s : {perm 'I_n.+2}] and [i : 'I_n], the descent of [drop_perm s] at [i]
     corresponds to the descent of [s] at [widen_ord i]. *)
-Lemma is_descent_drop (s : {perm 'I_n.+2}) (i : 'I_n) :
-  is_descent (drop_perm s) i = is_descent s (widen_ord (leqnSn _) i).
-Proof.
-rewrite /is_descent -(ltn_lift (s ord_max)) !lift_drop_permE.
-congr (s _ < s _); apply: val_inj; exact: lift_max.
-Qed.
-
 End DescentDrop.
 
 (* ========================================================================= *)
@@ -130,7 +119,4 @@ by rewrite cardsCs setCK card_ord.
 Qed.
 
 (** The reversal permutation [n,n-1,...,0] has the maximal [n] descents. *)
-Lemma des_rev_perm_ord : des rev_perm_ord = n.
-Proof. by rewrite -[rev_perm_ord]mulg1 -/(rev_perm 1) des_rev_perm des_id subn0. Qed.
-
 End DescentReverse.

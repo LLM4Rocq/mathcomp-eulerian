@@ -57,11 +57,6 @@ Definition S_w_seq (w : seq nat) : seq nat :=
 
 (** Boolean form of the support claim: [X] expands from [phi_w w] iff every
     d-position of [w] is in [omega] of [X]'s descent set. *)
-Definition check_phi_w_support (w : seq nat) (X : seq bool) : bool :=
-  (X \in expand_cde (phi_w w)) ==
-  all (fun k => k \in omega_seq [seq i <- iota 0 (size w).-1 | nth false X i])
-      (S_w_seq w).
-
 (* phi_w_support_S3 and phi_w_support_S4 — exhaustive vm_compute sanity   *)
 (* checks for S_3 (24 cases) and S_4 (192 cases) — were sanity proofs not  *)
 (* used by any downstream lemma.  Removed because the S_4 case takes      *)
@@ -255,9 +250,6 @@ by rewrite subnKC // ltnW.
 Qed.
 
 (** Membership in [iota m l] gives [m <= i < m + l]. *)
-Lemma iota_mem_range m l i : i \in iota m l -> m <= i < m + l.
-Proof. by rewrite mem_iota. Qed.
-
 (** [witness_perm n k] is duplicate-free when [k + 2 < n]. *)
 Lemma witness_perm_uniq n k :
   k + 2 < n -> uniq (witness_perm n k).
@@ -607,16 +599,6 @@ Qed.
 
 (** Mapping [S] over a uniq sequence preserves the order of elements
     (used to lift order-iso properties through the witness shift). *)
-Lemma map_succ_order_iso (s : seq nat) :
-  uniq s ->
-  forall p q, p < size s -> q < size s ->
-  (nth 0 s p < nth 0 s q) =
-  (nth 0 [seq i.+1 | i <- s] p < nth 0 [seq i.+1 | i <- s] q).
-Proof.
-move=> Hu p q Hp Hq.
-by rewrite !(nth_map 0) // ltnS ltnS.
-Qed.
-
 (** [classify_vertex_cde] is invariant under the [+1]-shift on a uniq
     sequence (since cd-classification depends only on order). *)
 Lemma classify_map_succ (s : seq nat) i :

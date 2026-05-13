@@ -407,24 +407,6 @@ Qed.
 (** Penultimate vertex of a uniq seq of size at least 2 is internal:
     otherwise its successor (the last vertex) would have a left child,
     contradicting [has_left_child_last]. *)
-Lemma last_vertex_internal w :
-  uniq w -> 2 <= size w ->
-  is_internal (size w).-2 w.
-Proof.
-move=> Hu Hsz.
-apply/negPn/negP => Hep.
-have Hk : (size w).-2.+1 < size w
-  by case: (size w) Hsz => [|[|n]].
-have Hklast : (size w).-2.+1 = (size w).-1
-  by case: (size w) Hsz => [|[|n]].
-have := endpoint_implies_next_has_left_child
-  Hu Hk Hep.
-rewrite Hklast => Hlc.
-have Hne : 0 < size w
-  by apply: leq_ltn_trans _ Hsz.
-by rewrite has_left_child_last // in Hlc.
-Qed.
-
 (* expand_cde_rcons_C and expand_cde_rcons_D have been removed.            *)
 (* Both claimed that appending a letter at the END of a cd-word commutes   *)
 (* with prepending a letter — but `expand_cde` recurses on the FIRST       *)
@@ -480,15 +462,6 @@ Qed.
 
 (** Every endpoint [k] with [k.+1 < size w] is the predecessor of a
     D-type internal vertex at [k+1] (for uniq [w]). *)
-Lemma endpoint_succ_is_D_internal k w :
-  uniq w -> k.+1 < size w -> ~~ is_internal k w ->
-  is_internal k.+1 w && has_left_child k.+1 w.
-Proof.
-move=> Hu Hk1 Hep.
-have Hlc := endpoint_implies_next_has_left_child Hu Hk1 Hep.
-by rewrite (has_left_child_is_internal Hk1 Hlc) Hlc.
-Qed.
-
 (* expand_cde_cat removed: unused outside this file. *)
 
 (* -- fact3: size lemmas --------------------------------------------------- *)
@@ -828,10 +801,6 @@ elim: letters => [|[||] l IH] //=.
 Qed.
 
 (** [size (phi_w w)] equals the number of internal vertices of [w]. *)
-Lemma size_phi_w w :
-  size (phi_w w) = size (internal_vertices w).
-Proof. by rewrite phi_w_as_map size_map. Qed.
-
 (** [expand_cde (phi_w w)] has cardinality [2 ^ |internal_vertices w|],
     matching the size of [powerset_internal w] for the M-class. *)
 Lemma size_expand_cde_phi_w w :

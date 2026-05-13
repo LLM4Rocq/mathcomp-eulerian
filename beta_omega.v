@@ -347,61 +347,11 @@ Qed.
 
 (** [block_left_le_right] -- block endpoints are ordered:
     [block_left s i <= block_right s i]. *)
-Lemma block_left_le_right s i :
-  is_descent s i -> val (block_left s i) <= val (block_right s i).
-Proof.
-move=> Hi; apply: (leq_trans (block_left_le Hi) (block_right_ge Hi)).
-Qed.
-
 (** [block_left_minimal] -- the block is left-maximal: the position
     immediately before [block_left s i] (when defined) is NOT a
     descent. *)
-Lemma block_left_minimal s i :
-  is_descent s i ->
-  forall l' : 'I_n, val l' = (val (block_left s i)).-1 ->
-  val (block_left s i) > 0 -> ~~ is_descent s l'.
-Proof.
-move=> Hi l' Hl' Hpos; apply/negP => Hdes.
-have Hok : left_ok s i l'.
-  rewrite /left_ok; apply/andP; split.
-    rewrite Hl'; apply: (leq_trans (leq_pred _) (block_left_le Hi)).
-  apply/forallP => k; apply/implyP; case/andP => Hk1 Hk2.
-  case: (leqP (val (block_left s i)) (val k)) => Hkb.
-    have Hr : val (block_left s i) <= val k <= val i by rewrite Hkb Hk2.
-    exact: block_left_descent Hi Hr.
-  have Ek : k = l'.
-    apply/val_inj; apply/eqP; rewrite eqn_leq.
-    have Hkle : val k <= (val (block_left s i)).-1.
-      by rewrite -ltnS prednK.
-    by rewrite -Hl' in Hkle; rewrite Hkle Hk1.
-  by rewrite Ek.
-have := block_left_min Hi Hok; rewrite Hl' leqNgt => /negP; apply.
-by rewrite prednK.
-Qed.
-
 (** [block_right_maximal] -- the block is right-maximal: the position
     immediately after [block_right s i] is NOT a descent. *)
-Lemma block_right_maximal s i :
-  is_descent s i ->
-  forall r' : 'I_n, val r' = (val (block_right s i)).+1 ->
-  ~~ is_descent s r'.
-Proof.
-move=> Hi r' Hr'; apply/negP => Hdes.
-have Hok : right_ok s i r'.
-  rewrite /right_ok; apply/andP; split.
-    by rewrite Hr'; apply: (leq_trans (block_right_ge Hi)).
-  apply/forallP => k; apply/implyP; case/andP => Hk1 Hk2.
-  case: (leqP (val k) (val (block_right s i))) => Hkb.
-    have Hr : val i <= val k <= val (block_right s i) by rewrite Hk1 Hkb.
-    exact: block_right_descent Hi Hr.
-  have Ek : k = r'.
-    apply/val_inj; apply/eqP; rewrite eqn_leq.
-    by rewrite Hr' Hkb /= -Hr' Hk2.
-  by rewrite Ek.
-have := block_right_max Hi Hok; rewrite Hr' leqNgt => /negP; apply.
-by rewrite ltnS.
-Qed.
-
 (** [block_chain_step] -- single-step value comparison: for any [k] in
     the block, [s] strictly decreases from position [k] to [k+1]. *)
 Lemma block_chain_step s i (k : 'I_n) :
