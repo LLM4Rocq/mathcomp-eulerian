@@ -206,12 +206,6 @@ Qed.
     of [perm_to_seq] for uniq, [n]-bounded seqs of length [n]. *)
 Definition seq_to_perm : {perm 'I_n} := perm (@seq_to_fun_inj).
 
-(** [seq_to_perm_nth] -- the value of [seq_to_perm] at [i] reads off
-    the [val i]-th entry of [w]. *)
-Lemma seq_to_perm_nth (i : 'I_n) :
-  val (seq_to_perm i) = nth 0 w (val i).
-Proof. by rewrite permE. Qed.
-
 End SeqToPerm.
 
 (* ========================================================================= *)
@@ -240,11 +234,4 @@ have Hord : nth (Ordinal Hk) (enum 'I_n) k = Ordinal Hk
 by rewrite Hord /= permE /seq_to_fun.
 Qed.
 
-(** [seq_to_perm_perm_to_seq] -- other-direction round-trip:
-    [seq_to_perm (perm_to_seq s) = s] for any [s : {perm 'I_n}]. *)
-Lemma seq_to_perm_perm_to_seq n (s : {perm 'I_n}) :
-  seq_to_perm (perm_to_seq_size s) (perm_to_seq_uniq s) (perm_to_seq_bnd s) = s.
-Proof.
-apply: (perm_to_seq_inj (n:=n)).
-by rewrite perm_to_seq_seq_to_perm.
-Qed.
+(* [seq_to_perm_perm_to_seq] removed: 0 uses anywhere; cleanup pass.  *)

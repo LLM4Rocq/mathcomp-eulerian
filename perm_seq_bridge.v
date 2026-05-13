@@ -392,15 +392,8 @@ apply/idP/idP.
   by rewrite ltnn in Hlt.
 Qed.
 
-(** [window_size_bound] -- the [psi_cdindex] window size at position
-    [i] is bounded by [size w - i]. *)
-Lemma window_size_bound i w :
-  window_size i w <= size w - i.
-Proof.
-rewrite /window_size.
-have [_ H] := window_size_fuel_bound i (leqnn (size w)).
-exact: H.
-Qed.
+(* [window_size_bound] removed here: identical to [psi_core.window_size_bound],
+   which is in scope and used downstream.  *)
 
 (** [S_w_seq_all_lt] -- elements of [S_w_seq w] (the support indices
     of the omega map) are bounded by [(size w).-2]. *)
@@ -920,22 +913,4 @@ rewrite -card_img.
 exact: proper_card Hproper.
 Qed.
 
-(* ========================================================================= *)
-(* SG. beta_swap_lt_caseA (fully proved from omega_proper_beta_lt)           *)
-(* ========================================================================= *)
-
-(** [beta_swap_lt_caseA] -- Case A of the beta-swap lemma: when
-    [i,j \in D] with [j = i+1] and the successor of [j] (if defined)
-    is also in [D], toggling [j] strictly increases [beta]. Combines
-    [toggle_at_j_omega_strict_superset] with [omega_proper_beta_lt]. *)
-Lemma beta_swap_lt_caseA : forall n (D : {set 'I_n}) (i j : 'I_n),
-  val j = (val i).+1 -> i \in D -> j \in D ->
-  (forall q : 'I_n, val q = (val j).+1 -> q \in D) ->
-  beta D < beta (toggle_at D j).
-Proof.
-move=> n D i j Hj Hi Hjin Hsucc.
-case: n D i j Hj Hi Hjin Hsucc => [|m] D i j Hj Hi Hjin Hsucc.
-- by have := ltn_ord i; rewrite ltn0.
-- apply: (omega_proper_beta_lt (m := m)).
-  exact: toggle_at_j_omega_strict_superset Hj Hi Hjin Hsucc.
-Qed.
+(* (SG. [beta_swap_lt_caseA] removed: 0 uses anywhere; cleanup pass.)        *)
