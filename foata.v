@@ -133,31 +133,8 @@ Definition count_gt (a : nat) (w : seq nat) : nat :=
 
 (** Sanity check on Stanley's running example
     [w = 3,1,4,5,9,2,6]: [inv_seq (foata w) = maj_seq w = 6]. *)
-Lemma sanity_inv_eq_maj :
-  inv_seq (foata [:: 3; 1; 4; 5; 9; 2; 6])
-  = maj_seq [:: 3; 1; 4; 5; 9; 2; 6].
-Proof.
-have Hf : foata [:: 3; 1; 4; 5; 9; 2; 6] = [:: 3; 4; 1; 5; 2; 9; 6] by [].
-rewrite Hf /inv_seq /maj_seq /=.
-by rewrite !big_cons !big_nil /is_desc_seq /=.
-Qed.
-
 (** Sanity check on [w = 2,3,1] (no-op fixed point of [foata]). *)
-Lemma sanity_inv_eq_maj2 :
-  inv_seq (foata [:: 2; 3; 1]) = maj_seq [:: 2; 3; 1].
-Proof.
-have -> : foata [:: 2; 3; 1] = [:: 2; 3; 1] by [].
-by rewrite /inv_seq /maj_seq /= !big_cons !big_nil /is_desc_seq /=.
-Qed.
-
 (** Sanity check on [w = 3,1,2]: [foata w = 1,3,2]. *)
-Lemma sanity_inv_eq_maj3 :
-  inv_seq (foata [:: 3; 1; 2]) = maj_seq [:: 3; 1; 2].
-Proof.
-have -> : foata [:: 3; 1; 2] = [:: 1; 3; 2] by [].
-by rewrite /inv_seq /maj_seq /= !big_cons !big_nil /is_desc_seq /=.
-Qed.
-
 (* ========================================================================= *)
 (* §D. Basic invariants of the building blocks                              *)
 (* ========================================================================= *)
@@ -172,15 +149,7 @@ by rewrite -cat1s perm_catC.
 Qed.
 
 (** [cyc_last_to_front] preserves length. *)
-Lemma cyc_last_to_front_size s :
-  size (cyc_last_to_front s) = size s.
-Proof. by rewrite (perm_size (cyc_last_to_front_perm_eq _)). Qed.
-
 (** [cyc_last_to_front] preserves uniqueness. *)
-Lemma cyc_last_to_front_uniq s :
-  uniq (cyc_last_to_front s) = uniq s.
-Proof. exact: perm_uniq (cyc_last_to_front_perm_eq _). Qed.
-
 (** Flattening the blocks of [split_blocks_aux] yields [cur ++ s]; the
     accumulator-aware version of [split_blocks_flatten]. *)
 Lemma split_blocks_aux_flatten P cur s :
@@ -223,22 +192,7 @@ exact: perm_eq_flatten_map_cyc.
 Qed.
 
 (** [foata_step] grows the word length by exactly one. *)
-Lemma foata_step_size a u :
-  size (foata_step a u) = (size u).+1.
-Proof.
-have Hp := foata_step_perm_eq a u.
-by rewrite (perm_size Hp) size_rcons.
-Qed.
-
 (** [foata_step] preserves uniqueness when the new letter is fresh. *)
-Lemma foata_step_uniq a u :
-  a \notin u -> uniq u -> uniq (foata_step a u).
-Proof.
-move=> Ha Hu.
-rewrite (perm_uniq (foata_step_perm_eq _ _)).
-by rewrite rcons_uniq Ha Hu.
-Qed.
-
 (* ========================================================================= *)
 (* §E. Foata invariants: size, perm_eq, uniq                                *)
 (* ========================================================================= *)
@@ -271,14 +225,6 @@ by rewrite (perm_uniq (foata_perm_eq _)).
 Qed.
 
 (** [foata] preserves any uniform upper bound on the letters. *)
-Lemma foata_all_lt w n :
-  all (fun x => x < n) w -> all (fun x => x < n) (foata w).
-Proof.
-move=> Hw.
-apply/allP => x; rewrite (perm_mem (foata_perm_eq _)).
-exact: (allP Hw).
-Qed.
-
 (* ----- E.1 Recursion of inv_seq under rcons ----- *)
 
 (** Classical recursion: appending letter [a] at the end of [w] increases
@@ -423,22 +369,12 @@ Lemma cross_inv_nil_r s1 : cross_inv s1 [::] = 0.
 Proof. by rewrite /cross_inv big_nil. Qed.
 
 (** [cross_inv] is zero on the left when [s1] is empty. *)
-Lemma cross_inv_nil_l s2 : cross_inv [::] s2 = 0.
-Proof.
-rewrite /cross_inv /count_gt /=.
-by rewrite big1 // => b _.
-Qed.
-
 (** [cross_inv] recursion when an element is appended on the right. *)
 Lemma cross_inv_rcons s1 s2 a :
   cross_inv s1 (rcons s2 a) = cross_inv s1 s2 + count_gt a s1.
 Proof. by rewrite /cross_inv -cats1 big_cat /= big_cons big_nil addn0. Qed.
 
 (** [cross_inv] recursion when an element is prepended on the right side. *)
-Lemma cross_inv_cons s1 b s2 :
-  cross_inv s1 (b :: s2) = count_gt b s1 + cross_inv s1 s2.
-Proof. by rewrite /cross_inv big_cons. Qed.
-
 (** Decomposition of [inv_seq] over concatenation: left inversions, right
     inversions, and cross-inversions. *)
 Lemma inv_seq_cat s1 s2 :
@@ -458,28 +394,13 @@ by rewrite addnA addnC addnA addnC.
 Qed.
 
 (** [count_gt] recursion under cons. *)
-Lemma count_gt_cons a b s :
-  count_gt a (b :: s) = (nat_of_bool (a < b)) + count_gt a s.
-Proof. by rewrite /count_gt /=. Qed.
-
 (** [count_gt] is additive under concatenation. *)
 Lemma count_gt_cat a s1 s2 :
   count_gt a (s1 ++ s2) = count_gt a s1 + count_gt a s2.
 Proof. by rewrite /count_gt count_cat. Qed.
 
 (** [cross_inv] distributes over concatenation in the left argument. *)
-Lemma cross_inv_cat_l s1 s1' s2 :
-  cross_inv (s1 ++ s1') s2 = cross_inv s1 s2 + cross_inv s1' s2.
-Proof.
-rewrite /cross_inv -big_split /=.
-by apply: eq_bigr => b _; rewrite count_gt_cat.
-Qed.
-
 (** [cross_inv] distributes over concatenation in the right argument. *)
-Lemma cross_inv_cat_r s1 s2 s2' :
-  cross_inv s1 (s2 ++ s2') = cross_inv s1 s2 + cross_inv s1 s2'.
-Proof. by rewrite /cross_inv big_cat. Qed.
-
 (** [cross_inv] only depends on the multiset of its right argument. *)
 Lemma cross_inv_perm_eq_r s1 s2 s2' :
   perm_eq s2 s2' -> cross_inv s1 s2 = cross_inv s1 s2'.
@@ -504,21 +425,7 @@ Definition count_lt (a : nat) (w : seq nat) : nat :=
   count (fun y => y < a) w.
 
 (** [count_lt] is invariant under [perm_eq]. *)
-Lemma count_lt_perm_eq a w1 w2 :
-  perm_eq w1 w2 -> count_lt a w1 = count_lt a w2.
-Proof.
-move=> Hp.
-rewrite /count_lt.
-have := perm_filter (fun y => y < a) Hp.
-move/perm_size.
-by rewrite !size_filter.
-Qed.
-
 (** [count_lt] is additive under concatenation. *)
-Lemma count_lt_cat a s1 s2 :
-  count_lt a (s1 ++ s2) = count_lt a s1 + count_lt a s2.
-Proof. by rewrite /count_lt count_cat. Qed.
-
 (** If each block is [perm_eq] to its image under [f], the flattened
     images are [perm_eq] to the flattened originals. *)
 Lemma perm_eq_flatten_map_pred (f : seq nat -> seq nat) bs :
@@ -657,10 +564,6 @@ exact: IH.
 Qed.
 
 (** Every block produced by [split_blocks] is non-empty. *)
-Lemma split_blocks_all_nonempty P s :
-  all (fun b => b != [::]) (split_blocks P s).
-Proof. exact: split_blocks_aux_all_nonempty. Qed.
-
 (* Structural lemma: in split_blocks_aux P cur s, every "internal" letter
    of every block (i.e., every letter except possibly the last of the LAST
    block) does NOT satisfy P.  Specifically: if `cur` is all-not-P and
@@ -1158,10 +1061,6 @@ Definition cyc_first_to_back (s : seq nat) : seq nat :=
   end.
 
 (** [cyc_first_to_back] preserves length. *)
-Lemma cyc_first_to_back_size s :
-  size (cyc_first_to_back s) = size s.
-Proof. by case: s => //= ? ?; rewrite size_rcons. Qed.
-
 (** [cyc_first_to_back] preserves the multiset. *)
 Lemma cyc_first_to_back_perm_eq s :
   perm_eq (cyc_first_to_back s) s.
@@ -1171,10 +1070,6 @@ by rewrite -cats1 -cat1s perm_catC.
 Qed.
 
 (** [cyc_first_to_back] preserves uniqueness. *)
-Lemma cyc_first_to_back_uniq s :
-  uniq (cyc_first_to_back s) = uniq s.
-Proof. exact: perm_uniq (cyc_first_to_back_perm_eq _). Qed.
-
 (** [cyc_first_to_back] is the left inverse of [cyc_last_to_front]. *)
 Lemma cyc_first_to_backK s :
   cyc_first_to_back (cyc_last_to_front s) = s.
@@ -1184,17 +1079,6 @@ by rewrite -lastI.
 Qed.
 
 (** [cyc_last_to_front] is the left inverse of [cyc_first_to_back]. *)
-Lemma cyc_last_to_frontK s :
-  cyc_last_to_front (cyc_first_to_back s) = s.
-Proof.
-case: s => [|x s] //=.
-case: s => [|y s] /=.
-  by [].
-rewrite last_rcons.
-rewrite belast_rcons /=.
-by [].
-Qed.
-
 (** [split_blocks_inv_aux P cur s] is the tail-recursive worker for
     [split_blocks_inv]: cuts before each [P]-letter rather than after. *)
 Fixpoint split_blocks_inv_aux (P : nat -> bool) (cur : seq nat) (s : seq nat) :
@@ -1229,26 +1113,11 @@ elim: s cur => [|x rest IH] cur /=.
 Qed.
 
 (** Concatenating the blocks of [split_blocks_inv P s] recovers [s]. *)
-Lemma split_blocks_inv_flatten P s :
-  flatten (split_blocks_inv P s) = s.
-Proof. by rewrite /split_blocks_inv split_blocks_inv_aux_flatten. Qed.
-
 (* The key cancellation: split_blocks_inv P (flatten (map cyc_last_to_front bs))
    = map cyc_last_to_front bs, when bs are wf_blocks for P. *)
 
 (** The rotation of a [wf_block] starts with a [P]-element and has all
     other elements not-[P].  Used by [split_blocks_inv_cyc_wf]. *)
-Lemma cyc_last_to_front_wf (P : pred nat) b :
-  wf_block P b ->
-  if cyc_last_to_front b is x :: rest then
-    P x && all (fun y => ~~ P y) rest
-  else false.
-Proof.
-case/wf_block_decomp => b' [l] [-> Hl Hb' _].
-rewrite cyc_last_to_front_rcons /=.
-by rewrite Hl Hb'.
-Qed.
-
 (* Behavior of split_blocks_inv_aux when fed `cur ++ x :: rest` where
    x is a P-element and `cur` is all not-P: it produces cur as a complete
    block (if non-empty), then continues with [:: x] as the seed. *)
@@ -1259,21 +1128,8 @@ Qed.
 
 (** Cons-step for [split_blocks_inv_aux] when the head satisfies [P]:
     flush [cur] and start a new block seeded with [x]. *)
-Lemma split_blocks_inv_aux_cons_P (P : pred nat) cur x rest :
-  P x ->
-  split_blocks_inv_aux P cur (x :: rest)
-  = (if cur is _ :: _ then [:: cur] else [::])
-    ++ split_blocks_inv_aux P [:: x] rest.
-Proof. by move=> Hx /=; rewrite Hx; case: cur. Qed.
-
 (** Cons-step for [split_blocks_inv_aux] when the head does not satisfy
     [P]: extend the current block by [x]. *)
-Lemma split_blocks_inv_aux_cons_notP (P : pred nat) cur x rest :
-  ~~ P x ->
-  split_blocks_inv_aux P cur (x :: rest)
-  = split_blocks_inv_aux P (rcons cur x) rest.
-Proof. by move=> /negbTE Hx /=; rewrite Hx. Qed.
-
 (* If we feed a wf_block with cur seed [:: l] (l is the P-letter at front)
    and a tail of all-not-P followed by more, we should reproduce blocks. *)
 
@@ -1307,12 +1163,6 @@ Qed.
 
 (** Feeding [split_blocks_inv_aux] with a wf-block-rotated [l :: nots ++ tail]
     reduces to a recursive call seeded with [[:: l]]. *)
-Lemma split_blocks_inv_aux_one_block (P : pred nat) l nots tail :
-  P l -> all (fun y => ~~ P y) nots ->
-  split_blocks_inv_aux P [::] ((l :: nots) ++ tail)
-  = split_blocks_inv_aux P [:: l] (nots ++ tail).
-Proof. by move=> Hl _ /=; rewrite Hl. Qed.
-
 (* The key lemma: a single wf-block-rotated `l :: nots` followed by a
    sequence whose first letter is P (or empty) produces `[:: l :: nots]`
    prepended to the recursive result. *)
@@ -1320,28 +1170,6 @@ Proof. by move=> Hl _ /=; rewrite Hl. Qed.
 (** Single rotated block [l :: nots] followed by [rest] starting with a
     [P]-letter (or empty) produces [[:: l :: nots]] prepended to the
     recursive split of [rest]. *)
-Lemma split_blocks_inv_aux_block_then_P (P : pred nat) l nots rest :
-  P l -> all (fun y => ~~ P y) nots ->
-  (forall x, x \in rest -> True) ->
-  match rest with
-  | [::] => split_blocks_inv_aux P [:: l] nots
-            = [:: l :: nots]
-  | y :: _ => P y ->
-              split_blocks_inv_aux P [:: l] (nots ++ rest)
-              = (l :: nots) :: split_blocks_inv_aux P [::] rest
-  end.
-Proof.
-move=> Hl Hnots _.
-case: rest => [|y rest'].
-- rewrite -[in LHS](cats0 nots).
-  rewrite (split_blocks_inv_aux_app_notP _ _ Hnots) /=.
-  by case: nots Hnots => [|? ?] //=; rewrite cats0.
-- move=> Hy.
-  rewrite (split_blocks_inv_aux_app_notP _ _ Hnots) /=.
-  rewrite Hy.
-  by case: nots Hnots => [|? ?] //=; rewrite cats0.
-Qed.
-
 (** Big cancellation: applying [split_blocks_inv P] to the flatten of
     rotated [wf_block]s recovers the rotated blocks themselves.  Key step
     in proving [foata_step_undoK]. *)

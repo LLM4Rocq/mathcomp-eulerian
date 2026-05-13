@@ -79,14 +79,6 @@ Qed.
 (** Inversions on the "[p]-row": every pair [(p, lift p k)] with
     [p < lift p k] is an inversion of [insert_max_perm t p], since
     [σ p = ord_max] dominates every value [σ (lift p k)]. *)
-Lemma is_inv_p_lift (k : 'I_n.+1) : is_inv σ p (lift p k) = (p < lift p k).
-Proof.
-rewrite /is_inv insert_max_perm_at_p insert_max_perm_lift /=.
-rewrite andbC; apply/idP/idP.
-- by case/andP.
-- by move=> ->; rewrite andbT; exact: ltn_ord.
-Qed.
-
 (** Pairs [(lift p k, p)] are never inversions of [insert_max_perm t p]:
     [σ p = ord_max] is the maximum value, so it cannot be exceeded by any
     earlier image [σ (lift p k)]. *)

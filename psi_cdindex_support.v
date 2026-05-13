@@ -78,15 +78,6 @@ by rewrite (is_internal_apply_psis [:: j]) //
 Qed.
 
 (** [S_w_seq] is invariant under [psi j], hence constant on each M-class. *)
-Lemma S_w_seq_psi j w :
-  uniq w -> S_w_seq (psi j w) = S_w_seq w.
-Proof.
-move=> Hu.
-rewrite /S_w_seq size_psi.
-congr map; apply: eq_in_filter => i _.
-by rewrite classify_vertex_cde_psi.
-Qed.
-
 (* -- Structural helpers for cde_total_width and D_offsets --------------- *)
 (* These provide explicit decomposition lemmas for phi_w, D_offsets, and  *)
 (* S_w_seq at mm_pos, producing small proof terms that avoid heavy        *)

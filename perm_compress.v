@@ -100,12 +100,6 @@ Lemma lift_perm_lift i : lift_perm (lift ord_max i) = lift k (t i).
 Proof. by rewrite lift_permE lift_fun_lift. Qed.
 
 (** Only [ord_max] is sent to [k] by [lift_perm k t]; all other positions avoid [k]. *)
-Lemma lift_perm_ne_k i : i != ord_max -> lift_perm i != k.
-Proof.
-case: (unliftP ord_max i) => [j ->|-> /eqP//] _.
-by rewrite lift_perm_lift eq_sym neq_lift.
-Qed.
-
 End LiftPerm.
 
 (* ========================================================================= *)
@@ -116,13 +110,6 @@ Section Cancellation.
 Variable n : nat.
 
 (** Left inverse: dropping a freshly lifted permutation recovers the original. *)
-Lemma drop_perm_lift_perm (k : 'I_n.+1) (t : {perm 'I_n}) :
-  drop_perm (lift_perm k t) = t.
-Proof.
-apply/permP => i; apply: (@lift_inj _ (lift_perm k t ord_max)).
-by rewrite lift_drop_permE lift_perm_lift lift_perm_ord_max.
-Qed.
-
 (** Right inverse: lifting a dropped permutation at the dropped value recovers
     the original. Establishes the bijection [{perm 'I_n.+1}] ~= ['I_n.+1] x [{perm 'I_n}]. *)
 Lemma lift_perm_drop_perm (s : {perm 'I_n.+1}) :
@@ -133,8 +120,4 @@ by case: (unliftP ord_max i) => [j|]->//; rewrite lift_drop_permE.
 Qed.
 
 (** Restatement of [lift_perm_ord_max] with explicit arguments, for use by clients. *)
-Lemma lift_perm_ord_max_eq (k : 'I_n.+1) (t : {perm 'I_n}) :
-  (lift_perm k t) ord_max = k.
-Proof. exact: lift_perm_ord_max. Qed.
-
 End Cancellation.

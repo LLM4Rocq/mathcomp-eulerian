@@ -128,17 +128,6 @@ End InsertAfter.
 (** Symbolic sanity check: bundles the three defining equations of
     [insert_after j0 s] (since mathcomp's [{perm}] is opaque to
     [vm_compute], we cannot do a numeric check). *)
-Lemma sanity_insert_after_pointwise n (j0 : 'I_n) (s : {perm 'I_n}) :
-  let sigma := insert_after j0 s in
-  [/\ sigma ord_max = lift ord_max (s j0),
-      sigma (lift ord_max j0) = ord_max
-    & forall k, k != j0 -> sigma (lift ord_max k) = lift ord_max (s k)].
-Proof.
-split; [ exact: insert_after_ord_max
-       | exact: insert_after_j0
-       | exact: insert_after_other ].
-Qed.
-
 (* ========================================================================= *)
 (* §C. Cycle count of insert_after = cycle count of s                         *)
 (*                                                                            *)

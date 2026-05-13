@@ -254,13 +254,6 @@ Section InsertExtractBij.
 Variable n : nat.
 
 (** Left inverse: extracting the max from a freshly inserted permutation recovers [t]. *)
-Lemma extract_insert_max (t : {perm 'I_n.+1}) (p : 'I_n.+2) :
-  extract_max_perm (insert_max_perm_at_p t p) = t.
-Proof.
-apply/permP => j; apply: (@widenSn_inj n).
-by rewrite (extract_max_widen (insert_max_perm_at_p _ _)) insert_max_perm_lift.
-Qed.
-
 (** Right inverse: inserting the extracted max back at position [p] recovers [s]. *)
 Lemma insert_extract_max (s : {perm 'I_n.+2}) (p : 'I_n.+2)
     (sp : s p = ord_max) :
@@ -427,29 +420,8 @@ by rewrite permKV insert_max_perm_at_p.
 Qed.
 
 (** The pairing map [(t, p) |-> insert_max_perm t p] is injective. *)
-Lemma insert_max_perm_pair_inj n :
-  injective (fun tp : {perm 'I_n.+1} * 'I_n.+2 => insert_max_perm tp.1 tp.2).
-Proof.
-move=> [t1 p1] [t2 p2] /= E.
-have Ep : p1 = p2.
-  by rewrite -(insert_max_perm_fiber p1 t1) -(insert_max_perm_fiber p2 t2) E.
-move: E; rewrite Ep => E.
-congr (_, _); apply/permP => i; apply: (@widenSn_inj n).
-have := congr1 (fun s : {perm 'I_n.+2} => s (lift p2 i)) E.
-by rewrite !insert_max_perm_lift.
-Qed.
-
 (** The pairing map [(t, p) |-> insert_max_perm t p] is surjective: every
     permutation of ['I_n.+2] arises by inserting the max at some position. *)
-Lemma insert_max_perm_pair_surj n (s : {perm 'I_n.+2}) :
-  exists tp : {perm 'I_n.+1} * 'I_n.+2, s = insert_max_perm tp.1 tp.2.
-Proof.
-pose p : 'I_n.+2 := (s^-1)%g ord_max.
-have sp : s p = ord_max by rewrite /p permKV.
-exists (extract_max_perm sp, p) => /=.
-by rewrite (insert_extract_max sp).
-Qed.
-
 (* ------------------------------------------------------------------------- *)
 (* Cardinality of descent / ascent sets                                      *)
 (* ------------------------------------------------------------------------- *)
@@ -463,29 +435,12 @@ by apply: eq_bigr => j _; case: (is_descent t j).
 Qed.
 
 (** The ascent count [n - des t] equals the sum of ascent indicators over positions. *)
-Lemma sum_ascent n (t : {perm 'I_n.+1}) :
-  \sum_(j : 'I_n) ~~ is_descent t j = n - des t.
-Proof.
-apply/eqP; rewrite -(eqn_add2l (des t)) subnKC ?des_le //.
-rewrite -sum_descent -big_split /=.
-rewrite (eq_bigr (fun _ => 1)); last by move=> j _; case: (is_descent t j).
-by rewrite sum_nat_const card_ord muln1.
-Qed.
-
 (* ------------------------------------------------------------------------- *)
 (* Main recurrence                                                           *)
 (* ------------------------------------------------------------------------- *)
 
 (** Proof-irrelevant variant of [extract_insert_max], threading any equality proof
     [insert_max_perm t p p = ord_max] rather than the canonical one. *)
-Lemma extract_insert_maxPI n (t : {perm 'I_n.+1}) (p : 'I_n.+2)
-  (sp : insert_max_perm t p p = ord_max) :
-  extract_max_perm sp = t.
-Proof.
-apply/permP => j; apply: (@widenSn_inj n).
-by rewrite extract_max_widen insert_max_perm_lift.
-Qed.
-
 (** The pairing map [(t, p) |-> insert_max_perm t p] is a bijection
     [{perm 'I_n.+1} x 'I_n.+2] ~= [{perm 'I_n.+2}]. Foundation of the recurrence. *)
 Lemma insert_max_perm_bij n :

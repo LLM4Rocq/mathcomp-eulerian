@@ -48,13 +48,6 @@ Definition set_is_alt (n : nat) (D : {set 'I_n}) : bool :=
 
 (** [alt_desc_set_is_alt] -- the canonical [alt_desc_set] satisfies
     [set_is_alt] (consecutive parities differ). *)
-Lemma alt_desc_set_is_alt n : set_is_alt (alt_desc_set n).
-Proof.
-apply/forallP => i; apply/forallP => j; apply/implyP => /eqP Hj.
-rewrite !mem_alt_desc_set Hj /= negbK.
-by case: (odd i).
-Qed.
-
 (** [set_not_altP] -- reflection: if [D] is not set-alternating then
     there exist consecutive [i,j] with the same [D]-membership. *)
 Lemma set_not_altP n (D : {set 'I_n}) :
@@ -91,50 +84,11 @@ Qed.
 
 (** [alt_pair_parity] -- consecutive ordinals have opposite memberships
     in [alt_desc_set] (parity flips). *)
-Lemma alt_pair_parity n (i j : 'I_n) :
-  val j = (val i).+1 -> (i \in alt_desc_set n) != (j \in alt_desc_set n).
-Proof.
-move=> Hj.
-rewrite !mem_alt_desc_set Hj /= negbK.
-by case: (odd i).
-Qed.
-
 (** [sym_diff_toggle_in] -- toggling at any [k] in the symmetric
     difference [sym_diff D alt] strictly reduces the Hamming
     distance from [D] to [alt_desc_set n]. *)
-Lemma sym_diff_toggle_in n (D : {set 'I_n}) (k : 'I_n) :
-  k \in sym_diff D (alt_desc_set n) ->
-  #|sym_diff (toggle_at D k) (alt_desc_set n)|
-    < #|sym_diff D (alt_desc_set n)|.
-Proof.
-move=> Hk.
-rewrite (cardsD1 k (sym_diff D (alt_desc_set n))) Hk add1n ltnS.
-apply: subset_leq_card; apply/subsetP => x.
-rewrite inE !in_setD [x \in toggle_at D k]toggle_at_in.
-rewrite /sym_diff !inE.
-case E : (k == x) => /=.
-- move/eqP: E => Ekx; subst x.
-  rewrite eqxx.
-  move: Hk; rewrite /sym_diff !inE.
-  by case: (k \in D); case: (odd k).
-- rewrite eq_sym E /=.
-  by case: (x \in D); case: (odd x).
-Qed.
-
 (** [sym_diff_eq0] -- a symmetric difference of cardinality zero
     forces the two sets to be equal. *)
-Lemma sym_diff_eq0 n (D E : {set 'I_n}) :
-  #|sym_diff D E| = 0 -> D = E.
-Proof.
-move=> /eqP; rewrite cards_eq0 => /eqP Hsd.
-apply/setP => j.
-have : j \notin sym_diff D E by rewrite Hsd inE.
-rewrite /sym_diff !inE negb_or !negb_and !negbK.
-case/andP => H1 H2; apply/idP/idP => H.
-- case/orP: H1 => //; by rewrite H.
-- case/orP: H2 => //; by rewrite H.
-Qed.
-
 (* ========================================================================= *)
 (* §E. Value-complement bijection                                             *)
 (* ========================================================================= *)
