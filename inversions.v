@@ -147,7 +147,7 @@ apply/subsetP => [[i j]]; rewrite !inE /is_inv.
 by case/andP=> ->.
 Qed.
 
-(* ----- D.2 Helper: full sum of (val i + 1) over 'I_n equals 'C(n+1, 2) ----- *)
+(* ----- D.2 Helper: sum of (val i + 1) over 'I_n is 'C(n+1, 2) ----- *)
 
 (** Helper: [\sum_(i : 'I_n) (val i).+1 = 'C(n+1, 2)].  Used to bound
     [maj]. *)

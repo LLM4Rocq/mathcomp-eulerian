@@ -1,19 +1,19 @@
-(* Layer 5: alternating-maximum corollary for β-numbers.                     *)
-(*                                                                           *)
-(* Proves that among descent sets D : {set 'I_n} which are not               *)
-(* set-alternating (i.e. contain a consecutive same-membership pair),        *)
-(* β(D) is strictly smaller than β(alt_desc_set n).                          *)
-(*                                                                           *)
-(* NO AXIOMS.  beta_alt_max is proved directly via omega_proper_beta_lt      *)
-(* (Stanley Prop 1.6.4 in beta_bridge.v): we show ω(D) ⊊ ω(alt) = setT     *)
-(* whenever D is not set-alternating.                                        *)
-(*                                                                           *)
-(* Historical note: the original proof went through per-step strict          *)
-(* monotonicity (beta_swap_lt_caseB).  That axiom turned out to be FALSE —   *)
-(* counterexample: n=3, D={0,1}, toggle_at D 1 = {0} gives β=3=3, not <.    *)
-(* The direct ω-based proof bypasses the swap chain entirely.                *)
-(*                                                                            *)
-(* Build order: beta_omega.v → beta_bridge.v → beta_swap.v                   *)
+(* Layer 5: alternating-maximum corollary for β-numbers.
+
+   Proves that among descent sets D : {set 'I_n} which are not
+   set-alternating (i.e. contain a consecutive same-membership pair),
+   β(D) is strictly smaller than β(alt_desc_set n).
+
+   NO AXIOMS.  beta_alt_max is proved directly via omega_proper_beta_lt
+   (Stanley Prop 1.6.4 in beta_bridge.v): we show ω(D) ⊊ ω(alt) = setT
+   whenever D is not set-alternating.
+
+   Historical note: the original proof went through per-step strict
+   monotonicity (beta_swap_lt_caseB).  That axiom turned out to be FALSE
+   — counterexample: n=3, D={0,1}, toggle_at D 1 = {0} gives β=3=3,
+   not <.  The direct ω-based proof bypasses the swap chain entirely.
+
+   Build order: beta_omega.v → beta_bridge.v → beta_swap.v *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import
@@ -90,7 +90,7 @@ Qed.
 (** [sym_diff_eq0] -- a symmetric difference of cardinality zero
     forces the two sets to be equal. *)
 (* ========================================================================= *)
-(* §E. Value-complement bijection                                             *)
+(* §E. Value-complement bijection *)
 (* ========================================================================= *)
 
 (** [compl_perm s] -- value-complement permutation: post-compose [s]
@@ -211,7 +211,7 @@ by rewrite beta_compl setCK.
 Qed.
 
 (* ========================================================================= *)
-(* §G. Direct ω-based proof that alt maximises β                             *)
+(* §G. Direct ω-based proof that alt maximises β *)
 (* ========================================================================= *)
 
 (** [not_set_is_alt_n_ge2] -- if [D] fails [set_is_alt] then [n >= 2]
@@ -293,7 +293,8 @@ apply/properP; split.
   have Hk0 : k0 \notin omega_set D.
     rewrite (@mem_omega_set m.+1).
     have Ew : widen_ord (leqnSn m.+1) k0 = i0 by apply/val_inj.
-    have El : lift ord0 k0 = j0 by apply/val_inj; rewrite /= /bump /= add1n -Hj0.
+    have El : lift ord0 k0 = j0.
+      by apply/val_inj; rewrite /= /bump /= add1n -Hj0.
     by rewrite Ew El Hij0 eqxx.
   exists k0; first by rewrite inE.
   exact: Hk0.

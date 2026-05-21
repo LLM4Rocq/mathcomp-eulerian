@@ -20,8 +20,9 @@
 *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
-From mathcomp_eulerian Require Import ordinal_reindex perm_compress
-                                      descent eulerian beta beta_omega beta_swap.
+From mathcomp_eulerian Require Import ordinal_reindex perm_compress.
+From mathcomp_eulerian Require Import descent eulerian beta beta_omega.
+From mathcomp_eulerian Require Import beta_swap.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -451,7 +452,8 @@ Qed.
 (** Negated descent indicator as a strict less-than: [~~ is_descent s i]
     iff [val (s (widen i)) < val (s (lift ord0 i))]. *)
 Lemma not_is_descentE s (i : 'I_n.+1) :
-  ~~ is_descent s i = (val (s (widen_ord (leqnSn _) i)) < val (s (lift ord0 i))).
+  ~~ is_descent s i =
+    (val (s (widen_ord (leqnSn _) i)) < val (s (lift ord0 i))).
 Proof.
 rewrite /is_descent -leqNgt.
 have Hne : widen_ord (leqnSn n.+1) i != lift ord0 i.
@@ -490,7 +492,8 @@ case: i Hi Hidx => [|j] Hi Hidx /=.
   rewrite Hidx.
   have -> : nth ord0 (enum 'I_n.+1) j = Ordinal Hj.
     by apply: val_inj => /=; rewrite nth_enum_ord.
-  by rewrite /=; congr (s _ < s _); apply: val_inj => /=; rewrite /bump /= add1n.
+  rewrite /=; congr (s _ < s _).
+  by apply: val_inj => /=; rewrite /bump /= add1n.
 Qed.
 
 End SignPerm.
@@ -551,7 +554,7 @@ Qed.
 End PickSeqFull.
 
 (* ========================================================================= *)
-(* §N. Auxiliary alt-subseq lemmas (towards the upper bound)                  *)
+(* §N. Auxiliary alt-subseq lemmas (towards the upper bound) *)
 (* ========================================================================= *)
 
 (** Any seq of size at most [1] is alternating. *)
@@ -761,7 +764,7 @@ Qed.
 End InterTurn.
 
 (* ========================================================================= *)
-(* §O. Status of the headline equivalence (open)                              *)
+(* §O. Status of the headline equivalence (open) *)
 (* ========================================================================= *)
 
 (* The headline equivalence
@@ -896,14 +899,15 @@ Proof. by apply/subsetP => t; rewrite !inE; case/andP => ->. Qed.
 End UpperBound.
 
 (* ========================================================================= *)
-(* §Q.1. Seq-level monotonicity infrastructure (Session B-4)                  *)
+(* §Q.1. Seq-level monotonicity infrastructure (Session B-4) *)
 (* ========================================================================= *)
 
 (* These are PURE NAT-SEQ lemmas (no perm/turn structure). They establish
    that flip_count is MONOTONE w.r.t. seq insertion — i.e., inserting one
    element into a nat seq preserves or increases flip_count. This gives a
    bridge to the GLOBAL bound:
-     flip_count(sign_seq(s @ xs)) <= flip_count(sign_seq(perm_seq s)) = turn_count s
+     flip_count(sign_seq(s @ xs))
+       <= flip_count(sign_seq(perm_seq s)) = turn_count s
    for sorted-strict xs being a sub-listing of enum 'I_n.+2.
 
    The pieces below FULLY PROVE the per-step monotonicity; the open work
@@ -1048,7 +1052,8 @@ Qed.
         Lemma flip_count_sign_seq_le_subseq (xs ys : seq nat) :
           subseq xs ys ->
           flip_count (sign_seq xs) <= flip_count (sign_seq ys).
-      Direct from (1) using the relation `sign_seq xs = pairmap leq.+1 (head 0 xs) (behead xs)`.
+      Direct from (1) using the relation
+      `sign_seq xs = pairmap leq.+1 (head 0 xs) (behead xs)`.
       ~10 LOC.
 
    3. Apply to perm_seq: for sorted-strict xs in 'I_n.+2 being a sub-listing
@@ -1162,8 +1167,9 @@ case: xs Hsub => [|x xs] Hsub /=.
         by move: Hsub; rewrite /= Eeq.
       have Hstep1 := flip_count_sign_seq_insert_front y (x :: xs).
       rewrite /sign_seq /= in Hstep1.
-      have Hstep2 : flip_count (pairmap (fun u : nat => [eta leq u.+1]) y (x :: xs)) <=
-                    flip_count (pairmap (fun u : nat => [eta leq u.+1]) y ys).
+      have Hstep2 :
+        flip_count (pairmap (fun u : nat => [eta leq u.+1]) y (x :: xs)) <=
+        flip_count (pairmap (fun u : nat => [eta leq u.+1]) y ys).
         exact: flip_count_pairmap_le_subseq Hsubys y.
       exact: leq_trans Hstep1 Hstep2.
 Qed.
@@ -1216,14 +1222,16 @@ case/orP: Halt => /andP [Hcmp Halt].
   rewrite Hcmp /=.
   have Hyzn : ~~ (y < z) by rewrite -leqNgt ltnW.
   rewrite (negbTE Hyzn) /=.
-  have Halt' : (y < z) && alt_aux false z rest || (z < y) && alt_aux true z rest.
+  have Halt' :
+    (y < z) && alt_aux false z rest || (z < y) && alt_aux true z rest.
     by rewrite Hzy Halt2 /= orbT.
   have IHv := IH y z Halt'.
   by move: IHv; rewrite (negbTE Hyzn).
 - case/andP: Halt => Hyz Halt2.
   have Hxyn : ~~ (x < y) by rewrite -leqNgt ltnW.
   rewrite (negbTE Hxyn) Hyz /=.
-  have Halt' : (y < z) && alt_aux false z rest || (z < y) && alt_aux true z rest.
+  have Halt' :
+    (y < z) && alt_aux false z rest || (z < y) && alt_aux true z rest.
     by rewrite Hyz Halt2 /=.
   have IHv := IH y z Halt'.
   by move: IHv; rewrite Hyz.
@@ -1242,7 +1250,7 @@ by case: xs Halt Hsz => [|x [|y [|z rest]]] //= _ _ ->.
 Qed.
 
 (* ========================================================================= *)
-(* §S. Final assembly: as_perm_max_upper                                      *)
+(* §S. Final assembly: as_perm_max_upper *)
 (* ========================================================================= *)
 
 Section UpperBoundAssembly.
@@ -1280,7 +1288,7 @@ Qed.
 End UpperBoundAssembly.
 
 (* ========================================================================= *)
-(* §T. Existence: as_perm_max s >= (turn_count s).+2                          *)
+(* §T. Existence: as_perm_max s >= (turn_count s).+2 *)
 (* ========================================================================= *)
 
 (* Construction: I := {ord0; ord_max} ∪ {(val t).+1 | t turning point of s}.
@@ -1523,7 +1531,7 @@ Qed.
 End LowerBound.
 
 (* ========================================================================= *)
-(* §T. is_alt characterization via alternating sign_seq + distinctness        *)
+(* §T. is_alt characterization via alternating sign_seq + distinctness *)
 (* ========================================================================= *)
 
 (* Converse to sign_seq_is_alt: alternating signs (with adjacent distinctness)
@@ -1560,7 +1568,8 @@ elim: xs y x => [|z rest IH] y x /=.
 move=> Hu Hab.
 have Hyz_ne : y != z by case/and3P: Hu.
 have Huyz : uniq_adj (y :: z :: rest).
-  by case: rest Hu {IH Hab} => [|w r] /=; case/and3P=> _ Hyz Hr; rewrite Hyz //=.
+  by case: rest Hu {IH Hab} => [|w r] /=;
+     case/and3P=> _ Hyz Hr; rewrite Hyz //=.
 move: Hab => /=.
 case/andP=> Hflip Hbabool.
 have Hrec : alt_aux (~~ (y < z)%N) z rest by exact: IH.
@@ -1738,7 +1747,8 @@ case: (eqVneq k (turn_count s).+1) => [Heq|Hne].
 have Hk_lt : k < (turn_count s).+1 by rewrite ltn_neqAle Hne.
 have := pos_seq_val_lt Hk Hszm1 Hk_lt.
 rewrite Hk_eq /= => Hcontr.
-have Hbound : val (nth ord0 (pos_seq s) (turn_count s).+1) < n.+2 by exact: ltn_ord.
+have Hbound : val (nth ord0 (pos_seq s) (turn_count s).+1) < n.+2
+  by exact: ltn_ord.
 by apply/eqP; rewrite eqn_leq; apply/andP; split;
   [have := Hbound; rewrite ltnS | apply: ltnW].
 Qed.
@@ -1782,7 +1792,9 @@ Qed.
 Lemma triple_flip_pos_seq s i :
   i.+2 < size (pos_seq s) ->
   (val (s (nth ord0 (pos_seq s) i)) < val (s (nth ord0 (pos_seq s) i.+1)))%N
-    != (val (s (nth ord0 (pos_seq s) i.+1)) < val (s (nth ord0 (pos_seq s) i.+2)))%N.
+    !=
+    (val (s (nth ord0 (pos_seq s) i.+1))
+     < val (s (nth ord0 (pos_seq s) i.+2)))%N.
 Proof.
 move=> Hi.
 have Hi1 : i.+1 < size (pos_seq s) by exact: ltnW.
@@ -1798,7 +1810,8 @@ have Hbval : val b = (val t).+1 by rewrite Hbeq val_turn_inj.
 have Hat : val a <= val t.
   by rewrite -ltnS -Hbval.
 (* No turns in (val a, val b). *)
-have Hno_left : forall t' : 'I_n, val a < (val t').+1 < val b -> ~~ is_turn s t'.
+have Hno_left :
+  forall t' : 'I_n, val a < (val t').+1 < val b -> ~~ is_turn s t'.
   move=> t' /andP [Ht1 Ht2].
   apply/negP => Ht'turn.
   pose x := turn_inj t'.
@@ -1811,7 +1824,8 @@ have Hno_left : forall t' : 'I_n, val a < (val t').+1 < val b -> ~~ is_turn s t'
   have Hxb : val x < val b by rewrite val_turn_inj.
   exact: (no_inner_in_pos_seq Hi1 Hxin Hxa Hxb).
 (* No turns in (val b, val c). *)
-have Hno_right : forall t' : 'I_n, val b < (val t').+1 < val c -> ~~ is_turn s t'.
+have Hno_right :
+  forall t' : 'I_n, val b < (val t').+1 < val c -> ~~ is_turn s t'.
   move=> t' /andP [Ht1 Ht2].
   apply/negP => Ht'turn.
   pose x := turn_inj t'.
@@ -1856,7 +1870,7 @@ Qed.
 End ExistenceLB.
 
 (* ========================================================================= *)
-(* §V. Upper bound: as_perm_max s <= (turn_count s).+2                        *)
+(* §V. Upper bound: as_perm_max s <= (turn_count s).+2 *)
 (* ========================================================================= *)
 
 (* Step 3: pick_seq is a subseq of perm_seq (as nat seqs).                    *)
@@ -1907,7 +1921,8 @@ Qed.
 (** [flip_count] expressed as an indexed sum of consecutive XOR-pairs.
     Used to align with the [turn_count] sum over [is_turn]. *)
 Lemma flip_count_as_sum (xs : seq bool) :
-  flip_count xs = \sum_(0 <= i < (size xs).-1) (nth false xs i (+) nth false xs i.+1).
+  flip_count xs =
+    \sum_(0 <= i < (size xs).-1) (nth false xs i (+) nth false xs i.+1).
 Proof.
 case: xs => [|x xs] /=.
   by rewrite /flip_count /= big_nil.
@@ -1948,7 +1963,8 @@ have Hsum_eq : forall i : 'I_n,
       (+) is_descent s (nth ord0 (enum 'I_n.+1) i.+1) = is_turn s i.
   move=> i.
   have Heq1 : (nth ord0 (enum 'I_n.+1) i : 'I_n.+1) = widen_ord (leqnSn n) i.
-    by apply: val_inj => /=; rewrite nth_enum_ord //; apply: ltnW; apply: ltn_ord.
+    apply: val_inj => /=; rewrite nth_enum_ord //.
+    by apply: ltnW; apply: ltn_ord.
   have Heq2 : (nth ord0 (enum 'I_n.+1) i.+1 : 'I_n.+1) = lift ord0 i.
     apply: val_inj => /=.
     rewrite nth_enum_ord /=. by rewrite /bump /= add1n.

@@ -75,7 +75,8 @@ Lemma sum_des_eq_eul_pol n :
   \sum_(σ : {perm 'I_n.+1}) 'X^(des σ) = eul_pol n :> {poly int}.
 Proof.
 rewrite /eul_pol.
-pose F (s : {perm 'I_n.+1}) : 'I_n.+1 := Ordinal (leq_ltn_trans (des_le s) (ltnSn n)).
+pose F (s : {perm 'I_n.+1}) : 'I_n.+1 :=
+  Ordinal (leq_ltn_trans (des_le s) (ltnSn n)).
 rewrite (partition_big F xpredT) //=.
 apply: eq_bigr => k _.
 rewrite /eulerian.

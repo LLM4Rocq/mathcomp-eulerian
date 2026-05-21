@@ -35,14 +35,15 @@
    as `perm.lift_perm`, `perm.lift_perm_id`, `perm.lift_perm_lift`.
 *)
 From mathcomp Require Import all_ssreflect fingroup perm.
-From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent cycles.
+From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent.
+From mathcomp_eulerian Require Import cycles.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 (* ========================================================================= *)
-(* §H1.  Cycle count of "extend with fixed ord_max" — PROVED                 *)
+(* §H1.  Cycle count of "extend with fixed ord_max" — PROVED *)
 (* ========================================================================= *)
 
 Section H1.
@@ -139,7 +140,7 @@ Qed.
 End H1.
 
 (* ========================================================================= *)
-(* §H2.  Cycle count under "lift to j != ord_max" — UNPROVABLE AS STATED     *)
+(* §H2.  Cycle count under "lift to j != ord_max" — UNPROVABLE AS STATED *)
 (* ========================================================================= *)
 
 (* The originally-conjectured lemma
@@ -186,13 +187,14 @@ End H1.
    construction.  H2 as a lemma about [lift_perm] is abandoned. *)
 
 (* ========================================================================= *)
-(* §Bij.  Per-fiber bijection — NOT PROVED                                   *)
-(*        (depends on a future [insert_after] construction; see §H2 above)   *)
+(* §Bij.  Per-fiber bijection — NOT PROVED
+          (depends on a future [insert_after] construction; see §H2 above) *)
 (* ========================================================================= *)
 
 (* Lemma stirling_fiber n k (j : 'I_n.+1) :
      #|[set s : {perm 'I_n.+1} | (s ord_max == j) && (cycle_count s == k.+1)]|
-     = #|[set s : {perm 'I_n} | cycle_count s == (if j == ord_max then k else k.+1)]|.
+     = #|[set s : {perm 'I_n} |
+            cycle_count s == (if j == ord_max then k else k.+1)]|.
 
    For j = ord_max:  bijection [s ↦ perm.lift_perm ord_max ord_max s]
    between [{perm 'I_n} with k cycles] and [{perm 'I_n.+1} fixing ord_max
@@ -205,7 +207,7 @@ End H1.
    Needs the [insert_after] lemma described in §H2 above. *)
 
 (* ========================================================================= *)
-(* §Rec.  The recurrence itself — NOT PROVED                                 *)
+(* §Rec.  The recurrence itself — NOT PROVED *)
 (* ========================================================================= *)
 
 (* Lemma stirling_c_rec n k :

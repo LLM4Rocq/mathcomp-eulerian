@@ -1,8 +1,8 @@
-(* psi.v — Milestone 2: Stanley's operators ψᵢ on min-max trees             *)
-(*                                                                           *)
-(* Implements the rank-shift operators ψᵢ of Stanley EC1 §1.6.3 on sequences *)
-(* of distinct integers, with the min-or-max alternating tree construction   *)
-(* (Option A of M2_PSI_INFORMAL.md §1.3).                                    *)
+(* psi.v — Milestone 2: Stanley's operators ψᵢ on min-max trees.
+
+   Implements the rank-shift operators ψᵢ of Stanley EC1 §1.6.3 on
+   sequences of distinct integers, with the min-or-max alternating tree
+   construction (Option A of M2_PSI_INFORMAL.md §1.3). *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree.
@@ -46,7 +46,8 @@ Qed.
     range, ensuring [mmtree_of_seq_mm_fuel] recursion is well-defined. *)
 Lemma mm_pos_lt s : s <> [::] -> mm_pos s < size s.
 Proof.
-move=> Hs; rewrite /mm_pos; case: ifP => _; [exact: min_pos_lt | exact: max_pos_lt].
+move=> Hs; rewrite /mm_pos.
+by case: ifP => _; [exact: min_pos_lt | exact: max_pos_lt].
 Qed.
 
 (** [mmtree_of_seq_mm_fuel fuel s] is the Stanley-correct min-max tree
@@ -166,7 +167,8 @@ case Hij: (i < j).
   have [Heq Hbd] := IH i _ Hsz'.
   rewrite size_take Hj in Heq Hbd.
   split.
-    by rewrite Heq Hij; symmetry; apply: (leq_ltn_trans (ltnW Hij)); rewrite ltnS.
+    rewrite Heq Hij; symmetry.
+    by apply: (leq_ltn_trans (ltnW Hij)); rewrite ltnS.
   apply: (leq_trans Hbd).
   by rewrite leq_sub2r // ltnW.
 case Hij2: (i == j).
@@ -185,7 +187,8 @@ split.
   rewrite Heq.
   have H1 : i - j - 1 + j.+1 = i.
     rewrite -[X in _ = X](@subnK j.+1 i) //.
-    by rewrite [in RHS](_ : i - j.+1 = i - j - 1); last by rewrite -addn1 subnDA.
+    rewrite [in RHS](_ : i - j.+1 = i - j - 1) //.
+    by rewrite -addn1 subnDA.
   have H2 : size s0 - j + j.+1 = (size s0).+1 by rewrite addnS subnK.
   by rewrite -(ltn_add2r j.+1) H1 H2.
 apply: (leq_trans Hbd).
@@ -200,7 +203,8 @@ have [Hil | Hig] := leqP i (size s0).
   by rewrite subn1 /= subSS leqnn.
 have -> : size s0 - (i - 1) = 0.
   apply/eqP; rewrite subn_eq0.
-  by case: i Hig Hij {Hji Hij2 Hsz2 Heq Hbd Heq_ij} => // i' Hig _; rewrite subn1 /=.
+  case: i Hig Hij {Hji Hij2 Hsz2 Heq Hbd Heq_ij} => // i' Hig _.
+  by rewrite subn1 /=.
 done.
 Qed.
 
@@ -252,7 +256,7 @@ rewrite /rank_shift_seq.
 by case: ifP => _ //; rewrite size_map.
 Qed.
 
-(* ----- 4. ψᵢ ------------------------------------------------------------- *)
+(* ----- 4. ψᵢ ----- *)
 
 (** [psi i w] is Stanley's [psi_i] operator on the M-class representative
     [w]: it fixes the prefix of length [i], applies the rank-shift to the
@@ -330,7 +334,8 @@ have Hshift_lt : shift < k.
 apply: (perm_trans (perm_map _ Hperm_Ls)).
 apply: (perm_trans (y := sorted)); last by rewrite perm_sym.
 set f := (fun y => nth 0 sorted ((index y sorted + shift) %% k)).
-have -> : map f sorted = map (nth 0 sorted) [seq (i + shift) %% k | i <- iota 0 k].
+have -> : map f sorted =
+          map (nth 0 sorted) [seq (i + shift) %% k | i <- iota 0 k].
   rewrite /f.
   apply: (@eq_from_nth _ 0); first by rewrite !size_map size_iota.
   move=> i Hi; rewrite size_map in Hi.
@@ -862,16 +867,16 @@ suff: take j (psi i w) =
   take i w ++ wa ++ take (j - (i + ws)) (drop (i + ws) w).
   by case=> -> ->; rewrite perm_cat2l perm_cat2r rank_shift_perm_eq.
 split.
-- rewrite /psi -/ws -/wa catA take_cat Hsz_psi /ws ltnNge Hfit /=.
+  rewrite /psi -/ws -/wa catA take_cat Hsz_psi /ws ltnNge Hfit /=.
   by rewrite catA.
-- have Hw_eq : w = take i w ++ wa ++ drop (i + ws) w.
-    rewrite /wa /window_at.
-    have -> : drop (i + ws) w = drop ws (drop i w)
-      by rewrite drop_drop addnC.
-    by rewrite cat_take_drop cat_take_drop.
-  rewrite {1}Hw_eq [take i w ++ wa ++ _]catA take_cat Hsz_w
-          /ws ltnNge Hfit /=.
-  by rewrite catA.
+have Hw_eq : w = take i w ++ wa ++ drop (i + ws) w.
+  rewrite /wa /window_at.
+  have -> : drop (i + ws) w = drop ws (drop i w)
+    by rewrite drop_drop addnC.
+  by rewrite cat_take_drop cat_take_drop.
+rewrite {1}Hw_eq [take i w ++ wa ++ _]catA take_cat Hsz_w
+        /ws ltnNge Hfit /=.
+by rewrite catA.
 Qed.
 
 (* ----- T4b: no extremum in prefix of w ----------------------------------- *)
@@ -1249,7 +1254,9 @@ have Hj_extremum :
 apply: mm_pos_char => //; first by rewrite size_psi.
 - by rewrite Hminv_eq.
 - by rewrite Hmaxv_eq.
-- by case: Hj_extremum => ->; [left; rewrite Hminv_eq | right; rewrite Hmaxv_eq].
+- case: Hj_extremum => ->.
+  + by left; rewrite Hminv_eq.
+  + by right; rewrite Hmaxv_eq.
 Qed.
 
 (* ----- T5 helpers: psi commutes with tree decomposition ------------------- *)
@@ -1264,7 +1271,8 @@ Qed.
 
 (** [take_mm_psi] : when [i] is in the left subtree, [psi i] commutes with
     [take (mm_pos w)], i.e. acts on the left subtree's labels alone.
-    Recursive descent step for [window_size_psi_self] and [window_at_psi_self]. *)
+    Recursive descent step for [window_size_psi_self] and
+    [window_at_psi_self]. *)
 Lemma take_mm_psi i w :
   w <> [::] -> uniq w -> 1 < window_size i w ->
   i < mm_pos w ->
@@ -1389,7 +1397,6 @@ case: (ltngtP i j) => [Hij | Hji | Hij].
   rewrite -Hpsi_eq Hdrop.
   apply: IH.
   + rewrite size_drop /s /=.
-    have -> : (size s0).+1 - j.+1 = size s0 - j by [].
     have Hsz' : size s0 <= n := Hsz.
     exact: leq_trans (leq_subr _ _) Hsz'.
   + have : uniq (take j.+1 s ++ drop j.+1 s).
@@ -1449,7 +1456,6 @@ case: (ltngtP i j) => [Hij | Hji | Hij].
   rewrite -Hpsi_eq Hdrop.
   apply: IH.
   + rewrite size_drop /s /=.
-    have -> : (size s0).+1 - j.+1 = size s0 - j by [].
     have Hsz' : size s0 <= n := Hsz.
     exact: leq_trans (leq_subr _ _) Hsz'.
   + have : uniq (take j.+1 s ++ drop j.+1 s).
@@ -1518,7 +1524,6 @@ case: (ltngtP i j) => [Hij | Hji | Hij].
 - (* i > j: recurse on drop j.+1 s *)
   apply: IH.
   + rewrite size_drop /s /=.
-    have -> : (size s0).+1 - j.+1 = size s0 - j by [].
     have Hsz' : size s0 <= n := Hsz.
     exact: leq_trans (leq_subr _ _) Hsz'.
   + have : uniq (take j.+1 s ++ drop j.+1 s) by rewrite cat_take_drop.
@@ -1601,7 +1606,7 @@ Qed.
 (* ----- M3.1 Window geometry trichotomy ------------------------------------ *)
 (* Two windows in a min-max tree are either disjoint or nested.               *)
 (* Justification: M3_COMMUTATIVITY_INFORMAL.md section 1.2.                   *)
-(* The recursive structure of window_size mirrors the tree construction.       *)
+(* The recursive structure of window_size mirrors the tree construction.     *)
 (* At each level, mm_pos separates left from right subtree. Positions in      *)
 (* different branches have disjoint windows; positions in the same branch     *)
 (* have nested windows. This is a structural property of binary trees.        *)
@@ -1933,7 +1938,8 @@ by rewrite /mm_pos Hmin_eq Hmax_eq.
 Qed.
 
 (** [order_iso_take] : the order-isomorphism property descends to [take m]
-    of both sequences; helper for the recursive case in [window_size_order_iso]. *)
+    of both sequences; helper for the recursive case in
+    [window_size_order_iso]. *)
 Lemma order_iso_take m (s1 s2 : seq nat) :
   m < size s1 -> size s1 = size s2 ->
   (forall p q, p < size s1 -> q < size s1 ->

@@ -1,28 +1,30 @@
-(* mmtree.v — Milestone 1 of the cd-index route                                *)
-(*                                                                             *)
-(* Stanley EC1 (2nd ed.) §1.6.3 defines, for a sequence w = a_1 … a_n of       *)
-(* distinct integers, the *min-max tree* M(w) as follows:                      *)
-(*   - let j be the least index such that a_j is either the minimum or        *)
-(*     maximum of {a_1, …, a_n};                                               *)
-(*   - a_j becomes the root, with M(a_1, …, a_{j-1}) as its left subtree and  *)
-(*     M(a_{j+1}, …, a_n) as its right subtree.                                *)
-(*                                                                             *)
-(* This file delivers Milestone 1 as specified in docs/internal/AXIOMS_TODO.md §4:           *)
-(*   - a `mmtree` inductive for labelled binary trees;                         *)
-(*   - `mmtree_of_seq` implementing the construction;                          *)
-(*   - `mmtree_to_seq` : in-order traversal;                                   *)
-(*   - `mmtree_of_seqK` : in-order traversal round-trips the construction      *)
-(*     (ordinary list equality, NO artificial leaf-marker interleaving).       *)
-(*                                                                             *)
-(* Design choice (per docs/internal/AXIOMS_TODO.md §4 row 1, column "Notes"):                *)
-(*   For Milestone 1 we only need the *round-trip*, so we pick ONE consistent  *)
-(*   rule at every recursive step: split at the index of the *minimum* element *)
-(*   of the current sub-sequence.  The full alternating min/max rule needed    *)
-(*   for the ψᵢ operators is deferred to Milestone 2.                          *)
-(*                                                                             *)
-(* We work with `nat` labels for concreteness and computability.  The          *)
-(* round-trip theorem does not require distinct labels: `index` picks the      *)
-(* least occurrence, which is a consistent well-defined choice.                *)
+(* mmtree.v — Milestone 1 of the cd-index route.
+
+   Stanley EC1 (2nd ed.) §1.6.3 defines, for a sequence w = a_1 … a_n of
+   distinct integers, the *min-max tree* M(w) as follows:
+     - let j be the least index such that a_j is either the minimum or
+       maximum of {a_1, …, a_n};
+     - a_j becomes the root, with M(a_1, …, a_{j-1}) as its left subtree
+       and M(a_{j+1}, …, a_n) as its right subtree.
+
+   This file delivers Milestone 1 as specified in
+   docs/internal/AXIOMS_TODO.md §4:
+     - a `mmtree` inductive for labelled binary trees;
+     - `mmtree_of_seq` implementing the construction;
+     - `mmtree_to_seq` : in-order traversal;
+     - `mmtree_of_seqK` : in-order traversal round-trips the
+       construction (ordinary list equality, NO artificial leaf-marker
+       interleaving).
+
+   Design choice (docs/internal/AXIOMS_TODO.md §4 row 1, "Notes"):
+   For Milestone 1 we only need the *round-trip*, so we pick ONE
+   consistent rule at every recursive step: split at the index of the
+   *minimum* element of the current sub-sequence.  The full alternating
+   min/max rule needed for the ψᵢ operators is deferred to Milestone 2.
+
+   We work with `nat` labels for concreteness and computability.  The
+   round-trip theorem does not require distinct labels: `index` picks
+   the least occurrence, which is a consistent well-defined choice. *)
 
 From mathcomp Require Import all_ssreflect.
 
@@ -137,8 +139,9 @@ move=> s; rewrite /mmtree_of_seq; apply: mmtree_of_seq_fuel_correct.
 exact: leqnn.
 Qed.
 
-(* --- Non-triviality example (docs/internal/AXIOMS_TODO.md §5, item 1 & §4 constraint) ---- *)
-(* Concrete sequence from the brief.                                           *)
+(* --- Non-triviality example
+       (docs/internal/AXIOMS_TODO.md §5, item 1 & §4 constraint) ---
+   Concrete sequence from the brief. *)
 
 (** [ex_seq] is the concrete test sequence used to demonstrate that the
     construction yields a genuinely branching tree. *)

@@ -6,7 +6,8 @@
 (* (ultimately) Putnam 2025 A5.                                              *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
-From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent eulerian.
+From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent.
+From mathcomp_eulerian Require Import eulerian.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -18,7 +19,8 @@ Unset Printing Implicit Defensive.
 
 (** [beta n D] is the set-refined descent count: the number of permutations of
     ['I_n.+1] whose descent set equals exactly [D]. Stanley's [beta_n(D)]
-    (Stanley EC1, S1.4); summing [beta D] over [|D| = k] recovers [eulerian n k]. *)
+    (Stanley EC1, S1.4); summing [beta D] over [|D| = k] recovers
+    [eulerian n k]. *)
 Definition beta (n : nat) (D : {set 'I_n}) : nat :=
   #|[set sigma : {perm 'I_n.+1} | descent_set sigma == D]|.
 
@@ -40,7 +42,8 @@ apply/idP/imsetP.
   by rewrite is_descent_rev rev_ordK.
 Qed.
 
-(** The reversal permutation [n,n-1,...,0] has descent set equal to all positions. *)
+(** The reversal permutation [n,n-1,...,0] has descent set equal to all
+    positions. *)
 Lemma descent_set_rev_perm_ord n :
   descent_set (rev_perm_ord n) = [set: 'I_n].
 Proof.
@@ -53,13 +56,15 @@ Qed.
 (* Image under rev_ord: involutivity and complement                          *)
 (* ========================================================================= *)
 
-(** [rev_ord] is involutive on subsets: applying [imset rev_ord] twice is the identity. *)
+(** [rev_ord] is involutive on subsets: applying [imset rev_ord] twice is
+    the identity. *)
 Lemma imset_rev_ord_inv n (D : {set 'I_n}) :
   [set rev_ord i | i in [set rev_ord i | i in D]] = D.
 Proof.
 apply/setP => x; apply/imsetP/idP.
 - by case=> y /imsetP[z Hz ->] ->; rewrite rev_ordK.
-- by move=> Hx; exists (rev_ord x); rewrite ?rev_ordK //; apply/imsetP; exists x.
+- move=> Hx; exists (rev_ord x); rewrite ?rev_ordK //.
+  by apply/imsetP; exists x.
 Qed.
 
 (** [rev_ord]-image commutes with set complement. *)
@@ -69,17 +74,20 @@ Proof.
 apply/setP => x; rewrite inE; apply/imsetP/idP.
 - case=> y; rewrite inE => HyND ->.
   apply/negP => /imsetP[z Hz Hrev].
-  have Eyz : y = z by apply: (can_inj (@rev_ordK _)); apply/val_inj/(congr1 val Hrev).
+  have Eyz : y = z.
+    by apply: (can_inj (@rev_ordK _)); apply/val_inj/(congr1 val Hrev).
   by rewrite Eyz Hz in HyND.
 - move=> HnD; exists (rev_ord x); rewrite ?rev_ordK //.
-  by rewrite inE; apply: contra HnD => Hx; apply/imsetP; exists (rev_ord x); rewrite ?rev_ordK.
+  rewrite inE; apply: contra HnD => Hx.
+  by apply/imsetP; exists (rev_ord x); rewrite ?rev_ordK.
 Qed.
 
 (* ========================================================================= *)
 (* beta0 and beta_full                                                       *)
 (* ========================================================================= *)
 
-(** [beta_n(emptyset) = 1]: only the identity permutation has empty descent set. *)
+(** [beta_n(emptyset) = 1]: only the identity permutation has empty descent
+    set. *)
 Lemma beta0 n : beta (set0 : {set 'I_n}) = 1.
 Proof.
 rewrite /beta -(cards1 (1%g : {perm 'I_n.+1})); apply: eq_card => s.
@@ -133,8 +141,9 @@ Qed.
 (* Connection to classical Eulerian numbers                                  *)
 (* ========================================================================= *)
 
-(** Connection to Eulerian numbers: summing [beta D] over all [D] of cardinality [k]
-    recovers the Eulerian number [A(n+1, k)] (Stanley EC1, S1.4). *)
+(** Connection to Eulerian numbers: summing [beta D] over all [D] of
+    cardinality [k] recovers the Eulerian number [A(n+1, k)]
+    (Stanley EC1, S1.4). *)
 Lemma beta_eulerian n k :
   \sum_(D : {set 'I_n} | #|D| == k) beta D = eulerian n k.
 Proof.
@@ -152,7 +161,8 @@ Qed.
 (* ========================================================================= *)
 
 (** Reversal-complement symmetry: [beta_n(D) = beta_n(rev_ord(complement D))].
-    Set-level refinement of [eulerian_symm], proved via the [rev_perm] involution. *)
+    Set-level refinement of [eulerian_symm], proved via the [rev_perm]
+    involution. *)
 Lemma beta_rev n (D : {set 'I_n}) :
   beta D = beta ([set rev_ord i | i in ~: D]).
 Proof.
@@ -160,5 +170,6 @@ rewrite /beta -(card_imset _ (@rev_perm_inj n)).
 congr #|pred_of_set _|; apply/setP => s; rewrite !inE; apply/imsetP/idP.
 - by case=> t; rewrite inE => /eqP Ht ->; rewrite descent_set_rev_perm Ht.
 - move/eqP => Hs; exists (rev_perm s); last by rewrite rev_perm_involutive.
-  by rewrite inE descent_set_rev_perm Hs -imset_rev_ord_compl setCK imset_rev_ord_inv.
+  rewrite inE descent_set_rev_perm Hs -imset_rev_ord_compl setCK.
+  by rewrite imset_rev_ord_inv.
 Qed.

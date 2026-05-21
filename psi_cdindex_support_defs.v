@@ -1,8 +1,9 @@
-(* psi_cdindex_support_defs.v — cd-index support definitions and small lemmas *)
-(*                                                                            *)
-(* Split from psi_cdindex_support.v so that downstream heavy support proofs   *)
-(* depend on a compact, separately checked API for cd-word widths, D-offsets, *)
-(* expansion membership, and transition/omega bridges.                        *)
+(* psi_cdindex_support_defs.v — cd-index support definitions and lemmas.
+
+   Split from psi_cdindex_support.v so that downstream heavy support
+   proofs depend on a compact, separately checked API for cd-word
+   widths, D-offsets, expansion membership, and transition/omega
+   bridges. *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
@@ -226,8 +227,8 @@ move=> Hsz; apply/idP/idP.
 Qed.
 
 (* -- has_transition = omega_seq membership -------------------------------- *)
-(* k ∈ omega_seq(desc(X)) iff nth false X k ≠ nth false X (k+1),           *)
-(* where desc(X) = {i < m : X[i] = true}.                                  *)
+(* k ∈ omega_seq(desc(X)) iff nth false X k ≠ nth false X (k+1),
+   where desc(X) = {i < m : X[i] = true}. *)
 
 (** Membership in the descent set [filter (nth X) (iota 0 m)] reduces to
     the bit at that index. *)

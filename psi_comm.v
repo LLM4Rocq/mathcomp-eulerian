@@ -1,4 +1,4 @@
-(* psi_comm.v — Milestone 3: Commutativity of psi + supporting helpers       *)
+(* psi_comm.v — Milestone 3: Commutativity of psi + supporting helpers *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core.
@@ -8,7 +8,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 
-(* ----- M4.3 helpers -------------------------------------------------------- *)
+(* ----- M4.3 helpers ----- *)
 
 (** [sorted_uniq_nth_ltn] : on a uniq sorted sequence, value order at two
     indices is the same as index order; ranking helper for [psi_comm]. *)
@@ -815,7 +815,8 @@ have [Htriv | Hnt] := leqP ws 1.
     rewrite /wa /window_at size_take size_drop.
     exact: leq_trans (geq_minl _ _) Htriv.
   by case: (wa) Hsz_wa => [|? [|??]] //=; rewrite /rank_shift_seq.
-have Hu_wa : uniq wa by rewrite /wa /window_at; exact: take_uniq (drop_uniq _ Hu).
+have Hu_wa : uniq wa.
+  by rewrite /wa /window_at; exact: take_uniq (drop_uniq _ Hu).
 have Hsz_wa : 1 < size wa.
   rewrite /wa /window_at size_take size_drop ltn_min.
   apply/andP; split => //.
@@ -1285,7 +1286,9 @@ case: (ltngtP i m) => [Him | Hmi | Hieqm].
     Huniq_dm Hws_drop Hmm_drop Hjm_pos.
   (* Now: Hrsk : rank_shift_seq (psi (j-m) d) = psi (j-m) (rank_shift_seq d) *)
   rewrite Hrsk.
-  (* Goal: psi (j-m) (rank_shift_seq d) = head 0 (rank_shift_seq d) :: psi j' (behead (rank_shift_seq d)) *)
+  (* Goal: psi (j-m) (rank_shift_seq d)
+            = head 0 (rank_shift_seq d) ::
+              psi j' (behead (rank_shift_seq d)) *)
   set rd := rank_shift_seq d.
   have Huniq_rd : uniq rd
     by rewrite /rd (perm_uniq (rank_shift_perm_eq d)).
@@ -1357,7 +1360,8 @@ have [Hj | Hj] := leqP (size w) j.
   have Hj2 : size (psi i w) <= j by rewrite size_psi.
   by rewrite (psi_id_oor Hj) (psi_id_oor Hj2).
 move/eqP in Hij; have Hij' : i <> j by [].
-case: (window_trichotomy Hi Hj Hij') => [Hdisj | Hdisj | [[Hn1 Hn2] | [Hn1 Hn2]]].
+case: (window_trichotomy Hi Hj Hij') =>
+  [Hdisj | Hdisj | [[Hn1 Hn2] | [Hn1 Hn2]]].
 - by apply: psi_comm_disjoint => //; left.
 - by apply: psi_comm_disjoint => //; right.
 - by apply: psi_comm_nested.

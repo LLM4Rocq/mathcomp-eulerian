@@ -1,8 +1,8 @@
-(* psi_cdindex_witness.v — Milestone 6: omega_seq, S_w_seq, witness_perm     *)
-(*                                                                           *)
-(* Split from psi_cdindex.v to reduce -vo compilation memory.                *)
-(* Contains: omega_seq, S_w_seq definitions, support checks,                 *)
-(* witness_perm infrastructure, strict_witness_exists.                        *)
+(* psi_cdindex_witness.v — Milestone 6: omega_seq, S_w_seq, witness_perm.
+
+   Split from psi_cdindex.v to reduce -vo compilation memory.
+   Contains: omega_seq, S_w_seq definitions, support checks,
+   witness_perm infrastructure, strict_witness_exists. *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
@@ -15,13 +15,13 @@ Unset Printing Implicit Defensive.
 (* ========================================================================= *)
 (* §M6. Theorem 1.6.3 & Proposition 1.6.4 (seq-level)                       *)
 (*                                                                           *)
-(* Stanley EC1 §1.6.3: cd-index Φₙ has nonneg integer coefficients.          *)
-(* Prop 1.6.4: ω(S) ⊂ ω(T) ⟹ β(S) < β(T).                                *)
-(* Finset-level axioms (omega_set, beta) live downstream (build order).      *)
+(* Stanley EC1 §1.6.3: cd-index Φₙ has nonneg integer coefficients.   *)
+(* Prop 1.6.4: ω(S) ⊂ ω(T) ⟹ β(S) < β(T).                             *)
+(* Finset-level axioms (omega_set, beta) live downstream.             *)
 (* ========================================================================= *)
 
 (* ----- M6.1 The ω-map on seq nat ----------------------------------------- *)
-(* ω(S) ⊆ [n−2]: position k ∈ ω(S) iff exactly one of k, k+1 belongs to S. *)
+(* ω(S) ⊆ [n−2]: position k ∈ ω(S) iff exactly one of k, k+1 ∈ S. *)
 (* Mirrors omega_set in beta_swap.v but on seq nat (descent positions).       *)
 
 (** [omega_seq s] is the seq-level [omega] map: positions [k] such that
@@ -47,12 +47,13 @@ Definition S_w_seq (w : seq nat) : seq nat :=
              & is_D_letter (classify_vertex_cde i w)].
 
 (* ----- M6.3 Support characterization -------------------------------------- *)
-(* Stanley line 388: Φw(a+b, ab+ba) = Σ_{ω(X)⊇S_w} u_X.                    *)
+(* Stanley line 388: Φw(a+b, ab+ba) = Σ_{ω(X)⊇S_w} u_X. *)
 (* u_X appears in the expansion iff every d-position of w is in ω(X).       *)
 (*                                                                           *)
-(* The support predicate: X ∈ expand_cde(Φ_w) iff S_w ⊆ ω(desc(X)).        *)
+(* The support predicate: X ∈ expand_cde(Φ_w) iff S_w ⊆ ω(desc(X)). *)
 (* NOTE: the boolean equality requires size X = (size w).-1; without that    *)
-(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong length. *)
+(* hypothesis the RHS is vacuously true when S_w = ∅ and X has wrong   *)
+(* length.                                                              *)
 (* Verified exhaustively for all permutations up to S_7.                     *)
 
 (** Boolean form of the support claim: [X] expands from [phi_w w] iff every
@@ -85,15 +86,16 @@ Example S_w_seq_ex4 : S_w_seq [:: 3; 1; 4; 7; 5; 9; 2; 6] = [:: 0; 4].
 Proof. by vm_compute. Qed.
 
 (* ----- M6.4 Theorem 1.6.3 & Proposition 1.6.4 (seq-level) ---------------- *)
-(* Thm 1.6.3: The cd-index Φₙ has nonneg integer coefficients (each         *)
-(* M-class contributes one cd-monomial with coefficient 1).                  *)
-(* Prop 1.6.4: ω(S) ⊂ ω(T) ⟹ β(S) < β(T).                                *)
+(* Thm 1.6.3: The cd-index Φₙ has nonneg integer coefficients (each   *)
+(* M-class contributes one cd-monomial with coefficient 1).            *)
+(* Prop 1.6.4: ω(S) ⊂ ω(T) ⟹ β(S) < β(T). *)
 (*                                                                           *)
 (* Finset versions (using omega_set/beta from beta_swap.v/beta.v) cannot     *)
 (* be stated here due to build order; they belong downstream.                *)
 (* We capture the key content at seq level:                                  *)
-(*   Weak: ω(S) ⊆ ω(T) ⟹ every M-class for β(S) also counts for β(T).     *)
-(*   Strict: for k ∈ ω(T)\ω(S), the cd-word c^k d c^{n-3-k} witnesses      *)
+(*   Weak: ω(S) ⊆ ω(T) ⟹ every M-class for β(S) also counts for       *)
+(*     β(T).                                                          *)
+(*   Strict: for k ∈ ω(T)\ω(S), the cd-word c^k d c^{n-3-k} witnesses *)
 (*     β(T) > β(S).  (Stanley lines 384-395.)                               *)
 
 (** Weak monotonicity: if [omega_seq S] is contained in [omega_seq T], then
@@ -481,7 +483,6 @@ have HnD : forall i, 1 <= i -> i <= m.+1 -> i != 1 ->
   rewrite /classify_vertex_cde.
   case Hint : (is_internal i core) => //=.
   by rewrite hlc_core_not1.
-have -> : iota 1 m.+1 = 1 :: iota 2 m by [].
 rewrite /= HD1 /=.
 suff -> : [seq i <- iota 2 m
    | is_D_letter (classify_vertex_cde i core)] = [::] by [].
@@ -554,7 +555,8 @@ have -> : iota 1 (size rest) = [seq j.+1 | j <- iota 0 (size rest)]
 rewrite filter_map -!map_comp.
 (* LHS: [seq (j.+1).-1 | j <- iota 0 (size rest) &
           is_D_letter (classify_vertex_cde (j.+1 - 1) rest)] *)
-rewrite (eq_filter (a2 := fun j => is_D_letter (classify_vertex_cde j rest))); last first.
+rewrite (eq_filter (a2 := fun j => is_D_letter (classify_vertex_cde j rest)));
+  last first.
   by move=> j /=; rewrite subn1 /=.
 rewrite (eq_map (g := id)); last first.
   by move=> j /=.
@@ -730,8 +732,8 @@ Proof. by vm_compute. Qed.
 
 (* ----- M6.6 Bridge to beta_swap.v ---------------------------------------- *)
 (* Finset-level axioms closing beta_swap.v §C must live downstream:          *)
-(*   beta_omega_monotone : omega_set S ⊆ omega_set T → beta S ≤ beta T      *)
-(*   beta_omega_strict   : omega_set S ⊊ omega_set T → beta S < beta T      *)
+(*   beta_omega_monotone : omega_set S ⊆ omega_set T → beta S ≤ beta T *)
+(*   beta_omega_strict   : omega_set S ⊊ omega_set T → beta S < beta T *)
 (* Derivation: omega_monotone_class_count (proved) + strict_witness_exists   *)
 (* (axiom) + omega_set/omega_seq correspondence + toggle_at_omega_* bridge.  *)
 

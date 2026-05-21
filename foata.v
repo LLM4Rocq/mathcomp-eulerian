@@ -483,7 +483,8 @@ by rewrite last_rcons belast_rcons.
 Qed.
 
 (** Inversions shift when [l] moves from the end to the front of [b']:
-    [inv_seq (l :: b') - inv_seq (rcons b' l) = count_lt l b' - count_gt l b']. *)
+    [inv_seq (l :: b') - inv_seq (rcons b' l)
+      = count_lt l b' - count_gt l b']. *)
 Lemma inv_seq_cons_eq_rcons_shift l b' :
   inv_seq (l :: b') + count_gt l b' = inv_seq (rcons b' l) + count_lt l b'.
 Proof.
@@ -492,7 +493,8 @@ have HCG : cross_inv b' [:: l] = count_gt l b'.
   by rewrite /cross_inv big_seq1.
 have HCL : cross_inv [:: l] b' = count_lt l b'.
   rewrite /cross_inv /count_lt.
-  have ->: \sum_(b <- b') count_gt b [:: l] = \sum_(b <- b') (nat_of_bool (b < l)).
+  have ->: \sum_(b <- b') count_gt b [:: l] =
+           \sum_(b <- b') (nat_of_bool (b < l)).
     by apply: eq_bigr => x _; rewrite /count_gt /= addn0.
   rewrite -sum1_count.
   by rewrite (eq_bigr (fun b => if b < l then 1 else 0));
@@ -723,7 +725,8 @@ Qed.
 
 (* The key per-step invariant.
 
-   We split into two cases (last u < a, and last u > a) and treat each separately.
+   We split into two cases (last u < a, and last u > a) and treat each
+   separately.
 *)
 
 (** Aggregated per-block inversion change in the [last u < a] case
@@ -882,10 +885,13 @@ case: u => [|x u] //= _ Hu' Hau Hla.
 have HPlast : (fun y : nat => y < a) (last 0 (x :: u)) by [].
 have Huniq : uniq (x :: u) by [].
 have Hu_ne : (x :: u) != [::] by [].
-have Hwf : all (wf_block (fun y : nat => y < a)) (split_blocks (fun y : nat => y < a) (x :: u)).
+have Hwf : all (wf_block (fun y : nat => y < a))
+               (split_blocks (fun y : nat => y < a) (x :: u)).
   exact: split_blocks_wf.
 have Hstr := split_blocks_lt_strict Huniq Hau Hu_ne Hla.
-have Hflat_bs : flatten (split_blocks (fun y : nat => y < a) (x :: u)) = x :: u by exact: split_blocks_flatten.
+have Hflat_bs : flatten (split_blocks (fun y : nat => y < a) (x :: u))
+                = x :: u
+  by exact: split_blocks_flatten.
 (* Step 1: foata_step *)
 rewrite /foata_step /=.
 have Hxulast : last x u < a by [].
@@ -898,7 +904,8 @@ have ->: inv_seq [:: a] = 0 by rewrite /inv_seq /= !big_cons !big_nil.
 rewrite addn0.
 (* Now: inv_seq (flatten (map cyc bs)) + count_gt a r_u = inv_seq u' *)
 set ru := flatten (map cyc_last_to_front bs).
-have Hperm_ru : perm_eq ru (x :: u) by rewrite /ru -[in X in perm_eq _ X]Hflat_bs;
+have Hperm_ru : perm_eq ru (x :: u).
+  rewrite /ru -[in X in perm_eq _ X]Hflat_bs.
   exact: perm_eq_flatten_map_cyc.
 have Hcg : count_gt a ru = count_gt a (x :: u) by exact: count_gt_perm_eq.
 rewrite Hcg.
@@ -907,8 +914,10 @@ have Hpermall : forall b, b \in bs -> perm_eq (cyc_last_to_front b) b.
   by move=> ? _; exact: cyc_last_to_front_perm_eq.
 have Hswap := inv_seq_flatten_swap_eq Hpermall.
 have Hsum_cyc := sum_inv_cyc_lt_blocks Hwf Hstr.
-(* Hswap: inv_seq ru + sum_b inv_seq b = inv_seq (flatten bs) + sum_b inv_seq (cyc b)
-   Hsum_cyc: sum_b inv_seq (cyc b) + sum_b (size b).-1 = sum_b inv_seq b *)
+(* Hswap: inv_seq ru + sum_b inv_seq b
+            = inv_seq (flatten bs) + sum_b inv_seq (cyc b)
+   Hsum_cyc: sum_b inv_seq (cyc b) + sum_b (size b).-1
+            = sum_b inv_seq b *)
 rewrite Hflat_bs in Hswap.
 set IRu := inv_seq ru. set IU := inv_seq (x :: u).
 set SB := \sum_(b <- bs) inv_seq b.
@@ -920,7 +929,8 @@ have Hsum' : SCB + SS = SB by rewrite -/SCB -/SB -/SS in Hsum_cyc.
 have Hkey : IRu + SS = IU.
   apply/eqP. rewrite -(eqn_add2r SCB).
   by rewrite -addnA [SS + SCB]addnC Hsum' Hswap'.
-(* SS = size u' - num_blocks = size (x::u) - count_lt a (x::u) = count_gt a (x::u) *)
+(* SS = size u' - num_blocks = size (x::u) - count_lt a (x::u)
+      = count_gt a (x::u) *)
 have Hsize_u : size (x :: u) = count_lt a (x :: u) + count_gt a (x :: u)
   by exact: size_count_lt_gt.
 have Hnumb : size bs = count_lt a (x :: u).
@@ -945,7 +955,8 @@ case: u => [|x u] //= _ Hu' Hau Hla.
 have HPlast : (fun y : nat => a < y) (last 0 (x :: u)) by [].
 have Huniq : uniq (x :: u) by [].
 have Hu_ne : (x :: u) != [::] by [].
-have Hwf : all (wf_block (fun y : nat => a < y)) (split_blocks (fun y : nat => a < y) (x :: u)).
+have Hwf : all (wf_block (fun y : nat => a < y))
+               (split_blocks (fun y : nat => a < y) (x :: u)).
   exact: split_blocks_wf.
 have Hstr := split_blocks_gt_strict Huniq Hau Hu_ne Hla.
 have Hflat_bs : flatten (split_blocks (fun y : nat => a < y) (x :: u)) = x :: u
@@ -960,7 +971,8 @@ rewrite inv_seq_cat /cross_inv big_seq1.
 have ->: inv_seq [:: a] = 0 by rewrite /inv_seq /= !big_cons !big_nil.
 rewrite addn0.
 set ru := flatten (map cyc_last_to_front bs).
-have Hperm_ru : perm_eq ru (x :: u) by rewrite /ru -[in X in perm_eq _ X]Hflat_bs;
+have Hperm_ru : perm_eq ru (x :: u).
+  rewrite /ru -[in X in perm_eq _ X]Hflat_bs.
   exact: perm_eq_flatten_map_cyc.
 have Hcg : count_gt a ru = count_gt a (x :: u) by exact: count_gt_perm_eq.
 rewrite Hcg.
@@ -979,7 +991,8 @@ have Hsum' : SCB = SB + SS by rewrite -/SCB -/SB -/SS in Hsum_cyc.
 have Hkey : IRu = IU + SS.
   apply/eqP. rewrite -(eqn_add2r SB).
   by rewrite Hswap' Hsum' [SB + SS]addnC addnA.
-(* SS = size u' - num_blocks = size (x::u) - count_gt a (x::u) = count_lt a (x::u) *)
+(* SS = size u' - num_blocks = size (x::u) - count_gt a (x::u)
+      = count_lt a (x::u) *)
 have Hsize_u : size (x :: u) = count_lt a (x :: u) + count_gt a (x :: u)
   by exact: size_count_lt_gt.
 have Hnumb : size bs = count_gt a (x :: u).
@@ -1421,7 +1434,8 @@ rewrite [LHS](_ : _ = \sum_(i : 'I_n | is_descent s i) (val i).+1); last first.
   by apply: eq_bigl => i; rewrite mem_descent_set.
 rewrite -[iota 0 n]val_enum_ord big_map.
 rewrite [LHS]big_mkcond -big_enum.
-rewrite [RHS](_ : _ = \sum_(i <- enum 'I_n) (if is_descent s i then (val i).+1 else 0)).
+rewrite [RHS](_ : _ = \sum_(i <- enum 'I_n)
+                        (if is_descent s i then (val i).+1 else 0)).
   by [].
 rewrite -big_mkcond.
 by apply: eq_big => k //=; rewrite is_descent_perm_seq.
@@ -1442,7 +1456,8 @@ Lemma foata_perm_to_seq_uniq (s : {perm 'I_n.+1}) :
   uniq (foata (perm_to_seq s)).
 Proof. by apply: foata_uniq; exact: perm_to_seq_uniq. Qed.
 
-(** [foata (perm_to_seq s)] is bounded by [n.+1]; needed to build [foata_perm]. *)
+(** [foata (perm_to_seq s)] is bounded by [n.+1]; needed to build
+    [foata_perm]. *)
 Lemma foata_perm_to_seq_bnd (s : {perm 'I_n.+1}) :
   all (fun x => x < n.+1) (foata (perm_to_seq s)).
 Proof.
@@ -1457,7 +1472,8 @@ Definition foata_perm (s : {perm 'I_n.+1}) : {perm 'I_n.+1} :=
   seq_to_perm (foata_perm_to_seq_size s) (foata_perm_to_seq_uniq s)
               (foata_perm_to_seq_bnd s).
 
-(** Commutation: [perm_to_seq] of [foata_perm s] is [foata] of [perm_to_seq s]. *)
+(** Commutation: [perm_to_seq] of [foata_perm s] is [foata] of
+    [perm_to_seq s]. *)
 Lemma perm_to_seq_foata_perm (s : {perm 'I_n.+1}) :
   perm_to_seq (foata_perm s) = foata (perm_to_seq s).
 Proof. by rewrite /foata_perm perm_to_seq_seq_to_perm. Qed.

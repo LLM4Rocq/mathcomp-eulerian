@@ -1,18 +1,19 @@
-(* perm_seq_basics.v -- psi-free perm <-> seq plumbing.                       *)
-(*                                                                            *)
-(* Extracted from perm_seq_bridge.v (refactor: separate the §1.4 perm/seq     *)
-(* bridge from the §1.6.3 cd-index proof of Stanley Prop 1.6.4).              *)
-(*                                                                            *)
-(* This file deliberately depends on NO psi_*.v / mmtree.v file, so that the  *)
-(* §1.4 closure (descent, eulerian, foata, q-analogues) can be built without  *)
-(* the cd-index machinery.  All proofs that genuinely need [psi]/[apply_psis] *)
-(* / [char_mono] / [omega_proper_beta_lt] stay in [perm_seq_bridge.v].        *)
-(*                                                                            *)
-(* The only new content here (vs. extracting verbatim) is the definition of   *)
-(* [is_descent_seq], previously defined in [psi_descent_v2.v].  We move it    *)
-(* here so [foata.v] and the other §1.4 files can use it without importing    *)
-(* psi_descent_v2.  [psi_descent_v2.v] now imports [perm_seq_basics] for      *)
-(* the definition.                                                            *)
+(* perm_seq_basics.v -- psi-free perm <-> seq plumbing.
+
+   Extracted from perm_seq_bridge.v (refactor: separate the §1.4 perm/seq
+   bridge from the §1.6.3 cd-index proof of Stanley Prop 1.6.4).
+
+   This file deliberately depends on NO psi_*.v / mmtree.v file, so that
+   the §1.4 closure (descent, eulerian, foata, q-analogues) can be built
+   without the cd-index machinery.  All proofs that genuinely need
+   [psi]/[apply_psis] / [char_mono] / [omega_proper_beta_lt] stay in
+   [perm_seq_bridge.v].
+
+   The only new content here (vs. extracting verbatim) is the definition
+   of [is_descent_seq], previously defined in [psi_descent_v2.v].  We
+   move it here so [foata.v] and the other §1.4 files can use it without
+   importing psi_descent_v2.  [psi_descent_v2.v] now imports
+   [perm_seq_basics] for the definition. *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import
@@ -23,7 +24,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 (* ========================================================================= *)
-(* §0. Sequence-level descent predicate                                       *)
+(* §0. Sequence-level descent predicate *)
 (* ========================================================================= *)
 
 (** [is_descent_seq w k] is the descent predicate: [k] is a descent of
@@ -135,7 +136,7 @@ by move=> ->.
 Qed.
 
 (* ========================================================================= *)
-(* §D. Descent positions / set bridge                                         *)
+(* §D. Descent positions / set bridge *)
 (* ========================================================================= *)
 
 (** [desc_positions_bvec] -- the descent positions extracted from the
@@ -165,7 +166,7 @@ apply: (sorted_eq leq_trans anti_leq).
 Qed.
 
 (* ========================================================================= *)
-(* §E. seq_to_perm: inverse of perm_to_seq                                    *)
+(* §E. seq_to_perm: inverse of perm_to_seq *)
 (* ========================================================================= *)
 
 Section SeqToPerm.
@@ -209,7 +210,7 @@ Definition seq_to_perm : {perm 'I_n} := perm (@seq_to_fun_inj).
 End SeqToPerm.
 
 (* ========================================================================= *)
-(* §F. Round-trip and helper lemmas                                           *)
+(* §F. Round-trip and helper lemmas *)
 (* ========================================================================= *)
 
 (** [perm_to_seq_bnd] -- every entry of [perm_to_seq s] is strictly

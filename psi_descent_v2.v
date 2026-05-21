@@ -18,12 +18,12 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* ===== Descent predicate ================================================== *)
-(*                                                                            *)
-(* [is_descent_seq] was previously defined here; it now lives in              *)
-(* [perm_seq_basics.v] so that the §1.4 closure (foata, qfact, qeul, altsub)  *)
-(* can use it without importing the cd-index chain.  See                      *)
-(* [docs/plans/CD_INDEX_SEPARATION_PLAN.md].                                  *)
+(* ===== Descent predicate =====
+
+   [is_descent_seq] was previously defined here; it now lives in
+   [perm_seq_basics.v] so that the §1.4 closure (foata, qfact, qeul,
+   altsub) can use it without importing the cd-index chain.  See
+   [docs/plans/CD_INDEX_SEPARATION_PLAN.md]. *)
 
 (** [is_descent_seq_ex] : the descent set of [[3;1;4;7;5;9;2;6]] is
     [{0, 3, 5}], a concrete sanity check. *)
@@ -32,7 +32,7 @@ Example is_descent_seq_ex :
   [seq k <- iota 0 7 | is_descent_seq w k] = [:: 0; 3; 5].
 Proof. by []. Qed.
 
-(* ===== has_left_child (unchanged from original) ============================ *)
+(* ===== has_left_child (unchanged from original) ===== *)
 
 (** [has_left_child_fuel fuel i s] tests, by fuel-bounded recursion on
     [mm_pos], whether the vertex at in-order position [i] of [M(s)] has a
@@ -138,10 +138,11 @@ Proof. by []. Qed.
     preserves interior order on [[4;7;5]]. *)
 Example rank_shift_interior_order_ex :
   let L := [:: 4; 7; 5] in
-  (nth 0 L 1 > nth 0 L 2) = (nth 0 (rank_shift_seq L) 1 > nth 0 (rank_shift_seq L) 2).
+  (nth 0 L 1 > nth 0 L 2) =
+  (nth 0 (rank_shift_seq L) 1 > nth 0 (rank_shift_seq L) 2).
 Proof. by []. Qed.
 
-(* ===== Tree validity ======================================================= *)
+(* ===== Tree validity ===== *)
 (* A tree is valid_mm if at each node, the root sits at the mm_pos           *)
 (* position of the in-order traversal.                                       *)
 
@@ -197,7 +198,7 @@ split; [|split].
 Qed.
 #[global] Opaque valid_mm_build.
 
-(* ===== Bridge lemmas ======================================================= *)
+(* ===== Bridge lemmas ===== *)
 (* Each proved once via cons lemmas, then made Opaque. These are the only    *)
 (* places where fuel_monotone appears; the structural induction proof        *)
 (* never touches fuel.                                                       *)
@@ -367,7 +368,7 @@ End Bridges.
 #[global] Opaque hlc_bridge_left hlc_bridge_root hlc_bridge_right.
 #[global] Opaque take_mm_eq drop_mm_eq.
 
-(* ===== Base-case lemmas for i = root ======================================= *)
+(* ===== Base-case lemmas for i = root ===== *)
 
 (* These are the non-trivial base cases when i equals the root position.     *)
 (* They are proved separately and made Opaque to keep the structural         *)
@@ -515,7 +516,7 @@ case: Hnth => Hval.
   by rewrite (negbTE Hnd_pred) Hd_j.
 Qed.
 
-(* ===== tree_props definition (unchanged) =================================== *)
+(* ===== tree_props definition (unchanged) ===== *)
 
 (** [tree_props i w] is the conjunction of five structural properties at
     in-order position [i]: post-window extremum, two pre-window-vs-window
@@ -570,7 +571,7 @@ case: (i - j - 1) Hi'0 => [//|m'] _ Hm.
 by rewrite addSn in Hm; rewrite /= -Hm.
 Qed.
 
-(* ===== THE STRUCTURAL INDUCTION PROOF ====================================== *)
+(* ===== THE STRUCTURAL INDUCTION PROOF ===== *)
 (* This is the heart of Option A. We prove tree_props for any valid          *)
 (* mmtree by structural induction. The proof term is O(n) because:          *)
 (*   - Each node contributes O(1) work (bridge lemma + IH application)      *)

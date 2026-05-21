@@ -310,7 +310,7 @@ Qed.
 (* Each lemma describes D(psi_i w) in terms of D(w) for all positions k.     *)
 (* Justification: M4_DESCENT_EFFECT_INFORMAL.md sections 2-4.                *)
 
-(* ----- Common proof pattern for descent-effect lemmas ---------------------- *)
+(* ----- Common proof pattern for descent-effect lemmas ------------------ *)
 (* Each lemma case-splits k relative to window [i, i+ws):                     *)
 (*   k+1 < i (prefix), k = i-1 (left boundary), k = i (head),               *)
 (*   i < k < i+ws (interior), k = i+ws-1 (right boundary), k >= i+ws (suffix)*)
@@ -692,7 +692,8 @@ Qed.
 (* ----- M4.9 Non-triviality examples for Fact #2 --------------------------- *)
 
 (* Case R, add: w = [3;1;4;7;5;9;2;6], i=2.
-   window_size 2 w = 3. has_left_child 2 w = false. ~~ is_descent_seq w 2 (4 < 7).
+   window_size 2 w = 3. has_left_child 2 w = false.
+   ~~ is_descent_seq w 2 (4 < 7).
    psi 2 w = [3;1;7;5;4;9;2;6].
    D(psi 2 w) = {0,2,3,5} = D(w) u {2}. *)
 (** [descent_psi_R_add_ex] : witness of [descent_psi_R_add] -- applying
