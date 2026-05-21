@@ -1,14 +1,15 @@
-(* beta_omega.v — Toggle operator, Stanley ω-map, and Foata block endpoints. *)
-(*                                                                            *)
-(* Extracted from beta_swap.v §A, §H, §I to allow beta_bridge.v to import   *)
-(* these without creating a dependency cycle with beta_swap.v.               *)
-(*                                                                            *)
-(* Contents:                                                                  *)
-(*   §A  sym_diff, toggle_at and basic lemmas                                *)
-(*   §H  omega_set (Stanley §1.6 ω-map), toggle-at ω-superset lemmas         *)
-(*   §I  Foata block endpoints (block_left, block_right, chain-of-values)    *)
-(*                                                                            *)
-(* No axioms. Does not import beta_swap.v.                                   *)
+(* beta_omega.v — Toggle operator, Stanley ω-map, and Foata block
+   endpoints.
+
+   Extracted from beta_swap.v §A, §H, §I to allow beta_bridge.v to import
+   these without creating a dependency cycle with beta_swap.v.
+
+   Contents:
+     §A  sym_diff, toggle_at and basic lemmas
+     §H  omega_set (Stanley §1.6 ω-map), toggle-at ω-superset lemmas
+     §I  Foata block endpoints (block_left, block_right, chain-of-values)
+
+   No axioms. Does not import beta_swap.v. *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import
@@ -63,7 +64,7 @@ Lemma toggle_at_other n (D : {set 'I_n}) (i j : 'I_n) :
 Proof. by move=> H; rewrite toggle_at_in (negbTE H). Qed.
 
 (* ========================================================================= *)
-(* §H. Stanley ω-map and toggle-at ω-superset lemmas.                        *)
+(* §H. Stanley ω-map and toggle-at ω-superset lemmas. *)
 (* ========================================================================= *)
 
 (** [omega_set D] -- Stanley's omega-map (Stanley EC1 §1.6) at the
@@ -212,7 +213,7 @@ case Elxj : (lift ord0 x == j).
 Qed.
 
 (* ========================================================================= *)
-(* §I. Foata block endpoints (Phase 1 of Track C).                            *)
+(* §I. Foata block endpoints (Phase 1 of Track C). *)
 (* ========================================================================= *)
 
 Section FoataBlocks.
@@ -403,7 +404,8 @@ move=> d; elim: d => [|d IH] p q Hq Hp Hqr.
 (* d.+1 case: insert intermediate position p+1. *)
 have Hp_le_br : val p <= val (block_right s i).
   have Hle : val p + d.+2 <= (val (block_right s i)).+1 by rewrite -Hq.
-  by rewrite -ltnS; apply: (leq_trans _ Hle); rewrite addnS ltnS; apply: leq_addr.
+  rewrite -ltnS; apply: (leq_trans _ Hle).
+  by rewrite addnS ltnS; apply: leq_addr.
 have Hp_lt_n : val p < n by apply: (leq_ltn_trans Hp_le_br); apply: ltn_ord.
 have Hp1_lt : (val p).+1 < n.+1 by rewrite ltnS.
 pose p' := Ordinal Hp1_lt.

@@ -1,9 +1,10 @@
-(* psi_cdindex_support.v — phi_w_support_general and structural helpers      *)
-(*                                                                           *)
-(* Split from psi_cdindex.v to reduce -vo compilation memory.                *)
-(* The cd-width/D-offset and expand_cde membership infrastructure now lives  *)
-(* in psi_cdindex_support_defs.v. This file keeps the tree/phi_w support     *)
-(* lemmas, phi_w_support_general, and the Fact #3 wrapper layer.             *)
+(* psi_cdindex_support.v — phi_w_support_general and structural helpers.
+
+   Split from psi_cdindex.v to reduce -vo compilation memory.
+   The cd-width/D-offset and expand_cde membership infrastructure now
+   lives in psi_cdindex_support_defs.v. This file keeps the tree/phi_w
+   support lemmas, phi_w_support_general, and the Fact #3 wrapper
+   layer. *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
@@ -22,10 +23,10 @@ Arguments has_left_child_fuel : simpl never.
 
 (* ========================================================================= *)
 (* ===== M6.8: phi_w_support_general ======================================= *)
-(* X ∈ expand_cde(Φ_w) ⟺ S_w ⊆ ω(desc(X))                               *)
+(* X ∈ expand_cde(Φ_w) ⟺ S_w ⊆ ω(desc(X)) *)
 (* ========================================================================= *)
 
-(* -- S_w_seq elements are bounded: k ∈ S_w_seq w → k < (size w).-2 ------- *)
+(* -- S_w_seq elements are bounded: k ∈ S_w_seq w → k < (size w).-2 -- *)
 (* S_w_seq w = [seq i.-1 | i <- iota 1 (size w).-1                         *)
 (*                        & is_D_letter (classify_vertex_cde i w)].          *)
 (* Since i ∈ iota 1 (size w).-1, i ranges from 1 to (size w).-1.            *)
@@ -216,9 +217,7 @@ have Hj : j < size s
      (fun H : s = [::] => ltac:(discriminate H)).
 have Hjp : j < (size s).-1 by apply: mm_pos_lt_pred; rewrite /s.
 rewrite /classify_vertex_cde /is_internal.
-rewrite (window_size_cons j a s0) -/s -/j
-  ltnn eqxx.
-have -> : j < size s = true by [].
+rewrite (window_size_cons j a s0) -/s -/j ltnn eqxx Hj.
 have -> : 1 < size s - j = true
   by rewrite ltn_subRL addnC /= ltnS.
 rewrite /=.
@@ -240,9 +239,7 @@ rewrite /phi_w /phi'_w /=.
 rewrite /classify_vertex_cde /is_internal.
 rewrite (window_size_cons 0 a rest)
   -/(mm_pos (a :: rest)) Hmm ltnn eqxx subn0.
-have -> : 0 < size (a :: rest) = true by [].
-have -> : 1 < size (a :: rest) = true by [].
-rewrite /= has_left_child_0 /=.
+rewrite Hsz /= has_left_child_0 /=.
 congr cons; congr (filter _).
 apply: (@eq_from_nth _ E_letter).
   by rewrite !size_map !size_iota.
@@ -313,14 +310,16 @@ rewrite -map_comp.
 have Hiota : iota 1 (size m) = [seq j.+1 | j <- iota 0 (size m)].
   by elim: (size m) 1 0 => [|n IH] m1 m2 //=; rewrite IH.
 rewrite Hiota filter_map -map_comp.
-rewrite (eq_filter (a2 := fun i => is_D_letter (nth C_letter m i))); last by move=> i.
+rewrite (eq_filter (a2 := fun i => is_D_letter (nth C_letter m i)));
+  last by move=> i.
 apply/eq_in_map => i Hi /=.
 by rewrite /cde_offset /= /cde_width add1n.
 Qed.
 
 (** Concatenation decomposition of [D_offsets] across a [D] inserted
     between [m1] and [m2]: left offsets, then the [D] at offset
-    [cde_total_width m1], then right offsets shifted by [cde_total_width m1 + 2]. *)
+    [cde_total_width m1], then right offsets shifted by
+    [cde_total_width m1 + 2]. *)
 Lemma D_offsets_cat_D m1 m2 :
   D_offsets (m1 ++ D_letter :: m2) =
   D_offsets m1 ++
@@ -365,7 +364,9 @@ congr (cat (D_offsets m1)); congr (cons (cde_total_width m1)).
      (filter (is_D_letter ∘ nth C_letter (m1 ++ D_letter :: m2))
        (iota (size m1).+1 (size m2)))
    = [seq cde_total_width m1 + 2 + x | x <- D_offsets m2]
-   Use iota shift: iota (size m1).+1 (size m2) = map (addn (size m1).+1) (iota 0 (size m2)) *)
+   Use iota shift:
+   iota (size m1).+1 (size m2)
+     = map (addn (size m1).+1) (iota 0 (size m2)) *)
 have Hshift : iota (size m1).+1 (size m2) =
   [seq (size m1).+1 + i | i <- iota 0 (size m2)].
   by rewrite -iotaDl addn0.
@@ -457,7 +458,8 @@ congr (_ ++ _ :: _).
     by move=> k /=; rewrite addSn -addnS addKn subn1.
   have Hfilt :
     filter (fun k => is_D_letter (classify_vertex_cde k d)) (iota 0 (size d)) =
-    filter (fun k => is_D_letter (classify_vertex_cde k d)) (iota 1 (size d).-1).
+    filter (fun k => is_D_letter (classify_vertex_cde k d))
+           (iota 1 (size d).-1).
     case: (size d) => [//|m]; by rewrite /= Hq0.
   rewrite Hfilt /S_w_seq -map_comp.
   apply: (@eq_in_map nat nat _ _ _).1 => k Hk.
@@ -519,10 +521,13 @@ have IHR := IH _ HszR HuR.
 case Hj0 : (0 < j).
   rewrite (phi_w_decomp_mm Hu Hsz2 Hj0).
   (* Use have to state explicit equalities *)
-  have HtotalL : cde_total_width (phi_w (take j s)) = (size (take j s)).-1 := IHL.
-  have HtotalR : cde_total_width (phi_w (drop j.+1 s)) = (size (drop j.+1 s)).-1 := IHR.
+  have HtotalL : cde_total_width (phi_w (take j s)) = (size (take j s)).-1
+    := IHL.
+  have HtotalR : cde_total_width (phi_w (drop j.+1 s))
+                   = (size (drop j.+1 s)).-1 := IHR.
   rewrite cde_total_width_cat HtotalL.
-  (* Goal: (size (take j s)).-1 + cde_total_width (D_letter :: phi_w (drop j.+1 s)) = ... *)
+  (* Goal: (size (take j s)).-1
+              + cde_total_width (D_letter :: phi_w (drop j.+1 s)) = ... *)
   have -> : cde_total_width (D_letter :: phi_w (drop j.+1 s)) =
     2 + cde_total_width (phi_w (drop j.+1 s)).
     by rewrite /cde_total_width /=.
@@ -636,10 +641,10 @@ Qed.
 
 (* ===== The main theorem ================================================= *)
 (* phi_w_support_general:                                                    *)
-(* X ∈ expand_cde(Φ_w) ⟺ S_w ⊆ ω(desc(X))                               *)
+(* X ∈ expand_cde(Φ_w) ⟺ S_w ⊆ ω(desc(X)) *)
 (*                                                                           *)
 (* Proof structure (all intermediate lemmas proved above):                   *)
-(* 1. expand_cde_mem_iff: X ∈ expand_cde(m) ⟺ all D-offset transitions     *)
+(* 1. expand_cde_mem_iff: X ∈ expand_cde(m) ⟺ all D-offset transitions *)
 (*    [PROVED by induction on the cd-word m]                                *)
 (* 2. has_transition_omega_seq: bit transition ⟺ omega_seq membership      *)
 (*    [PROVED using mem_filter_iota_nth and foldr_maxn_ge]                  *)

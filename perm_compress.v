@@ -18,21 +18,27 @@ Unset Printing Implicit Defensive.
 Section DropPerm.
 Variables (n : nat) (s : {perm 'I_n.+1}).
 
-(** [s] sends [ord_max] and [lift ord_max i] to distinct values, by injectivity. *)
+(** [s] sends [ord_max] and [lift ord_max i] to distinct values, by
+    injectivity. *)
 Fact drop_fun_ne (i : 'I_n) : s ord_max != s (lift ord_max i).
 Proof. by apply/eqP => /perm_inj /eqP; rewrite (negbTE (neq_lift _ _)). Qed.
 
-(** [drop_fun i] is the unique [j : 'I_n] such that [s (lift ord_max i) = lift (s ord_max) j].
-    This is [s] restricted to ['I_n.+1 \ {ord_max}] and reindexed onto ['I_n]. *)
+(** [drop_fun i] is the unique [j : 'I_n] such that
+    [s (lift ord_max i) = lift (s ord_max) j]. This is [s] restricted to
+    ['I_n.+1 \ {ord_max}] and reindexed onto ['I_n]. *)
 Definition drop_fun (i : 'I_n) : 'I_n := sval (unlift_some (drop_fun_ne i)).
 
-(** Defining equation for [drop_fun]: [s (lift ord_max i)] equals [lift (s ord_max) (drop_fun i)]. *)
+(** Defining equation for [drop_fun]: [s (lift ord_max i)] equals
+    [lift (s ord_max) (drop_fun i)]. *)
 Lemma drop_funE i : s (lift ord_max i) = lift (s ord_max) (drop_fun i).
 Proof. by rewrite /drop_fun; case: (unlift_some _) => /= j -> _. Qed.
 
 (** [drop_fun] is injective, inheriting injectivity from [s]. *)
 Lemma drop_fun_inj : injective drop_fun.
-Proof. by move=> i1 i2 /(congr1 (lift (s ord_max))); rewrite -!drop_funE => /perm_inj/lift_inj. Qed.
+Proof.
+by move=> i1 i2 /(congr1 (lift (s ord_max)));
+   rewrite -!drop_funE => /perm_inj/lift_inj.
+Qed.
 
 (** [drop_perm s] is the permutation of ['I_n] obtained by deleting position
     [ord_max] from [s] and collapsing around the value [s ord_max]. *)
@@ -83,8 +89,9 @@ case: unliftP => [j1 ->|->]; case: unliftP => [j2 ->|->] //.
 - by move/eqP; rewrite (negbTE (neq_lift _ _)).
 Qed.
 
-(** [lift_perm k t] is the permutation of ['I_n.+1] obtained from [t : {perm 'I_n}]
-    by inserting a new maximum position [ord_max] sent to [k]. Inverse of [drop_perm]. *)
+(** [lift_perm k t] is the permutation of ['I_n.+1] obtained from
+    [t : {perm 'I_n}] by inserting a new maximum position [ord_max] sent to
+    [k]. Inverse of [drop_perm]. *)
 Definition lift_perm : {perm 'I_n.+1} := perm lift_fun_inj.
 
 (** Equivalence with the underlying [lift_fun] for rewriting. *)
@@ -99,7 +106,8 @@ Proof. by rewrite lift_permE lift_fun_ord_max. Qed.
 Lemma lift_perm_lift i : lift_perm (lift ord_max i) = lift k (t i).
 Proof. by rewrite lift_permE lift_fun_lift. Qed.
 
-(** Only [ord_max] is sent to [k] by [lift_perm k t]; all other positions avoid [k]. *)
+(** Only [ord_max] is sent to [k] by [lift_perm k t]; all other positions
+    avoid [k]. *)
 End LiftPerm.
 
 (* ========================================================================= *)
@@ -109,9 +117,11 @@ End LiftPerm.
 Section Cancellation.
 Variable n : nat.
 
-(** Left inverse: dropping a freshly lifted permutation recovers the original. *)
-(** Right inverse: lifting a dropped permutation at the dropped value recovers
-    the original. Establishes the bijection [{perm 'I_n.+1}] ~= ['I_n.+1] x [{perm 'I_n}]. *)
+(** Left inverse: dropping a freshly lifted permutation recovers the
+    original. *)
+(** Right inverse: lifting a dropped permutation at the dropped value
+    recovers the original. Establishes the bijection
+    [{perm 'I_n.+1}] ~= ['I_n.+1] x [{perm 'I_n}]. *)
 Lemma lift_perm_drop_perm (s : {perm 'I_n.+1}) :
   lift_perm (s ord_max) (drop_perm s) = s.
 Proof.
@@ -119,5 +129,6 @@ apply/permP => i; rewrite lift_permE /lift_fun.
 by case: (unliftP ord_max i) => [j|]->//; rewrite lift_drop_permE.
 Qed.
 
-(** Restatement of [lift_perm_ord_max] with explicit arguments, for use by clients. *)
+(** Restatement of [lift_perm_ord_max] with explicit arguments, for use by
+    clients. *)
 End Cancellation.

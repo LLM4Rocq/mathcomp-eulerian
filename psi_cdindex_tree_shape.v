@@ -1,14 +1,14 @@
-(* psi_cdindex_tree_shape.v — Tree-shape encoding for ψ-invariance.          *)
-(*                                                                            *)
-(* Replaces the per-property recursive proofs in psi_cdindex_tree_hlc.v with  *)
-(* a single heavy proof on tree shapes plus thin corollaries.  Reduces peak  *)
-(* -vo memory below the 128 GB process cap.                                   *)
-(*                                                                            *)
-(* The shape encoding flattens the min-max tree as: head = mm_pos, tail =     *)
-(* shape(left subtree) ++ shape(right subtree).  Two sequences with equal     *)
-(* shape produce the same min-max tree (modulo labels), so any property that  *)
-(* depends only on the tree structure (has_left_child, window_size, …) is     *)
-(* shape-determined.                                                          *)
+(* psi_cdindex_tree_shape.v — Tree-shape encoding for ψ-invariance.
+
+   Replaces the per-property recursive proofs in psi_cdindex_tree_hlc.v
+   with a single heavy proof on tree shapes plus thin corollaries.
+   Reduces peak -vo memory below the 128 GB process cap.
+
+   The shape encoding flattens the min-max tree as: head = mm_pos,
+   tail = shape(left subtree) ++ shape(right subtree).  Two sequences
+   with equal shape produce the same min-max tree (modulo labels), so
+   any property that depends only on the tree structure
+   (has_left_child, window_size, …) is shape-determined. *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
@@ -468,7 +468,8 @@ congr (_ :: (_ ++ _)).
         by move: Hp; rewrite size_behead size_rank_shift_seq2 ltn_predRL.
       have Hq1 : q.+1 < size (dm_h :: dm_t)
         by move: Hq; rewrite size_behead size_rank_shift_seq2 ltn_predRL.
-      rewrite -[behead (rank_shift_seq _)] (drop1 (rank_shift_seq (dm_h :: dm_t))).
+      rewrite -[behead (rank_shift_seq _)]
+                (drop1 (rank_shift_seq (dm_h :: dm_t))).
       rewrite -[behead (dm_h :: dm_t)](drop1 (dm_h :: dm_t)).
       rewrite !nth_drop.
       have H := rank_shift_preserves_interior_order

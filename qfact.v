@@ -48,7 +48,7 @@ by rewrite /= subKn // -ltnS ltn_ord.
 Qed.
 
 (* ========================================================================= *)
-(* §2. inv (insert_max_perm τ p) = inv τ + (n.+1 - val p)                    *)
+(* §2. inv (insert_max_perm τ p) = inv τ + (n.+1 - val p)               *)
 (* ========================================================================= *)
 
 (* The set of inversions of (insert_max_perm τ p) splits into:
@@ -206,7 +206,8 @@ Theorem inv_q_fact n :
 Proof.
 elim: n => [|n IH].
 - (* n = 0: sum over the single permutation of S_1 *)
-  rewrite /q_fact big_ord_recl big_ord0 mulr1 /q_int big_ord_recl big_ord0 addr0.
+  rewrite /q_fact big_ord_recl big_ord0 mulr1 /q_int big_ord_recl big_ord0.
+  rewrite addr0.
   rewrite expr0.
   rewrite (big_pred1 1%g) /=; last first.
   { move=> s; symmetry; apply/eqP.

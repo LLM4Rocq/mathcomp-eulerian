@@ -31,5 +31,6 @@ Variable n : nat.
 Implicit Types (k : 'I_n.+1) (j : 'I_n.+1).
 
 (** Strict monotonicity of [unlift] where defined: if [j1, j2 != k] then the
-    underlying ordinals returned by [unlift_some] respect the order of [j1, j2]. *)
+    underlying ordinals returned by [unlift_some] respect the order of
+    [j1, j2]. *)
 End UnliftOrd.

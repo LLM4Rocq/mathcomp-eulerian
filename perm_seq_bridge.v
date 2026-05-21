@@ -1,20 +1,19 @@
-(* perm_seq_bridge.v -- Bridge between perm/finset world and seq/cd-index world *)
-(*                                                                             *)
-(* Proves omega_proper_beta_lt (Stanley Prop 1.6.4):                           *)
-(*   omega_set D \proper omega_set E -> beta D < beta E                        *)
-(*                                                                             *)
-(* and beta_swap_lt_caseA (derived from omega_proper_beta_lt).                 *)
-(*                                                                             *)
-(* Dependencies (from psi_cdindex.v, all proved):                              *)
-(*   - fact3: M-class descent patterns = expand_cde(phi_w)                     *)
-(*   - strict_witness_exists: witness perm with S_w = {k}                      *)
-(*   - omega_monotone_class_count: monotonicity of omega                       *)
-(*                                                                             *)
-(* No axioms. phi_w_support_general is imported from psi_cdindex.v.            *)
-(* char_mono_class_inj (M-class char_mono injectivity) proved from             *)
-(* fact3 + uniq_expand_cde.                                                    *)
-(*                                                                             *)
-(* Build order: beta_bridge.v -> perm_seq_bridge.v -> beta_swap.v.             *)
+(* perm_seq_bridge.v -- Bridge between perm/finset and seq/cd-index.
+
+   Proves omega_proper_beta_lt (Stanley Prop 1.6.4):
+     omega_set D \proper omega_set E -> beta D < beta E
+   and beta_swap_lt_caseA (derived from omega_proper_beta_lt).
+
+   Dependencies (from psi_cdindex.v, all proved):
+     - fact3: M-class descent patterns = expand_cde(phi_w)
+     - strict_witness_exists: witness perm with S_w = {k}
+     - omega_monotone_class_count: monotonicity of omega
+
+   No axioms. phi_w_support_general is imported from psi_cdindex.v.
+   char_mono_class_inj (M-class char_mono injectivity) proved from
+   fact3 + uniq_expand_cde.
+
+   Build order: beta_bridge.v -> perm_seq_bridge.v -> beta_swap.v. *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import
@@ -288,10 +287,12 @@ Lemma find_ss_spec w bv :
 Proof.
 move=> Hu Hbv.
 rewrite /find_ss.
-have Hmem : bv \in [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
+have Hmem : bv \in
+    [seq char_mono (apply_psis ss w) | ss <- powerset_internal w].
   by rewrite -(mem_sort leq_seqb) (fact3 Hu) mem_sort.
 have [ss Hss Heq] := mapP Hmem.
-have Hfilter : ss \in [seq s <- powerset_internal w | char_mono (apply_psis s w) == bv].
+have Hfilter : ss \in
+    [seq s <- powerset_internal w | char_mono (apply_psis s w) == bv].
   by rewrite mem_filter Hss andbT; apply/eqP.
 set flt := [seq s <- _ | _].
 have Hfilter' : ss \in flt by rewrite /flt.
@@ -313,7 +314,8 @@ Definition class_map n (bv : seq bool) (sigma : {perm 'I_n}) : {perm 'I_n} :=
   let ss := find_ss w bv in
   seq_to_perm (apply_psis_size_eq ss (perm_to_seq_size sigma))
               (uniq_apply_psis ss (perm_to_seq_uniq sigma))
-              (all_bnd_apply_psis ss (perm_to_seq_bnd sigma) (perm_to_seq_uniq sigma)).
+              (all_bnd_apply_psis ss (perm_to_seq_bnd sigma)
+                                  (perm_to_seq_uniq sigma)).
 
 (** [perm_to_seq_class_map] -- [perm_to_seq] of [class_map bv sigma]
     is exactly [apply_psis (find_ss ... bv) (perm_to_seq sigma)]. *)
@@ -336,7 +338,8 @@ Proof. by rewrite /omega_seq /omega_seq_local. Qed.
 (** [omega_set_seq_bridge_bounded] -- bridge in the bounded form: for
     [k < m], [k \in omega_seq (set_to_seq D)] iff [Ordinal Hkm \in
     omega_set D]. *)
-Lemma omega_set_seq_bridge_bounded m (D : {set 'I_m.+1}) (k : nat) (Hkm : k < m) :
+Lemma omega_set_seq_bridge_bounded m (D : {set 'I_m.+1}) (k : nat)
+    (Hkm : k < m) :
   (k \in omega_seq (set_to_seq D)) = ((Ordinal Hkm) \in omega_set D).
 Proof.
 rewrite omega_seq_mem_eq.
@@ -448,7 +451,8 @@ have [Hsub [k Hkin Hknot]] := properP Hprop.
 set bvD := descent_to_bvec D.
 set bvE := descent_to_bvec E.
 set f := class_map (n:=m.+2) bvE.
-(* Step 1: show that for sigma with descent D, bvE is in expand_cde(phi_w(perm_to_seq sigma)) *)
+(* Step 1: show that for sigma with descent D, bvE is in
+   expand_cde(phi_w(perm_to_seq sigma)) *)
 have bvE_in_class : forall sigma : {perm 'I_m.+2}, descent_set sigma = D ->
   bvE \in expand_cde (phi_w (perm_to_seq sigma)).
   move=> sigma HdescD.
@@ -460,14 +464,16 @@ have bvE_in_class : forall sigma : {perm 'I_m.+2}, descent_set sigma = D ->
   (* bvD is in expand_cde(phi_w(perm_to_seq sigma)) *)
   have HbvD_in : bvD \in expand_cde (phi_w (perm_to_seq sigma)).
     by rewrite -Hcm; exact: char_mono_in_expand_cde.
-  (* By phi_w_support_general: S_w_seq is subset of omega_seq(desc_positions(bvD)) *)
+  (* By phi_w_support_general: S_w_seq is subset of
+     omega_seq(desc_positions(bvD)) *)
   have Hsz2 : 2 <= size (perm_to_seq sigma) by rewrite Hsize.
   have HszBvD : size bvD = (size (perm_to_seq sigma)).-1.
     by rewrite /bvD size_descent_to_bvec Hsize.
   have Hsupport_D := phi_w_support_general Huniq Hsz2 HszBvD.
   rewrite -/bvD in Hsupport_D.
   have Hrew : (size (perm_to_seq sigma)).-1 = m.+1 by rewrite Hsize.
-  have HD_all : all (fun j => j \in omega_seq [seq i <- iota 0 m.+1 | nth false bvD i])
+  have HD_all : all (fun j => j \in
+                       omega_seq [seq i <- iota 0 m.+1 | nth false bvD i])
                     (S_w_seq (perm_to_seq sigma)).
     by rewrite -[X in iota 0 X]Hrew -Hsupport_D.
   (* desc_positions(bvD) = set_to_seq D *)
@@ -494,7 +500,8 @@ have bvE_in_class : forall sigma : {perm 'I_m.+2}, descent_set sigma = D ->
 have f_descent_E : forall sigma : {perm 'I_m.+2}, descent_set sigma = D ->
   descent_set (f sigma) = E.
   move=> sigma HdescD.
-  have Hspec := find_ss_spec (perm_to_seq_uniq sigma) (bvE_in_class sigma HdescD).
+  have Hspec :=
+    find_ss_spec (perm_to_seq_uniq sigma) (bvE_in_class sigma HdescD).
   have Hcm : char_mono (perm_to_seq (f sigma)) = bvE.
     by rewrite perm_to_seq_class_map; case: Hspec.
   have := char_mono_perm_to_seq (f sigma).
@@ -547,7 +554,8 @@ have f_inj : {in [set sigma | descent_set sigma == D] &, injective f}.
   (* By perm_to_seq_inj: sigma1 = sigma2 *)
   by apply: perm_to_seq_inj; exact: Hw12.
 (* Step 4: image is proper subset of {descent E} *)
-(* Use strict_witness_exists: exists w0 with S_w = {val k}, contributing to E but not D *)
+(* Use strict_witness_exists: exists w0 with S_w = {val k},
+   contributing to E but not D *)
 have Hkm : val k < m := ltn_ord k.
 have Hkm2 : val k < (m.+2).-2 by rewrite /=.
 have [w0 [Hu0 [Hsz0 HS0]]] := strict_witness_exists Hkm2.
@@ -605,25 +613,31 @@ have bvD_notin_w0 : bvD \notin expand_cde (phi_w w0).
    If Im(f) = betaE_set, then beta(D) = beta(E).
    We need to show Im(f) ⊊ betaE_set.
 
-   For this, consider any sigma with descent E in Im(f), say sigma = f(tau) for tau with descent D.
+   For this, consider any sigma with descent E in Im(f), say
+   sigma = f(tau) for tau with descent D.
    Then perm_to_seq sigma = apply_psis ss (perm_to_seq tau) for some ss.
    phi_w(perm_to_seq sigma) = phi_w(perm_to_seq tau).
-   And bvD ∈ expand_cde(phi_w(perm_to_seq tau)) = expand_cde(phi_w(perm_to_seq sigma)).
+   And bvD ∈ expand_cde(phi_w(perm_to_seq tau))
+         = expand_cde(phi_w(perm_to_seq sigma)).
 
-   So every sigma in Im(f) has bvD ∈ expand_cde(phi_w(perm_to_seq sigma)).
+   So every sigma in Im(f) has
+   bvD ∈ expand_cde(phi_w(perm_to_seq sigma)).
 
-   But there exists sigma0 with descent E such that bvD ∉ expand_cde(phi_w(perm_to_seq sigma0)).
+   But there exists sigma0 with descent E such that
+   bvD ∉ expand_cde(phi_w(perm_to_seq sigma0)).
    This sigma0 is NOT in Im(f).
 *)
 (* We need: exists sigma0 : {perm 'I_{m+2}} with descent_set = E and
    bvD ∉ expand_cde(phi_w(perm_to_seq sigma0)). *)
 (* By strict_witness_exists: w0 uniq, size m+2, S_w = {val k}.
    bvE ∈ expand_cde(phi_w(w0)) and bvD ∉ expand_cde(phi_w(w0)).
-   We need to find sigma0 with perm_to_seq sigma0 having the same phi_w as w0. *)
+   We need sigma0 with perm_to_seq sigma0 having the same phi_w as w0.
+*)
 (* Since perm_to_seq is surjective onto perms of iota 0 (m+2), and w0 is
    perm_eq to some perm of iota 0 (m+2) (after rank normalization)... *)
 (* Actually, we directly need w0 to be a perm of iota 0 (m+2). *)
-(* strict_witness_exists gives witness_perm n k = iota 1 k ++ [k+2; k+1] ++ iota (k+3) (n-k-2).
+(* strict_witness_exists gives
+   witness_perm n k = iota 1 k ++ [k+2; k+1] ++ iota (k+3) (n-k-2).
    This is a perm of [1..n], not [0..n-1]. We need to shift by -1. *)
 (* ALTERNATIVELY: use a rank-normalization argument. *)
 (* For any uniq w, sort leq w = sort leq (rank_normalize w),
@@ -633,13 +647,16 @@ have bvD_notin_w0 : bvD \notin expand_cde (phi_w w0).
    phi_w(w0') = phi_w(w0) since phi_w depends only on relative order.
    S_w_seq(w0') = S_w_seq(w0) = [val k] similarly. *)
 (* Then there exists sigma0 with perm_to_seq(sigma0) = w0'. *)
-(* descent_set(sigma0): char_mono(w0') ∈ expand_cde(phi_w(w0')) = expand_cde(phi_w(w0)). *)
-(* bvE ∈ expand_cde(phi_w(w0)), so by fact3, some member of class(w0') has char_mono = bvE. *)
+(* descent_set(sigma0): char_mono(w0') ∈ expand_cde(phi_w(w0'))
+                                       = expand_cde(phi_w(w0)). *)
+(* bvE ∈ expand_cde(phi_w(w0)), so by fact3, some member of class(w0')
+   has char_mono = bvE. *)
 (* That member, as a perm, has descent E. *)
 
-(* Let me use a cleaner approach: the image of f on betaD_set is properly contained
-   in betaE_set, by showing that any element of Im(f) has bvD in its expand_cde,
-   but there exist elements of betaE_set that don't. *)
+(* Let me use a cleaner approach: the image of f on betaD_set is
+   properly contained in betaE_set, by showing that any element of
+   Im(f) has bvD in its expand_cde, but there exist elements of
+   betaE_set that don't. *)
 
 (* Image characterization: sigma ∈ Im(f|_{betaD_set}) implies
    bvD ∈ expand_cde(phi_w(perm_to_seq sigma)) *)
@@ -654,12 +671,16 @@ have img_has_bvD : forall sigma : {perm 'I_m.+2},
   rewrite phi_w_apply_psis //.
     by rewrite -Hcm; exact: (char_mono_in_expand_cde (perm_to_seq_uniq tau)).
   exact: perm_to_seq_uniq.
-(* Now we need a sigma with descent E but bvD ∉ expand_cde(phi_w(perm_to_seq sigma)). *)
-(* Use w0 from strict_witness_exists. We need it as a perm of iota 0 (m+2). *)
+(* Now we need a sigma with descent E but
+   bvD ∉ expand_cde(phi_w(perm_to_seq sigma)). *)
+(* Use w0 from strict_witness_exists. We need it as a perm of
+   iota 0 (m+2). *)
 (* w0 = witness_perm (m+2) (val k), which is a perm of [1..m+2].
-   Subtracting 1 from each element gives a perm of [0..m+1] = iota 0 (m+2). *)
+   Subtracting 1 from each element gives a perm of [0..m+1]
+   = iota 0 (m+2). *)
 (* But the definitions are opaque; let me use perm_eq properties. *)
-(* Since w0 is uniq of size m+2, let w0_norm = [seq (index x (sort leq w0)) | x <- w0].
+(* Since w0 is uniq of size m+2, let
+   w0_norm = [seq (index x (sort leq w0)) | x <- w0].
    This is a perm of iota 0 (m+2), and it's order-isomorphic to w0. *)
 (* phi_w(w0_norm) = phi_w(w0) by order-isomorphism invariance. *)
 (* S_w_seq(w0_norm) = S_w_seq(w0) similarly. *)
@@ -684,7 +705,8 @@ have card_img : #|[set f tau | tau in [set s | descent_set s == D]]| = beta D.
 (* For this we show: exists sigma_new in betaE_set \ Im(f). *)
 (* We need a perm with descent E whose phi_w doesn't support bvD. *)
 (* Use w0 from strict_witness_exists. w0 is uniq, size m+2, S_w = {val k}. *)
-(* We need a perm sigma0 of 'I_{m+2} such that phi_w(perm_to_seq sigma0) = phi_w(w0). *)
+(* We need a perm sigma0 of 'I_{m+2} such that
+   phi_w(perm_to_seq sigma0) = phi_w(w0). *)
 (* Define sigma0 via rank normalization of w0. *)
 
 (* Rank normalization: map each element to its rank in sorted order *)
@@ -729,11 +751,14 @@ have Hpts0 : perm_to_seq sigma0 = w0_norm.
 (* phi_w(w0_norm) = phi_w(w0) because order-isomorphism preserves
    has_left_child (via has_left_child_order_iso) and window_size
    (via window_size_order_iso or similar) *)
-(* For the general statement, we need phi_w_order_iso, which may need to be proved. *)
+(* For the general statement, we need phi_w_order_iso, which may need
+   to be proved. *)
 (* Actually, let me check if this is already available... *)
-(* phi_w depends on classify_vertex_cde, which depends on is_internal and has_left_child.
-   is_internal depends on window_size. Both window_size and has_left_child are
-   order-isomorphism invariant (proved in psi_cdindex.v). *)
+(* phi_w depends on classify_vertex_cde, which depends on is_internal
+   and has_left_child.
+   is_internal depends on window_size. Both window_size and
+   has_left_child are order-isomorphism invariant (proved in
+   psi_cdindex.v). *)
 (* We need: phi_w is order-isomorphism invariant. This means:
    for w1, w2 of same size, uniq, with same relative order at all positions,
    phi_w(w1) = phi_w(w2). *)
@@ -741,7 +766,8 @@ have Hpts0 : perm_to_seq sigma0 = w0_norm.
 (* Let me introduce this as a derived fact. *)
 
 (* First, check S_w_seq(w0_norm) = S_w_seq(w0) *)
-(* S_w_seq depends on classify_vertex_cde, which depends on is_internal and has_left_child.
+(* S_w_seq depends on classify_vertex_cde, which depends on is_internal
+   and has_left_child.
    Both are order-invariant. So S_w_seq is order-invariant. *)
 
 (* For now, let me just show bvD ∉ expand_cde(phi_w(perm_to_seq sigma0)) *)
@@ -755,13 +781,15 @@ have Hpts0 : perm_to_seq sigma0 = w0_norm.
 (* From psi_cdindex.v, we have window_size_apply_psis (line 666), but that's
    for apply_psis, not general order isomorphism. *)
 
-(* ALTERNATIVE: Instead of rank normalization, use the fact that w0 is already
-   a specific permutation (witness_perm n k = iota 1 k ++ [k+2; k+1] ++ iota (k+3) (n-k-2)).
+(* ALTERNATIVE: Instead of rank normalization, use the fact that w0 is
+   already a specific permutation
+   (witness_perm n k = iota 1 k ++ [k+2; k+1] ++ iota (k+3) (n-k-2)).
    This is a perm of [1..n]. Subtracting 1 gives a perm of [0..n-1]. *)
 (* But subtraction changes the actual values, not just the relative order. *)
 
-(* SIMPLEST APPROACH: Show that for ANY uniq w of size m+2, if bvE ∈ expand_cde(phi_w w)
-   then there exists a perm sigma with descent E in the M-class of the rank-normalization of w.
+(* SIMPLEST APPROACH: Show that for ANY uniq w of size m+2, if
+   bvE ∈ expand_cde(phi_w w) then there exists a perm sigma with
+   descent E in the M-class of the rank-normalization of w.
    And this perm is not in Im(f) if bvD ∉ expand_cde(phi_w w). *)
 
 (* This is getting very complex. Let me use a cleaner argument. *)
@@ -774,18 +802,23 @@ have Hpts0 : perm_to_seq sigma0 = w0_norm.
 
    So beta(D) = |Im(f)| ≤ |betaE_set| = beta(E).
 
-   For strictness, we need |Im(f)| < |betaE_set|, i.e., betaE_set ⊄ Im(f).
+   For strictness, we need |Im(f)| < |betaE_set|, i.e.,
+   betaE_set ⊄ Im(f).
 
-   Every sigma in Im(f) satisfies: bvD ∈ expand_cde(phi_w(perm_to_seq sigma))  [img_has_bvD].
+   Every sigma in Im(f) satisfies:
+   bvD ∈ expand_cde(phi_w(perm_to_seq sigma))  [img_has_bvD].
 
-   So it suffices to find sigma_new ∈ betaE_set with bvD ∉ expand_cde(phi_w(perm_to_seq sigma_new)).
+   So it suffices to find sigma_new ∈ betaE_set with
+   bvD ∉ expand_cde(phi_w(perm_to_seq sigma_new)).
 
-   Since w0 is uniq, size m+2, and w0_norm is order-isomorphic and a perm of iota 0 (m+2):
+   Since w0 is uniq, size m+2, and w0_norm is order-isomorphic and
+   a perm of iota 0 (m+2):
    - perm_to_seq sigma0 = w0_norm
    - phi_w(w0_norm) = phi_w(w0) (by order isomorphism invariance)
    - S_w_seq(w0_norm) = S_w_seq(w0) = [val k]
 
-   So bvE ∈ expand_cde(phi_w(w0_norm)) and bvD ∉ expand_cde(phi_w(w0_norm)).
+   So bvE ∈ expand_cde(phi_w(w0_norm)) and
+   bvD ∉ expand_cde(phi_w(w0_norm)).
 
    By fact3: the M-class of w0_norm contains a member with char_mono = bvE.
    That member, as a perm (via seq_to_perm), has descent E.
@@ -802,14 +835,17 @@ have phi_w_order_iso : forall (s1 s2 : seq nat),
     (nth 0 s1 p < nth 0 s1 q) = (nth 0 s2 p < nth 0 s2 q)) ->
   phi_w s1 = phi_w s2.
   move=> s1 s2 Hszeq Hu1 Hu2 Hord.
-  (* phi_w = filter non-E from phi'_w = [classify_vertex_cde i s | i <- iota 0 (size s)] *)
-  (* classify_vertex_cde depends on is_internal (window_size) and has_left_child *)
+  (* phi_w = filter non-E from
+     phi'_w = [classify_vertex_cde i s | i <- iota 0 (size s)] *)
+  (* classify_vertex_cde depends on is_internal (window_size) and
+     has_left_child *)
   (* Both are order-invariant *)
   rewrite /phi_w /phi'_w Hszeq.
   congr (filter _ _).
   apply: eq_map => i.
   rewrite /classify_vertex_cde.
-  (* is_internal depends on window_size, which is determined by mm_pos recursion *)
+  (* is_internal depends on window_size, determined by mm_pos
+     recursion *)
   (* We need: is_internal i s1 = is_internal i s2 *)
   (* and has_left_child i s1 = has_left_child i s2 *)
   have Hint : is_internal i s1 = is_internal i s2.
@@ -842,10 +878,12 @@ have HS_w0 : S_w_seq w0_norm = S_w_seq w0.
   have Hint : is_internal i w0_norm = is_internal i w0.
     rewrite /is_internal Hsz_norm'.
     case Hisz: (i < size w0) => //=.
-    by rewrite (window_size_order_iso i Hsz_norm' Huniq_norm Hu0 Hord_rev).
+    by rewrite (window_size_order_iso
+                  i Hsz_norm' Huniq_norm Hu0 Hord_rev).
   rewrite Hint.
   case: (is_internal i w0) => //=.
-  by rewrite (has_left_child_order_iso i Hsz_norm' Huniq_norm Hu0 Hord_rev).
+  by rewrite (has_left_child_order_iso
+                i Hsz_norm' Huniq_norm Hu0 Hord_rev).
 
 (* bvE ∈ expand_cde(phi_w(perm_to_seq sigma0)) *)
 have HbvE_sigma0 : bvE \in expand_cde (phi_w (perm_to_seq sigma0)).
@@ -864,7 +902,8 @@ have Hsz_new : size w_new = m.+2.
 have Huniq_new : uniq w_new.
   by apply: uniq_apply_psis; exact: perm_to_seq_uniq.
 have Hbnd_new : all (fun x => x < m.+2) w_new.
-  by apply: all_bnd_apply_psis; [exact: perm_to_seq_bnd | exact: perm_to_seq_uniq].
+  by apply: all_bnd_apply_psis;
+    [exact: perm_to_seq_bnd | exact: perm_to_seq_uniq].
 set sigma_new := seq_to_perm Hsz_new Huniq_new Hbnd_new.
 have Hpts_new : perm_to_seq sigma_new = w_new.
   by rewrite perm_to_seq_seq_to_perm.
@@ -878,10 +917,12 @@ have Hdesc_new : descent_set sigma_new = E.
   by [].
 
 (* sigma_new is not in Im(f) *)
-have Hnotin : sigma_new \notin [set f tau | tau in [set s | descent_set s == D]].
+have Hnotin : sigma_new \notin
+    [set f tau | tau in [set s | descent_set s == D]].
   apply/negP => /imsetP [tau].
   rewrite inE => /eqP Hdtau Heq.
-  have Hsigma_in : sigma_new \in [set f tau' | tau' in [set s | descent_set s == D]].
+  have Hsigma_in : sigma_new \in
+      [set f tau' | tau' in [set s | descent_set s == D]].
     by apply/imsetP; exists tau => //; rewrite inE Hdtau.
   have Habs : bvD \in expand_cde (phi_w (perm_to_seq sigma_new))
     by exact: img_has_bvD Hsigma_in.

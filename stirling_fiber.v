@@ -22,7 +22,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 (* ========================================================================= *)
-(* §A. The insert_after construction                                          *)
+(* §A. The insert_after construction                                       *)
 (* ========================================================================= *)
 
 Section InsertAfter.
@@ -117,7 +117,7 @@ Proof. by rewrite insert_after_ord_max eq_sym neq_lift. Qed.
 End InsertAfter.
 
 (* ========================================================================= *)
-(* §B. Sanity check.                                                          *)
+(* §B. Sanity check.                                                       *)
 (*                                                                            *)
 (* Goal of plan was vm_compute cycle_count for n=2.  Unfortunately mathcomp's *)
 (* {perm} type wraps finfun which is opaque to vm_compute (computing          *)
@@ -129,7 +129,7 @@ End InsertAfter.
     [insert_after j0 s] (since mathcomp's [{perm}] is opaque to
     [vm_compute], we cannot do a numeric check). *)
 (* ========================================================================= *)
-(* §C. Cycle count of insert_after = cycle count of s                         *)
+(* §C. Cycle count of insert_after = cycle count of s                      *)
 (*                                                                            *)
 (* Strategy: decompose insert_after as a product of a transposition and       *)
 (* a lift_perm fixing ord_max, then apply mathcomp's porbits_mul_tperm.       *)
@@ -190,8 +190,8 @@ Qed.
 End CycleCountInsertAfter.
 
 (* ========================================================================= *)
-(* §D. Bijection: insert_after as a bijection between                         *)
-(*       'I_n × {perm 'I_n}                                                    *)
+(* §D. Bijection: insert_after as a bijection between
+       'I_n × {perm 'I_n}                                                *)
 (*     and                                                                    *)
 (*       {sigma : {perm 'I_n.+1} | sigma ord_max != ord_max}                  *)
 (* ========================================================================= *)
@@ -257,7 +257,7 @@ by rewrite eq_tau /tau permM tpermK.
 Qed.
 
 (* ========================================================================= *)
-(* §E. Per-fiber count and stirling_c_rec assembly                            *)
+(* §E. Per-fiber count and stirling_c_rec assembly                         *)
 (* ========================================================================= *)
 
 (** Count of permutations [sigma] of ['I_n.+1] with [sigma ord_max !=

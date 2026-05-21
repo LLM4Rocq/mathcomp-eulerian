@@ -10,8 +10,9 @@ Unset Printing Implicit Defensive.
 (* Eulerian numbers                                                          *)
 (* ========================================================================= *)
 
-(** [eulerian n k] is the Eulerian number [A(n+1, k)]: the number of permutations
-    of ['I_n.+1] with exactly [k] descents. Stanley's [A(n+1, k)] (Stanley EC1, S1.4). *)
+(** [eulerian n k] is the Eulerian number [A(n+1, k)]: the number of
+    permutations of ['I_n.+1] with exactly [k] descents. Stanley's
+    [A(n+1, k)] (Stanley EC1, S1.4). *)
 Definition eulerian (n k : nat) : nat :=
   #|[set s : {perm 'I_n.+1} | des s == k]|.
 
@@ -26,17 +27,19 @@ Section EulerianBasic.
 Lemma eulerian_row_sum n : \sum_(k < n.+1) eulerian n k = #|{perm 'I_n.+1}|.
 Proof.
 rewrite /eulerian -sum1_card.
-rewrite (partition_big (fun s : {perm 'I_n.+1} => inord (des s) : 'I_n.+1) xpredT) //=.
+rewrite (partition_big
+           (fun s : {perm 'I_n.+1} => inord (des s) : 'I_n.+1) xpredT) //=.
 apply: eq_bigr => k _; rewrite -sum1_card; apply: eq_bigl => s; rewrite inE.
 by rewrite -val_eqE /= inordK // ltnS des_le.
 Qed.
 
-(** Row sum equals [(n+1)!]: combines [eulerian_row_sum] with [|S_{n+1}| = (n+1)!]. *)
+(** Row sum equals [(n+1)!]: combines [eulerian_row_sum] with
+    [|S_{n+1}| = (n+1)!]. *)
 Lemma eulerian_row_sum_fact n : \sum_(k < n.+1) eulerian n k = n.+1`!.
 Proof. by rewrite eulerian_row_sum card_Sn. Qed.
 
-(** Out-of-range vanishing: [eulerian n k = 0] when [k > n], since no permutation
-    has more than [n] descents. *)
+(** Out-of-range vanishing: [eulerian n k = 0] when [k > n], since no
+    permutation has more than [n] descents. *)
 Lemma eulerian_out_of_range n k : n < k -> eulerian n k = 0.
 Proof.
 move=> nk; apply/eqP; rewrite cards_eq0; apply/eqP/setP => s.
@@ -87,7 +90,8 @@ End EulerianBasic.
 (* Symmetry: eulerian n k = eulerian n (n - k)                               *)
 (* ========================================================================= *)
 
-(** Reversal is injective on permutations (left cancellation by [rev_perm_ord]). *)
+(** Reversal is injective on permutations (left cancellation by
+    [rev_perm_ord]). *)
 Lemma rev_perm_inj n : injective (@rev_perm n).
 Proof. by move=> s1 s2; rewrite /rev_perm; exact: mulgI. Qed.
 
@@ -108,7 +112,8 @@ apply/imsetP/idP.
   by rewrite inE des_rev_perm Hs subKn.
 Qed.
 
-(** Boundary value: [eulerian n n = 1], counting only the reversal permutation. *)
+(** Boundary value: [eulerian n n = 1], counting only the reversal
+    permutation. *)
 Lemma eulerian_n_n n : eulerian n n = 1.
 Proof. by rewrite (eulerian_symm (leqnn n)) subnn eulerian_n_0. Qed.
 
@@ -118,9 +123,9 @@ Proof. by rewrite (eulerian_symm (leqnn n)) subnn eulerian_n_0. Qed.
 (* (The k = 0 case is eulerian_n_0: eulerian n.+1 0 = 1.)                    *)
 (*                                                                           *)
 (* We prove this via the "insert-max-value" bijection                        *)
-(*   {perm 'I_n.+2} ≅ {perm 'I_n.+1} × 'I_n.+2                               *)
-(*   σ ↦ (τ, p)                                                              *)
-(* where p = σ^{-1}(ord_max) is the position of the max value and τ is       *)
+(*   {perm 'I_n.+2} ≅ {perm 'I_n.+1} × 'I_n.+2                             *)
+(*   σ ↦ (τ, p) *)
+(* where p = σ^{-1}(ord_max) is the position of the max value and τ is     *)
 (* obtained by deleting that max from σ's one-line notation.                 *)
 (* ========================================================================= *)
 
@@ -202,7 +207,8 @@ Section ExtractMax.
 Variables (n : nat) (s : {perm 'I_n.+2}) (p : 'I_n.+2).
 Hypothesis (sp : s p = ord_max).
 
-(** Off-position values of [s] avoid [ord_max] when [s p = ord_max], by injectivity. *)
+(** Off-position values of [s] avoid [ord_max] when [s p = ord_max], by
+    injectivity. *)
 Fact extract_max_ne (j : 'I_n.+1) : s (lift p j) != (ord_max : 'I_n.+2).
 Proof.
 rewrite -sp; apply/eqP => /perm_inj /eqP.
@@ -210,7 +216,8 @@ by rewrite eq_sym (negbTE (neq_lift _ _)).
 Qed.
 
 (** Underlying function of [extract_max_perm]: removes the value [ord_max]
-    (located at position [p]) and reindexes the remaining values onto ['I_n.+1]. *)
+    (located at position [p]) and reindexes the remaining values onto
+    ['I_n.+1]. *)
 Definition extract_max_fun (j : 'I_n.+1) : 'I_n.+1 :=
   odflt j (unlift ord_max (s (lift p j))).
 
@@ -232,7 +239,8 @@ rewrite !extract_max_funE => /perm_inj /lift_inj //.
 Qed.
 
 (** [extract_max_perm sp] is the permutation of ['I_n.+1] obtained from
-    [s : {perm 'I_n.+2}] (with [s p = ord_max]) by deleting the value [ord_max]. *)
+    [s : {perm 'I_n.+2}] (with [s p = ord_max]) by deleting the value
+    [ord_max]. *)
 Definition extract_max_perm : {perm 'I_n.+1} := perm extract_max_fun_inj.
 
 (** Equivalence with the underlying [extract_max_fun] for rewriting. *)
@@ -253,8 +261,10 @@ End ExtractMax.
 Section InsertExtractBij.
 Variable n : nat.
 
-(** Left inverse: extracting the max from a freshly inserted permutation recovers [t]. *)
-(** Right inverse: inserting the extracted max back at position [p] recovers [s]. *)
+(** Left inverse: extracting the max from a freshly inserted permutation
+    recovers [t]. *)
+(** Right inverse: inserting the extracted max back at position [p]
+    recovers [s]. *)
 Lemma insert_extract_max (s : {perm 'I_n.+2}) (p : 'I_n.+2)
     (sp : s p = ord_max) :
   insert_max_perm (extract_max_perm sp) p = s.
@@ -309,7 +319,8 @@ Lemma des_insert_max_ord_max :
 Proof.
 rewrite /des /descent_set.
 suff -> : [set i : 'I_n.+1 | is_descent (insert_max_perm t ord_max) i]
-        = [set (lift ord_max j : 'I_n.+1) | j in [set i : 'I_n | is_descent t i]].
+        = [set (lift ord_max j : 'I_n.+1)
+            | j in [set i : 'I_n | is_descent t i]].
   by rewrite card_imset //; exact: lift_inj.
 apply/setP => i; rewrite !inE.
 case: (unliftP ord_max i) => [j ->|->].
@@ -323,7 +334,8 @@ case: (unliftP ord_max i) => [j ->|->].
     apply/val_inj => /=.
     rewrite /bump /=.
     have H2 : (n <= j) = false by apply/negbTE; rewrite -ltnNge; apply: ltn_ord.
-    have H3 : (n.+1 <= j.+1) = false by apply/negbTE; rewrite -ltnNge; apply: ltn_ord.
+    have H3 : (n.+1 <= j.+1) = false
+      by apply/negbTE; rewrite -ltnNge; apply: ltn_ord.
     by rewrite H2 H3.
   rewrite /is_descent E1 E2 !insert_max_perm_lift.
   apply/idP/imsetP.
@@ -344,8 +356,9 @@ case: (unliftP ord_max i) => [j ->|->].
     by move: (ltn_ord j); rewrite -eqn ltnn.
 Qed.
 
-(** Inserting [ord_max] at an interior position above [j] adds a descent iff [j]
-    was an ascent in [t]. Key combinatorial lemma for the Eulerian recurrence. *)
+(** Inserting [ord_max] at an interior position above [j] adds a descent
+    iff [j] was an ascent in [t]. Key combinatorial lemma for the
+    Eulerian recurrence. *)
 Lemma des_insert_max_interior (j : 'I_n) :
   des (insert_max_perm t (lift ord0 (widen_ord (leqnSn n) j))) =
     des t + ~~ is_descent t j.
@@ -361,15 +374,18 @@ suff -> : [set i | is_descent sigma i]
   by case: (is_descent t j); rewrite addnC.
 apply/setP => i; rewrite !inE.
 case: (unliftP h i) => [x ->|->].
-- (* Goal: is_descent σ (lift h x) = x ∈ descent_set t ∪ {j} (up to lift h) *)
+- (* Goal: is_descent σ (lift h x) = x ∈ descent_set t ∪ {j}
+         (up to lift h) *)
   have sigma_lift0 : forall x : 'I_n,
     sigma (lift ord0 (lift h x)) = widen_ord (leqnSn n.+1) (t (lift ord0 x)).
     move=> y.
     have E : lift ord0 (lift h y) = lift p (lift ord0 y) :> 'I_n.+2.
       by apply/val_inj => /=; rewrite /p /=; rewrite /bump /= addnCA.
     by rewrite /sigma E insert_max_perm_lift.
-  have -> : (lift h x \in [set lift h x0 | x0 in [set y | is_descent t y] :|: [set j]])
-          = (is_descent t x) || (x == j).
+  have -> :
+      (lift h x \in
+       [set lift h x0 | x0 in [set y | is_descent t y] :|: [set j]])
+      = (is_descent t x) || (x == j).
     apply/imsetP/idP => [[y]|].
     + by rewrite !inE => /orP[Hy|/eqP ->] /lift_inj ->;
          [rewrite Hy|rewrite eqxx orbT].
@@ -384,7 +400,8 @@ case: (unliftP h i) => [x ->|->].
       by rewrite /sigma E insert_max_perm_at_p.
     by rewrite orbT; apply: ltn_ord.
   + rewrite orbF.
-    have E : widen_ord (leqnSn n.+1) (lift h x) = lift p (widen_ord (leqnSn n) x) :> 'I_n.+2.
+    have E : widen_ord (leqnSn n.+1) (lift h x) =
+             lift p (widen_ord (leqnSn n) x) :> 'I_n.+2.
       apply/val_inj; rewrite /= /p /= /bump /=.
       case: (ltngtP x j) => [Hxj|Hxj|Hxj].
       - by [].
@@ -392,7 +409,9 @@ case: (unliftP h i) => [x ->|->].
       - by rewrite -val_eqE /= Hxj eqxx in xnj.
     by rewrite /sigma E insert_max_perm_lift.
 - (* Goal: is_descent σ h = h ∈ image (false) *)
-  have Rfalse : (h \in [set lift h x | x in [set y | is_descent t y] :|: [set j]]) = false.
+  have Rfalse :
+      (h \in [set lift h x | x in [set y | is_descent t y] :|: [set j]])
+      = false.
     by apply/negbTE/imsetP => -[y _ Hy]; have := neq_lift h y; rewrite -Hy eqxx.
   rewrite Rfalse /is_descent.
   have E1 : widen_ord (leqnSn n.+1) h = lift p h :> 'I_n.+2.
@@ -407,7 +426,7 @@ Qed.
 End DesInsertMax.
 
 (* ------------------------------------------------------------------------- *)
-(* Bijection on fibers: {σ : σ^{-1} ord_max = p} ≃ {perm 'I_n.+1}           *)
+(* Bijection on fibers: {σ : σ^{-1} ord_max = p} ≃ {perm 'I_n.+1}        *)
 (* ------------------------------------------------------------------------- *)
 
 (** The inverse of [insert_max_perm t p] sends [ord_max] back to [p]:
@@ -426,7 +445,8 @@ Qed.
 (* Cardinality of descent / ascent sets                                      *)
 (* ------------------------------------------------------------------------- *)
 
-(** The descent count [des t] equals the sum of descent indicators over positions. *)
+(** The descent count [des t] equals the sum of descent indicators
+    over positions. *)
 Lemma sum_descent n (t : {perm 'I_n.+1}) :
   \sum_(j : 'I_n) is_descent t j = des t.
 Proof.
@@ -434,15 +454,18 @@ rewrite /des /descent_set -sum1dep_card [RHS]big_mkcond /=.
 by apply: eq_bigr => j _; case: (is_descent t j).
 Qed.
 
-(** The ascent count [n - des t] equals the sum of ascent indicators over positions. *)
+(** The ascent count [n - des t] equals the sum of ascent indicators
+    over positions. *)
 (* ------------------------------------------------------------------------- *)
 (* Main recurrence                                                           *)
 (* ------------------------------------------------------------------------- *)
 
-(** Proof-irrelevant variant of [extract_insert_max], threading any equality proof
-    [insert_max_perm t p p = ord_max] rather than the canonical one. *)
+(** Proof-irrelevant variant of [extract_insert_max], threading any
+    equality proof [insert_max_perm t p p = ord_max] rather than the
+    canonical one. *)
 (** The pairing map [(t, p) |-> insert_max_perm t p] is a bijection
-    [{perm 'I_n.+1} x 'I_n.+2] ~= [{perm 'I_n.+2}]. Foundation of the recurrence. *)
+    [{perm 'I_n.+1} x 'I_n.+2] ~= [{perm 'I_n.+2}]. Foundation of the
+    recurrence. *)
 Lemma insert_max_perm_bij n :
   bijective (fun tp : {perm 'I_n.+1} * 'I_n.+2 => insert_max_perm tp.1 tp.2).
 Proof.
@@ -492,9 +515,11 @@ have asc_card (u : {perm 'I_n.+1}) : #|[set x | ~~ is_descent u x]| = n - des u.
 under eq_bigr => t _ do
   rewrite !eqSS !sum_nat_cond_const -/(descent_set t) -/(des t) asc_card.
 rewrite -!sum1dep_card !big_distrr /=.
-rewrite [X in _ = _ + X]big_mkcond /= [X in _ = X + _]big_mkcond /= -big_split /=.
+rewrite [X in _ = _ + X]big_mkcond /=
+        [X in _ = X + _]big_mkcond /= -big_split /=.
 apply: eq_bigr => t _; rewrite !muln1.
-case E1: (des t == k); case E2: (des t == k.+1); rewrite /= ?addn0 ?add0n ?mul0n ?muln0.
+case E1: (des t == k); case E2: (des t == k.+1);
+  rewrite /= ?addn0 ?add0n ?mul0n ?muln0.
 - move/eqP: E1 E2 => ->; move/eqP => Habs.
   by exfalso; move: (ltnSn k); rewrite {1}Habs ltnn.
 - move/eqP: E1 => <-.
@@ -588,7 +613,8 @@ have alpha_eq :
   \sum_(j < N.+4) ((-1 : int) ^ j *+ 'C(N.+2, j) *+ 'C(u - j, N.+2)).
   rewrite [RHS]big_ord_recl [(-1) ^ ord0]expr0 bin0 mulr1n subn0.
   by congr (_ + _); apply: eq_bigr => i _.
-rewrite addrA alpha_eq [\sum_(j < N.+4) _]big_ord_recr /= bin_small // mul0rn addr0 beta_eq.
+rewrite addrA alpha_eq [\sum_(j < N.+4) _]big_ord_recr /= bin_small //.
+rewrite mul0rn addr0 beta_eq.
 rewrite -[_ + - _]/(_ - _) -sumrB; apply: eq_bigr => i _.
 have aux v : ((v - i).-1 = v.-1 - i)%N by case: v => [|v']//=; rewrite -subnS.
 by rewrite (binS' (u - i) N) (aux u) mulrnDr addrAC subrr add0r.
@@ -605,7 +631,8 @@ elim: n t => [|n IH] t; last by rewrite aux_id_step IH; case: t.
 under eq_bigr => j _ do rewrite bin1.
 transitivity ((t - 0)%:R + (-1 : int) *+ (2 * (t - 1)) + (t - 2)%N%:R : int).
   rewrite 3!big_ord_recl big_ord0 addr0 -!exprnP /=.
-  by rewrite expr0 !exprS expr0 mulr1 mulrN1 opprK !mulr1n -mulrnA addrA (mulnC 2).
+  by rewrite expr0 !exprS expr0 mulr1 mulrN1 opprK !mulr1n
+             -mulrnA addrA (mulnC 2).
 rewrite subn0; case: t => [|[|[|t]]] /=.
 - by rewrite !muln0 !mulr0n !add0r.
 - by rewrite !muln0 !mulr0n addr0.
@@ -619,7 +646,7 @@ rewrite subn0; case: t => [|[|[|t]]] /=.
 Qed.
 
 (* ------------------------------------------------------------------------- *)
-(* Closed form (Eulerian explicit formula) — TODO                             *)
+(* Closed form (Eulerian explicit formula) — TODO                       *)
 (* ------------------------------------------------------------------------- *)
 (*                                                                            *)
 (* Given aux_id, the proof of eulerian_explicit follows by Worpitzky          *)
@@ -643,7 +670,8 @@ Lemma eulerian_explicit n k :
   (eulerian n k)%:Z =
     \sum_(j < k.+1) (-1) ^ j *+ 'C(n.+2, j) *+ (k.+1 - j) ^ n.+1.
 Proof.
-under eq_bigr => j _ do rewrite -mulr_natr -mulr_natr worpitzky natr_sum big_distrr /=.
+under eq_bigr => j _ do
+  rewrite -mulr_natr -mulr_natr worpitzky natr_sum big_distrr /=.
 rewrite exchange_big /=.
 under eq_bigr => m _.
   rewrite (eq_bigr (fun j : 'I_k.+1 => (eulerian n m)%:R *
@@ -666,8 +694,10 @@ have inner_eq : forall m, m < n.+1 ->
   rewrite big_mkcond [RHS]big_mkcond /=; apply: eq_bigr => i _ /=; rewrite /F.
   case Hin: (i < n.+3); case Hik: (i < k.+1) => //=.
   - rewrite (_ : 'C(k.+1 + m - i, n.+1) = 0)%N ?mulr0n //.
-    by apply/bin_small/(leq_ltn_trans _ Hm); rewrite leq_subLR leq_add2r leqNgt Hik.
-  - by rewrite (_ : 'C(n.+2, i) = 0)%N ?mulr0n ?mul0rn //; apply: bin_small; rewrite leqNgt Hin.
+    apply/bin_small/(leq_ltn_trans _ Hm).
+    by rewrite leq_subLR leq_add2r leqNgt Hik.
+  - rewrite (_ : 'C(n.+2, i) = 0)%N ?mulr0n ?mul0rn //.
+    by apply: bin_small; rewrite leqNgt Hin.
 under eq_bigr => m _ do rewrite (inner_eq m (ltn_ord m)).
 case: (leqP k n) => Hkn; last first.
   rewrite eulerian_out_of_range // big1 // => i _.
@@ -676,7 +706,8 @@ case: (leqP k n) => Hkn; last first.
   by rewrite ltnS (leq_trans Hkn) // leq_addr.
 have HmO : (n - k < n.+1)%N by rewrite ltnS leq_subr.
 pose m0 := Ordinal HmO.
-rewrite (bigD1 m0) //= [in (k.+1 + m0 == n.+1)%N]/m0 /= addSn addnC subnK // eqxx mulr1.
+rewrite (bigD1 m0) //= [in (k.+1 + m0 == n.+1)%N]/m0 /= addSn addnC subnK //.
+rewrite eqxx mulr1.
 rewrite big1 ?addr0 ?(eulerian_symm Hkn) ?natz // => i Hi.
 rewrite (_ : (k.+1 + i == n.+1) = false) ?mulr0 //.
 apply: contraNF Hi => /eqP H; apply/eqP/val_inj => /=.

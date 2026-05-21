@@ -1,4 +1,4 @@
-(* psi_cdindex_tree.v — Tree-shape structural proofs (part 2)                *)
+(* psi_cdindex_tree.v — Tree-shape structural proofs (part 2) *)
 (*                                                                           *)
 (* Free-endpoint and LR-predecessor lemmas, proved by structural induction  *)
 (* on the min-max tree (mmtree) and lifted to seq via mmtree_of_seq_mm.     *)
@@ -14,7 +14,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* ----- M5.2 Examples -------------------------------------------------------- *)
+(* ----- M5.2 Examples ----- *)
 
 Example window_size_psi_ex1 :
   window_size 2 (psi 5 [:: 3; 1; 4; 7; 5; 9; 2; 6]) =
@@ -212,7 +212,8 @@ elim => [|l IHl x r IHr] i.
   by rewrite /has_left_child /has_left_child_fuel; case: i.
 case=> Hmm [Hvl Hvr].
 case: (ltngtP i (size (mmtree_to_seq l))) => Hi.
-- by rewrite (hlc_bridge_left Hmm Hi) (@has_left_child_t_Node_lt l x r i Hi) IHl.
+- rewrite (hlc_bridge_left Hmm Hi).
+  by rewrite (@has_left_child_t_Node_lt l x r i Hi) IHl.
 - rewrite (hlc_bridge_right Hmm Hi) (@has_left_child_t_Node_gt l x r i Hi).
   rewrite IHr //.
   by rewrite -subnDA addn1.

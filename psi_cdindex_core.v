@@ -1,8 +1,8 @@
-(* psi_cdindex_core.v — cd-index core: re-exports defs/tree + remaining      *)
-(*                                                                           *)
-(* Split into psi_cdindex_defs.v (definitions), psi_cdindex_tree.v (heavy    *)
-(* structural proofs), and this file (remaining lemmas + re-export).         *)
-(* Downstream files can continue to Require Import psi_cdindex_core.         *)
+(* psi_cdindex_core.v — cd-index core: re-exports defs/tree + remaining.
+
+   Split into psi_cdindex_defs.v (definitions), psi_cdindex_tree.v (heavy
+   structural proofs), and this file (remaining lemmas + re-export).
+   Downstream files can continue to Require Import psi_cdindex_core. *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
@@ -12,7 +12,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* ----- M5.5 Main theorem: Fact #3 ------------------------------------------ *)
+(* ----- M5.5 Main theorem: Fact #3 ----- *)
 
 (* -- Tree-shape invariance under apply_psis -------------------------------- *)
 
@@ -657,7 +657,8 @@ Lemma char_mono_apply_psis_D_bit_pred ss w v :
 Proof.
 elim: ss w => [|u ss IH] w Hu Huss Hint Hintv Hdv.
   rewrite /=.
-  by rewrite (nth_char_mono (leq_ltn_trans (leq_pred v) (is_internal_lt Hintv))).
+  by rewrite (nth_char_mono
+                (leq_ltn_trans (leq_pred v) (is_internal_lt Hintv))).
 move: Huss => /= /andP [Hunin Husss].
 have Hintu : is_internal u w by apply: Hint; rewrite mem_head.
 have Hupsi : uniq (psi u w) := uniq_psi u Hu.

@@ -1,9 +1,9 @@
-(* psi_cdindex_defs.v — Definitions and simple lemmas for cd-index            *)
-(*                                                                           *)
-(* Split from psi_cdindex_core.v to reduce -vo compilation memory.           *)
-(* Contains: is_internal, apply_psis, char_mono, cde, classify_vertex_cde,   *)
-(* phi_w, internal_vertices, expand_cde, powerset_internal, leq_seqb,        *)
-(* and simple apply_psis lemmas.                                             *)
+(* psi_cdindex_defs.v — Definitions and simple lemmas for cd-index.
+
+   Split from psi_cdindex_core.v to reduce -vo compilation memory.
+   Contains: is_internal, apply_psis, char_mono, cde,
+   classify_vertex_cde, phi_w, internal_vertices, expand_cde,
+   powerset_internal, leq_seqb, and simple apply_psis lemmas. *)
 
 From mathcomp Require Import all_ssreflect.
 Require Import mmtree psi_core psi_comm psi_descent_v2 psi_descent_thms.
@@ -12,13 +12,14 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(* ===== Milestone 5: Fact #3 — Φ_w(a+b, ab+ba) = Σ_{v∈[w]} u_{D(v)} ====== *)
-(* Reference: M5_FACT3_INFORMAL.md (informal proof note).                      *)
-(* Stanley EC1 (2nd ed.) section 1.6.3, Fact #3 (lines 294-329).              *)
-(* The cd-index of w, evaluated at c:=a+b and d:=ab+ba, equals the sum of     *)
-(* characteristic monomials u_{D(v)} over the M-equivalence class [w].        *)
+(* ===== Milestone 5: Fact #3 — Φ_w(a+b, ab+ba) = Σ_{v∈[w]} u_{D(v)}
+   Reference: M5_FACT3_INFORMAL.md (informal proof note).
+   Stanley EC1 (2nd ed.) section 1.6.3, Fact #3 (lines 294-329).
+   The cd-index of w, evaluated at c:=a+b and d:=ab+ba, equals the sum
+   of characteristic monomials u_{D(v)} over the M-equivalence class
+   [w]. *)
 
-(* ----- M5.0 Definitions ----------------------------------------------------- *)
+(* ----- M5.0 Definitions ----- *)
 
 (** [is_internal i w] holds iff vertex [i] is non-endpoint in the
     min-max tree of [w] (its window has size > 1). *)
@@ -39,8 +40,9 @@ Definition char_mono (w : seq nat) : seq bool :=
     [D_letter] (both children), [E_letter] (endpoint). *)
 Inductive cde := C_letter | D_letter | E_letter.
 
-(** [classify_vertex_cde i w] returns the cd-letter for vertex [i] of [w]:
-    [E_letter] if endpoint, [D_letter] if it has a left child, else [C_letter]. *)
+(** [classify_vertex_cde i w] returns the cd-letter for vertex [i] of
+    [w]: [E_letter] if endpoint, [D_letter] if it has a left child, else
+    [C_letter]. *)
 Definition classify_vertex_cde (i : nat) (w : seq nat) : cde :=
   if ~~ is_internal i w then E_letter
   else if has_left_child i w then D_letter
@@ -72,7 +74,8 @@ Fixpoint expand_cde (letters : seq cde) : seq (seq bool) :=
       [seq false :: t | t <- tails] ++ [seq true :: t | t <- tails]
   | D_letter :: rest =>
       let tails := expand_cde rest in
-      [seq false :: true :: t | t <- tails] ++ [seq true :: false :: t | t <- tails]
+      [seq false :: true :: t | t <- tails] ++
+      [seq true :: false :: t | t <- tails]
   | E_letter :: rest => expand_cde rest
   end.
 
@@ -93,7 +96,7 @@ Fixpoint leq_seqb (s1 s2 : seq bool) : bool :=
     else ~~ b1
   end.
 
-(* ----- M5.1 Proved helpers -------------------------------------------------- *)
+(* ----- M5.1 Proved helpers ----- *)
 
 (** Empty operator list acts as identity. *)
 Lemma apply_psis_nil w : apply_psis [::] w = w.
@@ -114,7 +117,8 @@ elim: ops w => [// | i ops IH] w /= Hu.
 by apply: IH; apply: uniq_psi.
 Qed.
 
-(** [apply_psis ops w] is a permutation of [w] (each [psi] is a transposition). *)
+(** [apply_psis ops w] is a permutation of [w] (each [psi] is a
+    transposition). *)
 Lemma perm_eq_apply_psis ops w : perm_eq (apply_psis ops w) w.
 Proof.
 elim: ops w => [| i ops IH] w /=; first exact: perm_refl.
