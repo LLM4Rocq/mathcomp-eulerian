@@ -50,9 +50,10 @@ Highlights:
 | `fps.v` | carrier, algebraic structures, units, polynomial embedding, geometric series |
 | `fps_deriv.v` | formal derivative (Leibniz rule), primitive, derivative-cancellation (char 0) |
 | `fps_egf.v` | exponential generating functions: `egf_mul` (binomial convolution), `egf_deriv` (shift), injectivity |
+| `fps_trig.v` | `expf`, `sinf`, `cosf`, `secf`, `tanf`; derivative rules; `sin2cos2`; `sec2f`; the quadratic ODE `sectan_ode` for sec + tan |
+| `fps_ode.v` | `fps_quad_ode_uniq`: solutions of `2y' = c + y^2` are determined by their constant coefficient (char 0) |
 
-(Coming per the plan: `fps_trig.v`, `fps_ode.v`, then `fps_ogf.v`,
-`fps_comp.v`, `fps_explog.v`.)
+(Coming per the plan: `fps_ogf.v`, `fps_comp.v`, `fps_explog.v`.)
 
 ## Axioms
 
