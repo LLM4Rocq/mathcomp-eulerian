@@ -1364,6 +1364,52 @@ of the formalization,
 requires the toggle-action machinery of \S1.6.3 and is the subject
 of a future chapter.
 
+% =====================================================================
+\section{Worpitzky's identity and the Eulerian generating function}
+% =====================================================================
+
+\begin{theorem}[Worpitzky]
+  For all $m, n \geq 0$,
+  \[
+    (m+1)^{n+1} \;=\; \sum_{k=0}^{n} A(n,k) \binom{m+n+1-k}{n+1},
+  \]
+  where $A(n,k)$ counts the permutations of $n+1$ letters with $k$
+  descents.
+\end{theorem}
+
+\rocqsource{worpitzky.v}{56}
+\begin{lstlisting}[language=Rocq]
+Theorem worpitzky (n m : nat) :
+  ((m.+1) ^ n.+1
+   = \sum_(k < n.+1) eulerian n k * 'C(m + n.+1 - k, n.+1))%N.
+\end{lstlisting}
+
+\decoded{A pure statement about natural numbers — axiom-free, in the
+combinatorial core.  Proved by induction on $n$ from the Eulerian
+recurrence \texttt{eulerian\_rec}, with a Pascal-style splitting of
+$(m+1)\binom{m+n+1-k}{n+1}$ at each step.}
+
+\noindent Packaged as generating functions (Stanley \S1.4): with
+$A_n(x) = \texttt{eul\_pol}\ n$ the Eulerian polynomial,
+\[
+  \sum_{m \geq 0} (m+1)^{n+1} x^m \;=\; \frac{A_n(x)}{(1-x)^{n+2}}.
+\]
+
+\rocqsource{stanley_ogf.v}{69}
+\begin{lstlisting}[language=Rocq]
+Theorem stanley_1_4 n :
+  pow_ogf n * ((1 - 'Xf) ^+ n.+2) = poly_fps (eul_pol n).
+\end{lstlisting}
+
+\decoded{An identity in \texttt{\{fps int\}} — note the coefficient
+ring: $\mathbb{Z}$ is not a field, and the inverse of $(1-x)^{n+2}$
+exists because the \texttt{mathcomp\_fps} unit theory only asks for an
+invertible constant coefficient.  The coefficient-level content is
+exactly Worpitzky's identity combined with the negative-binomial
+expansion $(1-x)^{-(k+1)} = \sum_m \binom{m+k}{k} x^m$
+(\texttt{coef\_fps\_geomXn}).  This layer uses the classical axioms of
+\texttt{mathcomp-classical}; the Worpitzky identity itself does not.}
+
 \clearpage
 
 % =====================================================================
@@ -2008,6 +2054,66 @@ The indicator therefore \emph{does} factor into independent
 $s_L$- and $s_R$-conditions, with no $4$-to-$1$ analysis required.
 \end{remark}
 
+% =====================================================================
+\section{Proposition 1.6.1: the generating function of the Euler
+  numbers}
+% =====================================================================
+
+\begin{theorem}[Stanley, Proposition 1.6.1]
+  As formal power series,
+  \[
+    \sum_{n \geq 0} \Eul_n \frac{x^n}{n!} \;=\; \sec x + \tan x.
+  \]
+\end{theorem}
+
+\rocqsource{stanley_egf.v}{66}
+\begin{lstlisting}[language=Rocq]
+Theorem stanley_1_6_1 : euler_egf = secf + tanf :> {fps rat}.
+
+Corollary stanley_1_6_1_coef n :
+  (eulerA n)%:R = n`!%:R * ((secf + tanf : {fps rat})``_n).
+\end{lstlisting}
+
+\decoded{\texttt{euler\_egf} is the exponential generating function
+$\sum_n \Eul_n x^n/n!$ of the Euler numbers, an element of the ring
+\texttt{\{fps rat\}} of formal power series over $\mathbb{Q}$; the
+right-hand side is built from the formal series $\sec = \cos^{-1}$
+and $\tan = \sin \cdot \sec$.  Everything is formal: no analysis,
+no convergence.}
+
+\noindent
+\emph{Proof sketch.} The Andr\'e recurrence \texttt{euler\_rec}
+above translates verbatim into the formal differential equation
+$2A' = 1 + A^2$, $A(0) = 1$ for $A = \texttt{euler\_egf}$ (the
+translation is one application of the EGF workhorse lemma
+\texttt{egf\_mul}: products of egfs are egfs of binomial
+convolutions).  The series $\sec + \tan$ satisfies the same
+equation (\texttt{sectan\_ode}, using $\sin^2 + \cos^2 = 1$, itself
+proved by the derivative trick), and solutions of this quadratic
+equation are determined by their constant coefficient
+(\texttt{fps\_quad\_ode\_uniq}: coefficient $n{+}1$ of a solution
+is computed from coefficients $\leq n$ since $2(n{+}1)$ is
+invertible in characteristic $0$). \qed
+
+\paragraph{The FPS sub-library.} The proof is carried by a new
+reusable library of formal power series (\texttt{fps/}, namespace
+\texttt{mathcomp\_fps}, Apache-2.0, depending only on mathcomp and
+\texttt{mathcomp-classical}): \texttt{\{fps R\}} is the type of
+coefficient sequences with the full mathcomp algebra hierarchy ---
+in particular a \emph{com-unit-ring for any}
+\texttt{comUnitRingType} $R$, with $f$ invertible iff $f_0$ is ---
+plus formal derivatives (Leibniz rule) and the EGF calculus.  Ring
+axioms are inherited from \texttt{\{poly R\}} through truncation
+(coefficient $n$ of a product only sees coefficients $\leq n$), not
+re-proved.
+
+\paragraph{Axiom note.} This generating-function layer (and only
+it) uses the three standard classical axioms of
+\texttt{mathcomp-classical} (functional/propositional
+extensionality, indefinite description) --- the same set as
+mathcomp-analysis.  \texttt{Print Assumptions stanley\_1\_6\_1}
+lists exactly those; the combinatorial chapters remain axiom-free.
+
 \appendix
 
 \input{lemma_catalog.tex}
@@ -2147,6 +2253,12 @@ reading order:
   \item[\texttt{reflection.v}] Stanley \S1.6.4
     (Chapter~\ref{ch:reflection}); Andr\'e's reflection method and
     the recurrence \texttt{euler\_rec}, fully proved.
+  \item[\texttt{fps/*.v}, \texttt{stanley\_egf.v}] formal power
+    series sub-library (namespace \texttt{mathcomp\_fps}) and
+    Stanley \S1.6.4 Proposition~1.6.1,
+    $\sum \Eul_n x^n/n! = \sec x + \tan x$
+    (Chapter~\ref{ch:reflection}); this layer uses the classical
+    axioms of \texttt{mathcomp-classical}.
 \end{description}
 
 \end{document}

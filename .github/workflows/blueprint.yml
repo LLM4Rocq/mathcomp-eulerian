@@ -32,11 +32,12 @@ jobs:
             startGroup "Workaround permission issue"
               sudo chown -R 1000:1000 .
             endGroup
-            startGroup "Install MathComp (ssreflect + fingroup + algebra)"
+            startGroup "Install MathComp (ssreflect + fingroup + algebra + classical)"
               opam install -y \
                 coq-mathcomp-ssreflect \
                 coq-mathcomp-fingroup \
-                coq-mathcomp-algebra
+                coq-mathcomp-algebra \
+                coq-mathcomp-classical
             endGroup
           script: |
             startGroup "Build project"

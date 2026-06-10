@@ -59,6 +59,7 @@ RUN opam update \
       rocq-mathcomp-ssreflect.2.5.0 \
       rocq-mathcomp-fingroup.2.5.0 \
       rocq-mathcomp-algebra.2.5.0 \
+      rocq-mathcomp-classical.1.16.0 \
       coq-lsp.0.2.5+9.1 \
  && opam clean -a -c -s --logs
 
