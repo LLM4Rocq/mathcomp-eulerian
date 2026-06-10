@@ -13,8 +13,29 @@ fps_egf.v, fps_trig.v, fps_ode.v) and `stanley_egf.v` all land with 0
 admits; `Print Assumptions stanley_1_6_1` = the classical trio.
 **PHASE 2 COMPLETE** (same day) — `worpitzky.v` (axiom-free Worpitzky +
 `coef_eul_pol`), `fps/fps_ogf.v` (negative binomial), `stanley_ogf.v`
-(`stanley_1_4`, the §1.4 Eulerian OGF over `{fps int}`). Next: phase 3
-(composition + exp/log; demos #1 and #2).
+(`stanley_1_4`, the §1.4 Eulerian OGF over `{fps int}`).
+**PHASE 3 COMPLETE** — `fps/fps_comp.v` (composition + chain rule, via
+the truncation bootstrap to `\Po`), `fps/fps_explog.v` (exp/log group
+laws over com-unit-rings with invertible naturals; demo #1
+`exp(log (1−x)⁻¹) = (1−x)⁻¹`), `stirling_egf.v` (demo #2,
+`stirling_cycle_egf : Σ (Σ c(n,k)tᵏ) xⁿ/n! = (1−x)^(−t)` over
+`{fps {poly rat}}`).
+**PHASE 4 PART 1 COMPLETE** — `qbin.v` (Gaussian binomials, axiom-free,
+q-Pascal + q=1 specialization) and `carlitz.v` (`q_staircase`: the
+Carlitz denominator `Π(1−qⁱx)` inverted by the Gaussian-binomial gf,
+over `{fps {poly int}}`).
+**PHASE 4 PART 2 COMPLETE** — `qeul_rec.v` (axiom-free: maj of an
+insertion from the descent-set lemmas, rank sums producing q-integers,
+`q_eulerian n k` and the Carlitz recurrence
+`B(n+1,k+1) = [k+2]_q B(n,k+1) + q^(k+1)[n+1-k]_q B(n,k)` via the
+insert-max bijection with `q^maj` weights), `qworpitzky.v` (axiom-free:
+q-integer/Gaussian-binomial calculus incl. the complementary absorption
+`[k+1][n,k+1] = [n-k][n,k]`, the q-Pascal splitting step, `q_worpitzky`,
+`coef_q_eul_pol`), and the final packaging in `carlitz.v`:
+`carlitz : (Σ_m ([m+1]_q)^(n+1) x^m) · Π_(i<n+2)(1−qⁱx) = q_eul_pol n`
+over `{fps {poly int}}` (+ division/inverse forms).  **The FPS plan is
+fully delivered**; remaining ideas (Lagrange inversion, library
+split-out, truncated companion) are stretch items below.
 
 **Phase-1 headline.** Stanley EC1, **Proposition 1.6.1**: the exponential
 generating function of the Euler numbers,
