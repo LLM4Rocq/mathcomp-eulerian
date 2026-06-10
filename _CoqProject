@@ -8,6 +8,8 @@
 # (depends on mathcomp + mathcomp-classical only; see fps/README.md
 # and docs/plans/FPS_PLAN.md).
 fps/fps.v
+fps/fps_deriv.v
+fps/fps_egf.v
 
 mmtree.v
 psi_core.v

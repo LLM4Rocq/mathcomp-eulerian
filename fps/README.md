@@ -48,9 +48,11 @@ Highlights:
 | File | Content |
 |---|---|
 | `fps.v` | carrier, algebraic structures, units, polynomial embedding, geometric series |
+| `fps_deriv.v` | formal derivative (Leibniz rule), primitive, derivative-cancellation (char 0) |
+| `fps_egf.v` | exponential generating functions: `egf_mul` (binomial convolution), `egf_deriv` (shift), injectivity |
 
-(Coming per the plan: `fps_deriv.v`, `fps_egf.v`, `fps_trig.v`,
-`fps_ode.v`, then `fps_ogf.v`, `fps_comp.v`, `fps_explog.v`.)
+(Coming per the plan: `fps_trig.v`, `fps_ode.v`, then `fps_ogf.v`,
+`fps_comp.v`, `fps_explog.v`.)
 
 ## Axioms
 
