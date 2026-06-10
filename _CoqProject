@@ -13,6 +13,7 @@ fps/fps_egf.v
 fps/fps_trig.v
 fps/fps_ode.v
 fps/fps_ogf.v
+fps/fps_comp.v
 
 mmtree.v
 psi_core.v
