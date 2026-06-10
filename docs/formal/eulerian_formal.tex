@@ -25,13 +25,12 @@ verify the formal statement.
 \paragraph{Status.} This edition covers all of Stanley
 \S1.3 (cycles, Stirling numbers, inversions, major index, Foata),
 \S1.4 (descents, Eulerian numbers, $\beps{n}{S}$, $q$-analogues),
-\S1.6.2 (longest alternating subsequence), and \S1.6.3 (toggle
-action, $\omega$-map, and the headline Corollary~1.6.5). Stanley
-\S1.6.4 (Andr\'e's reflection method) is included as
-Chapter~\ref{ch:reflection} but is \emph{partial}: the headline
-recurrence is proven modulo one named admit, in a file out of the
-active build chain. See that chapter for details and pointers to
-the retrospective document.
+\S1.6.2 (longest alternating subsequence), \S1.6.3 (toggle
+action, $\omega$-map, and the headline Corollary~1.6.5), and
+\S1.6.4 (Andr\'e's reflection method,
+Chapter~\ref{ch:reflection}): the Andr\'e recurrence
+$2\Eul_{n+2} = \sum_k \binom{n+1}{k}\Eul_k\Eul_{n+1-k}$ is now
+fully proved, with no admits, in the active build chain.
 
 \paragraph{First-time readers.} Read Chapter~\ref{ch:primer} once,
 then Chapters~\ref{ch:cycles}--\ref{ch:reflection} top to bottom.
@@ -1901,19 +1900,18 @@ echo 'From mathcomp_eulerian Require Import beta_swap.
 \clearpage
 
 % =====================================================================
-\chapter{Andr\'e's reflection method (partial)}
+\chapter{Andr\'e's reflection method}
 \label{ch:reflection}
 % =====================================================================
 
-\paragraph{Status.} This chapter records a \emph{partial}
-formalization. The headline recurrence $2 \Eul_{n+2} = \sum_k
-\binom{n+1}{k} \Eul_k \Eul_{n+1-k}$ is proven modulo one named
-\texttt{Admitted} lemma, in the file
-\texttt{experimental/reflection.v} which is \emph{out of the active
-build chain} (excluded from \texttt{\_CoqProject}). The companion
+\paragraph{Status.} The headline recurrence $2 \Eul_{n+2} = \sum_k
+\binom{n+1}{k} \Eul_k \Eul_{n+1-k}$ is now \emph{fully formalized}
+in \texttt{reflection.v}, which is part of the active build chain
+--- 0 admits, 0 axioms (\texttt{Print Assumptions euler\_rec}
+prints \texttt{Closed under the global context}). The companion
 document \texttt{docs/internal/PHASE\_C\_RETROSPECTIVE.md} captures
-the eight sessions of work, the structural obstacle, and a concrete
-$\sim$510 LOC discharge plan for any future contributor.
+the earlier sessions of work and the (since resolved) structural
+obstacle; see the remark at the end of this chapter.
 
 % =====================================================================
 \section{Euler numbers}
@@ -1924,24 +1922,34 @@ $\sim$510 LOC discharge plan for any future contributor.
   alternating permutations of $\Sn{n+1}$). Set $\Eul_0 = 1$.
 \end{definition}
 
-\noindent (No \texttt{rocqsource} block since the file is out of the
-build chain.)
+\rocqsource{reflection.v}{28}
+\begin{lstlisting}[language=Rocq]
+Definition euler (n : nat) : nat := beta (alt_desc_set n).
+
+Definition eulerA (n : nat) : nat :=
+  if n is k.+1 then euler k else 1.
+\end{lstlisting}
 
 % =====================================================================
 \section{The headline recurrence}
 % =====================================================================
 
-\begin{theorem}[Andr\'e recurrence, modulo one admit]
+\begin{theorem}[Andr\'e recurrence]
   For every $n \geq 0$,
   \[
     2 \Eul_{n+2} \;=\; \sum_{k=0}^{n+1} \binom{n+1}{k} \, \Eul_k \, \Eul_{n+1-k}.
   \]
 \end{theorem}
 
-\noindent The formal statement \texttt{euler\_rec} in
-\texttt{experimental/reflection.v} (line 1705) is derived in one
-line from \texttt{two\_eulerA\_split} (already proven) and an
-admitted lemma:
+\rocqsource{reflection.v}{1988}
+\begin{lstlisting}[language=Rocq]
+Theorem euler_rec n :
+  2 * eulerA n.+2
+  = \sum_(k < n.+2) 'C(n.+1, k) * eulerA k * eulerA (n.+1 - k).
+\end{lstlisting}
+
+\noindent \texttt{euler\_rec} is derived in one line from
+\texttt{two\_eulerA\_split} and the boundary cancellation lemma:
 
 \[
   \texttt{sum\_set\_is\_alt\_eq\_andre\_sum} \;:\;
@@ -1949,27 +1957,55 @@ admitted lemma:
   \;=\; \sum_{k} \binom{n+1}{k} \Eul_k \Eul_{n+1-k}.
 \]
 
-\noindent The base case $n = 0$ ($2\Eul_2 = 2$) is proven
-unconditionally in the same file
-(\texttt{euler\_rec\_n0\_direct}); cases $n = 1, 2$ inherit the
-admit transitively.
+\noindent
+\emph{Proof sketch.} The left side counts the pairs $(t, p)$ ---
+equivalently, via the \texttt{insert\_max\_perm} bijection, the
+permutations $\sigma \in \Sn{n+2}$ --- whose descent set is
+set-alternating of \emph{either} flavour; by
+\texttt{beta\_compl} this is $2\Eul_{n+2}$. The inner sum over the
+slot $p$ of the maximum splits into three groups
+(\texttt{sum\_set\_is\_alt\_ord0},
+\texttt{sum\_set\_is\_alt\_ord\_max},
+\texttt{interior\_set\_is\_alt}):
+\begin{itemize}
+  \item $p = 0$ forces a descent at slot $0$, so only the
+    \texttt{alt} flavour survives and the tail contributes
+    $\Eul_{n+1}$ --- the $k = n+1$ term.
+  \item $p = n+1$ forces an ascent at slot $n$; the prefix
+    contributes $\Eul_{n+1}$ --- the $k = 0$ term.
+  \item An interior slot $c+1$ forces an ascent at $c$ and a
+    descent at $c+1$, which pins the flavour to the parity of $c$.
+    The surviving condition on $t$ is
+    $\descent(t) \cup \{c\} = P_c$ for a parity-prescribed target
+    $P_c$ (\texttt{andre\_target}), and --- the key point --- this
+    \emph{factors} through the
+    $(\mathrm{image\_left}, \mathrm{perm\_left}, \mathrm{perm\_right})$
+    decomposition (\texttt{andre\_union\_eq\_split}): left and
+    right sub-permutations must each be alternating of a
+    parity-prescribed flavour, while the boundary descent of $t$
+    at slot $c$ is absorbed by the union $\cup\,\{c\}$ and is
+    \emph{unconstrained}. Counting via the \texttt{assemble\_perm}
+    bijection and \texttt{card\_draws}
+    (\texttt{andre\_interior\_count}) yields
+    $\binom{n+1}{c+1} \Eul_{c+1} \Eul_{n-c}$ --- the $k = c+1$
+    term. \qed
+\end{itemize}
 
-\begin{remark}[The structural obstacle]
-The combinatorial heart of the admit is the boundary descent at
-the position of the inserted maximum. After partitioning
-$\sigma \in \Sn{n+2}$ by the position $p$ of the max and the value
-set $L$ left of it, the descent at slot $p-1$ depends on
-$(L, s_L, s_R)$ \emph{jointly}: specifically on whether the
-largest left value (selected by $s_L$) exceeds the smallest right
-value (selected by $s_R$). This couples the three components, so
-$[\descent(\sigma) = E]$ does not factor into independent
-$s_L$- and $s_R$-conditions. The classical proof absorbs the
-coupling via the factor of $2$ on the LHS (sum over
-\texttt{alt} and \texttt{\textasciitilde:alt}), but the formal
-counterpart turns out to be a 4-to-1 reduction, not the 2-to-1
-fibration suggested by the English proof. The retrospective
-explains in detail why estimates for this discharge consistently
-underran by a factor of $\sim$2--3.
+\noindent The base case $n = 0$ ($2\Eul_2 = 2$) is also proven
+directly in the same file (\texttt{euler\_rec\_n0\_direct}).
+
+\begin{remark}[The structural obstacle, resolved]
+Earlier sessions stalled on the boundary descent at the position of
+the inserted maximum, which appears to couple $(L, s_L, s_R)$
+jointly: whether the last left value exceeds the first right value
+depends on all three components. The resolution is that the
+coupling never needs to be analysed: the inserted maximum forces
+the descent at slot $c+1$ of $\sigma$ \emph{regardless} of the
+boundary comparison in $t$, so the alternation condition on
+$\sigma$ constrains $\descent(t) \cup \{c\}$ --- and membership of
+the boundary slot $c$ in $\descent(t)$ is swallowed by the union.
+The indicator therefore \emph{does} factor into independent
+$s_L$- and $s_R$-conditions, with no $4$-to-$1$ analysis required.
 \end{remark}
 
 \appendix
@@ -2108,9 +2144,9 @@ reading order:
     \texttt{psi\_*.v} files are project-internal scaffolding for
     the cd-index machinery underlying
     \texttt{omega\_proper\_beta\_lt}.
-  \item[\texttt{experimental/reflection.v}] Stanley \S1.6.4
-    (Chapter~\ref{ch:reflection}); contains 1 named admit, out of
-    the active build chain.
+  \item[\texttt{reflection.v}] Stanley \S1.6.4
+    (Chapter~\ref{ch:reflection}); Andr\'e's reflection method and
+    the recurrence \texttt{euler\_rec}, fully proved.
 \end{description}
 
 \end{document}

@@ -172,10 +172,9 @@ each element, get `{1, 3}` — matches Stanley.
 | `altsub.v` | §1.6.2 — longest alternating subsequence | ✅ |
 | `beta_omega.v` | §1.6.3 — toggle action `ω` | ✅ |
 | `beta_swap.v` | §1.6.3 — alternating descent set, Stanley Cor 1.6.5 | ✅ |
-| `experimental/reflection.v` | §1.6.4 — André reflection, `euler_rec` | ⚠️ 1 named admit |
+| `reflection.v` | §1.6.4 — André reflection, `euler_rec` | ✅ |
 
 ✅ = kernel-validated, axiom-free, in active build chain.
-⚠️ = out of build chain; see `docs/internal/PHASE_C_RETROSPECTIVE.md`.
 
 ### Verifying axiom-freeness yourself
 

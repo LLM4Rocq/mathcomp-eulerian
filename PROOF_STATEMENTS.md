@@ -66,8 +66,10 @@ and not in `_CoqProject`.
 | `beta_bridge.v` | ✅ | Set ↔ seq bridge for `omega` |
 | `perm_seq_bridge.v` | ✅ | **`omega_proper_beta_lt`** (Stanley Prop 1.6.4) |
 | `beta_swap.v` | ✅ | **`beta_alt_max`** (the headline theorem, Stanley Cor 1.6.5) |
+| `reflection.v` | ✅ | **`euler_rec`** (André recurrence, Stanley §1.6.4) |
 
-All 23 maintained files compile to `.vo`. The headline theorems —
+All 33 maintained files compile to `.vo` (the table lists the
+§1.4/§1.6 cd-index chain; see `_CoqProject` for the full list). The headline theorems —
 Stanley Prop 1.6.4 (`omega_proper_beta_lt`) and Cor 1.6.5
 (`beta_alt_max`) — are kernel-validated and closed under the global
 context.
@@ -565,6 +567,33 @@ upstream (see `beta_compl`, line 166: `β(D) = β(~D)`).
 inequality follows. This **exactly mirrors Stanley's "Proof: Immediate from
 Proposition 1.6.4 and equation (1.65)"** (p. 61).
 
+## 17. André's reflection method / Euler numbers ✅ `reflection.v`
+
+[Stanley §1.6.4 (alternating permutations and Euler numbers)]
+
+**Euler numbers ✅ (`reflection.v`).** `euler n := beta (alt_desc_set n)`
+counts the down-up alternating permutations of length `n+1`;
+`eulerA n` is Stanley's `A_n` (with `A_0 = 1`).
+
+**Theorem ✅ `euler_rec`** — the André recurrence:
+
+> `2 · A_{n+2} = ∑_{k ≤ n+1} C(n+1, k) · A_k · A_{n+1−k}`
+
+**Proof structure (fully formalized, 0 admits).** By `beta_compl`, the LHS
+is the number of permutations of length `n+2` whose descent set is
+*set-alternating* (either flavour). Via the `insert_max_perm` bijection,
+each such permutation is `(t, p)` — a shorter permutation `t` plus the slot
+`p` of the maximum. The boundary slots `p = 0` and `p = n+1` each contribute
+`A_{n+1}` (the `k = n+1` and `k = 0` terms); an interior slot `c+1` forces
+one alternation flavour (`interior_set_is_alt`) and the resulting condition
+on `t` **factors** through the `(image_left, perm_left, perm_right)`
+decomposition (`andre_union_eq_split`): the left/right sub-permutations must
+each be alternating of a parity-prescribed flavour, while the boundary
+descent is unconstrained. Counting (`andre_interior_count`) gives
+`C(n+1, c+1) · A_{c+1} · A_{n−c}` via `card_draws` and the
+`assemble_perm` bijection (`sum_reindex_inner`). Summing the three groups
+of slots is `sum_set_is_alt_eq_andre_sum`.
+
 ---
 
 # Stanley correspondence summary
@@ -596,6 +625,7 @@ which we don't formalize.)
 | §1.6.3, p. 60-61 (proof of 1.6.4) | Witness `Φw = c^{i−1} d c^{n−2−i}` | `witness_perm` (`psi_cdindex_witness.v`) | ✅ |
 | §1.6.3, p. 60, **Proposition 1.6.4** | `ω(S) ⊂ ω(T) ⇒ βn(S) < βn(T)` | `omega_proper_beta_lt` (`perm_seq_bridge.v`) | ✅ |
 | §1.6.3, p. 61, **Corollary 1.6.5** | `βn(S) ≤ En`, equality iff S alternating | `beta_alt_max` (`beta_swap.v`) | ✅ |
+| §1.6.4 (Euler numbers) | André recurrence `2·A_{n+2} = ∑_k C(n+1,k)·A_k·A_{n+1−k}` | `euler_rec` (`reflection.v`) | ✅ |
 
 **Our companion / housekeeping results** (not in Stanley but needed):
 `mm_pos_lt_pred` (the root of M(w) is internal); `cde_total_width_phi_w_all`
@@ -605,7 +635,7 @@ which we don't formalize.)
 
 # What this is and isn't
 
-**What is verified ✅** (kernel-checked, 0 axioms, 0 Admitted, all 23
+**What is verified ✅** (kernel-checked, 0 axioms, 0 Admitted, all 33
 maintained files build to `.vo`):
 
 - The min-max tree `M(w)` round-trip and structural API (Stanley §1.6.3, p. 56).
@@ -647,7 +677,7 @@ If you want to dive into the formal proofs:
 2. **Walk back up the dependency chain** via `_CoqProject`. The
    topological order is `mmtree → psi_core → psi_comm →
    psi_descent_v2/thms → psi_cdindex_* → perm_seq_bridge → beta_swap`.
-3. **Compile with `make clean && make -j2`** — all 23 files build to
+3. **Compile with `make clean && make -j2`** — all 33 files build to
    `.vo` end-to-end; no holdouts.
 4. **Verify axiom-freeness** with `coqchk -R . mathcomp_eulerian
    mathcomp_eulerian.beta_swap`, or interactively
@@ -662,8 +692,8 @@ If you want to dive into the formal proofs:
 # Build status snapshot
 
 ```
-.vo files         : 23 / 23    ← all kernel proof terms validated
-.vos files        : 23 / 23    ← all proof scripts validated
+.vo files         : 33 / 33    ← all kernel proof terms validated
+.vos files        : 33 / 33    ← all proof scripts validated
 Active Admitted   :  0         ← in active build chain
 Custom axioms     :  0         ← coqchk: standard axioms only
 Headline theorem  : beta_alt_max — closed under the global context

@@ -2,12 +2,12 @@
 (*                                                                            *)
 (* Stanley EC1 §1.6.4.                                                        *)
 (*                                                                            *)
-(* This file lands the definitions of Euler numbers via the alternating       *)
-(* descent set and the trivial base cases.  The substantive recurrence        *)
+(* This file defines the Euler numbers via the alternating descent set and    *)
+(* proves the substantive recurrence (euler_rec, end of file)                 *)
 (*                                                                            *)
 (*    2 * eulerA n.+2 = \sum_(k < n.+2) 'C(n.+1, k) * eulerA k * eulerA (n.+1 - k) *)
 (*                                                                            *)
-(* is left for sessions C-2 through C-5.                                      *)
+(* with NO admits: the André reflection argument is fully formalized in §L.   *)
 
 From mathcomp Require Import all_ssreflect fingroup perm.
 From mathcomp_eulerian Require Import ordinal_reindex perm_compress
@@ -1597,26 +1597,34 @@ Proof. by move=> h; rewrite descent_set_insert_max_interior imset_lift_eq. Qed.
 (* §L.  SESSION C-8 — the boundary cancellation lemma + euler_rec            *)
 (* ========================================================================= *)
 
-(* The headline recurrence we want to land:                                   *)
+(* The headline recurrence:                                                   *)
 (*                                                                            *)
 (*    2 * eulerA n.+2 = \sum_(k < n.+2)                                       *)
 (*                          'C(n.+1, k) * eulerA k * eulerA (n.+1 - k)        *)
 (*                                                                            *)
 (* Strategy.  By two_eulerA_split, the LHS equals                              *)
 (*    beta (alt_desc_set n.+1) + beta (~: alt_desc_set n.+1).                  *)
-(* The single boundary admit below packages the entire combinatorial          *)
-(* André-style decomposition into one precise statement: the alt + ~alt        *)
-(* count of descent sets equals the André sum.                                *)
+(* The boundary cancellation lemma (sum_set_is_alt_eq_andre_sum, proved in    *)
+(* §L.0.a-c below) packages the entire combinatorial André-style              *)
+(* decomposition: the alt + ~alt count of descent sets equals the André sum.  *)
 (*                                                                            *)
-(* The Phase A (descent_set_decomp_partition + descent_left_part_image +      *)
-(* descent_right_part_R_image) and Phase B (assemble_perm + sum_reindex_inner *)
-(* + sum_partition_image_left) infrastructure combined with                   *)
-(* set_is_alt_classify (beta_swap) and card_draws (mathcomp/binomial.v)        *)
-(* should suffice to discharge it; this is left as a precisely stated admit.  *)
+(* The proof combines the Phase A descent-set translations                    *)
+(* (descent_left_of_t / descent_right_of_t), the Phase B assemble bijection   *)
+(* (assemble_perm + sum_reindex_inner + sum_partition_image_left),            *)
+(* set_is_alt_indicator (§L.0) and card_draws (mathcomp/binomial.v).          *)
 
 (* ------------------------------------------------------------------------- *)
 (* §L.0.  Scaffolding toward boundary cancellation                            *)
 (* ------------------------------------------------------------------------- *)
+
+(* The canonical alt_desc_set is set-alternating (consecutive parities       *)
+(* differ).  [Restored locally: the beta_swap.v copy was removed in the      *)
+(* project-wide dead-code audit while this file was out of the build chain.] *)
+Lemma alt_desc_set_is_alt m : set_is_alt (alt_desc_set m).
+Proof.
+apply/forallP => i; apply/forallP => j; apply/implyP => /eqP Hj.
+by rewrite !mem_alt_desc_set Hj /=; case: (odd i).
+Qed.
 
 (* The key observation: by set_is_alt_classify, a set D : {set 'I_m.+1} is    *)
 (* set-alternating iff D = alt_desc_set m.+1 OR D = ~: alt_desc_set m.+1, and *)
@@ -1664,36 +1672,311 @@ apply: eq_bigr => p _.
 by rewrite -set_is_alt_indicator.
 Qed.
 
-(* The boundary cancellation in its set_is_alt-indicator form.  The remaining *)
-(* gap (the entire combinatorial content of the André reflection method).     *)
-(*                                                                            *)
-(* DERIVATION SKETCH (~250-400 LOC; not formalized in Session C-8):           *)
-(*  By beta_eq_triple_split-style decomposition of the inner p-sum into        *)
-(*  the three insert positions (ord0, ord_max, interior), and use of           *)
-(*  descent_set_insert_max_{ord0,ord_max,interior} to translate the            *)
-(*  set_is_alt indicator on (insert_max_perm t p) into a constraint on        *)
-(*  descent_set t (depending on p):                                           *)
-(*    - p = ord0: forces a descent at slot 0; the inserted set is              *)
-(*      ord0 |: lift_ord0 (descent_set t).                                     *)
-(*    - p = ord_max: no new descent; inserted set is lift_ord_max-image of    *)
-(*      descent_set t.                                                        *)
-(*    - p interior at j: inserted set is lift h-image of                       *)
-(*      (descent_set t :|: [set j]).                                          *)
-(*  After translation, sum_partition_image_left + sum_reindex_inner +          *)
-(*  descent_left_part_image + descent_right_part_R_image factor the t-sum     *)
-(*  into \sum_L \sum_(sL,sR) [sL is alt-flavour] * [sR is alt-flavour], where *)
-(*  the alt-flavour count for sL (resp. sR) sums to eulerA(k+1) (resp.        *)
-(*  eulerA(n-k)) — modulo the boundary slot j-1 which couples sL's max to    *)
-(*  sR's first value.  card_draws gives \sum_L 1 = 'C(n.+1, k+1).             *)
+(* ------------------------------------------------------------------------- *)
+(* §L.0.a.  Counting helpers                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Summing the descent-set indicator over all permutations is beta.          *)
+Lemma sum_descent_set_indicator m (D : {set 'I_m}) :
+  \sum_(t : {perm 'I_m.+1}) (descent_set t == D) = beta D.
+Proof.
+rewrite /beta -sum1dep_card big_mkcond /= [RHS]big_mkcond /=.
+by apply: eq_bigr => t _; case: eqP.
+Qed.
+
+(* setU1 variant of imset_lift_eq: when does h |: (lift h)-image equal D?    *)
+Lemma setU1_imset_lift_eq m (h : 'I_m.+1) (S : {set 'I_m}) (D : {set 'I_m.+1}) :
+  (h |: [set lift h x | x in S] == D)
+  = (h \in D) && (S == [set x | lift h x \in D]).
+Proof.
+apply/eqP/andP => [<-|].
+- split; first by rewrite setU11.
+  apply/eqP/setP => x; rewrite inE !inE.
+  rewrite eq_sym (negbTE (neq_lift h x)) /=.
+  by rewrite mem_imset //; exact: lift_inj.
+- case=> Hh /eqP HS.
+  apply/setP => y; rewrite !inE.
+  case: (eqVneq y h) => [-> | yneh] /=; first by rewrite Hh.
+  have hney : h != y by rewrite eq_sym.
+  case: (unlift_some hney) => x -> _.
+  rewrite mem_imset; last exact: lift_inj.
+  by rewrite HS inE.
+Qed.
+
+(* nat coercion of a conjunction is a product — used to factor indicators.   *)
+Lemma nat_of_andb (a b : bool) : ((a && b) : nat) = a * b.
+Proof. by case: a; case: b. Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* §L.0.b.  Boundary insert positions: p = ord0 and p = ord_max              *)
+(* ------------------------------------------------------------------------- *)
+
+(* Max inserted at the FRONT: slot 0 is a forced descent, so only the         *)
+(* alt flavour survives; the tail must realise the complementary parity.      *)
+Lemma sum_set_is_alt_ord0 n :
+  \sum_(t : {perm 'I_n.+1})
+      set_is_alt (descent_set (insert_max_perm t (ord0 : 'I_n.+2)))
+  = eulerA n.+1.
+Proof.
+transitivity (\sum_(t : {perm 'I_n.+1}) (descent_set t == ~: alt_desc_set n : nat)).
+  apply: eq_bigr => t _.
+  rewrite -set_is_alt_indicator descent_set_insert_max_ord0 !setU1_imset_lift_eq.
+  have -> : ((ord0 : 'I_n.+1) \in alt_desc_set n.+1) = true.
+    by rewrite mem_alt_desc_set.
+  have -> : ((ord0 : 'I_n.+1) \in ~: alt_desc_set n.+1) = false.
+    by rewrite inE mem_alt_desc_set.
+  rewrite /= addn0.
+  have -> : [set x : 'I_n | lift ord0 x \in alt_desc_set n.+1]
+            = ~: alt_desc_set n.
+    by apply/setP => x; rewrite !inE negbK /=.
+  by [].
+by rewrite sum_descent_set_indicator -beta_compl.
+Qed.
+
+(* Max inserted at the END: slot n is a forced ascent; the flavour is        *)
+(* dictated by the parity of n.                                              *)
+Lemma sum_set_is_alt_ord_max n :
+  \sum_(t : {perm 'I_n.+1})
+      set_is_alt (descent_set (insert_max_perm t (ord_max : 'I_n.+2)))
+  = eulerA n.+1.
+Proof.
+transitivity (\sum_(t : {perm 'I_n.+1})
+    (descent_set t == (if odd n then alt_desc_set n else ~: alt_desc_set n)
+     : nat)).
+  apply: eq_bigr => t _.
+  rewrite -set_is_alt_indicator descent_set_insert_max_ord_max !imset_lift_eq.
+  have -> : ((ord_max : 'I_n.+1) \notin alt_desc_set n.+1) = odd n.
+    by rewrite mem_alt_desc_set negbK.
+  have -> : ((ord_max : 'I_n.+1) \notin ~: alt_desc_set n.+1) = ~~ odd n.
+    by rewrite inE negbK mem_alt_desc_set.
+  have -> : [set x : 'I_n | lift ord_max x \in alt_desc_set n.+1]
+            = alt_desc_set n.
+    by apply/setP => x; rewrite !inE /= /bump leqNgt ltn_ord /=.
+  have -> : [set x : 'I_n | lift ord_max x \in ~: alt_desc_set n.+1]
+            = ~: alt_desc_set n.
+    by apply/setP => x; rewrite !inE /= /bump leqNgt ltn_ord /=.
+  by case: (odd n) => /=; rewrite ?addn0 ?add0n.
+by case: (odd n); rewrite sum_descent_set_indicator // -beta_compl.
+Qed.
+
+(* ------------------------------------------------------------------------- *)
+(* §L.0.c.  Interior insert positions                                         *)
+(* ------------------------------------------------------------------------- *)
+
+(* For an interior insert at slot c.+1 (c : 'I_n), exactly one alt flavour    *)
+(* is compatible (slot c is a forced ascent, slot c.+1 a forced descent), so  *)
+(* the set_is_alt indicator collapses to a single descent-set condition on t: *)
+(* descent_set t :|: [set c] must equal the parity-prescribed target below.   *)
+Definition andre_target n (c : 'I_n) : {set 'I_n} :=
+  [set x : 'I_n | odd (lift (widen_ord (leqnSn n) c) x) (+) odd c].
+
+Lemma interior_set_is_alt n (t : {perm 'I_n.+1}) (c : 'I_n) :
+  (set_is_alt
+     (descent_set (insert_max_perm t (lift ord0 (widen_ord (leqnSn n) c))))
+   : nat)
+  = (descent_set t :|: [set c] == andre_target c).
+Proof.
+rewrite -set_is_alt_indicator descent_set_insert_max_interior !imset_lift_eq.
+have -> : (widen_ord (leqnSn n) c \notin alt_desc_set n.+1) = odd c.
+  by rewrite mem_alt_desc_set negbK.
+have -> : (widen_ord (leqnSn n) c \notin ~: alt_desc_set n.+1) = ~~ odd c.
+  by rewrite inE negbK mem_alt_desc_set.
+case Hc: (odd c) => /=; rewrite ?addn0 ?add0n.
+- have -> : [set x : 'I_n | lift (widen_ord (leqnSn n) c) x \in alt_desc_set n.+1]
+            = andre_target c.
+    by apply/setP => x; rewrite !inE Hc addbT.
+  by [].
+- have -> : [set x : 'I_n | lift (widen_ord (leqnSn n) c) x \in ~: alt_desc_set n.+1]
+            = andre_target c.
+    by apply/setP => x; rewrite !inE Hc addbF negbK.
+  by [].
+Qed.
+
+(* The interior counting argument: fix the split position c, decompose the   *)
+(* target condition through (image_left, perm_left, perm_right), and count.  *)
+Section AndreInterior.
+
+Variables (n : nat) (c : 'I_n).
+
+Lemma andre_split_lt : c.+1 < n.+2.
+Proof. by rewrite !ltnS ltnW // ltn_ord. Qed.
+
+Let s : 'I_n.+2 := Ordinal andre_split_lt.
+
+Lemma andre_s_ltn : s < n.+1.
+Proof. by rewrite /= ltnS ltn_ord. Qed.
+
+(* Membership in the target, by position relative to the boundary slot c.    *)
+Lemma andre_target_lt (x : 'I_n) : x < c ->
+  (x \in andre_target c) = odd x (+) odd c.
+Proof. by move=> Hx; rewrite inE /= /bump leqNgt Hx. Qed.
+
+Lemma andre_target_at : (c \in andre_target c) = true.
+Proof. by rewrite inE /= /bump leqnn /= addNb addbb. Qed.
+
+Lemma andre_target_gt (x : 'I_n) : c < x ->
+  (x \in andre_target c) = ~~ (odd x (+) odd c).
+Proof. by move=> Hx; rewrite inE /= /bump (ltnW Hx) /= addNb. Qed.
+
+(* THE key factorization: the target condition on t splits into independent  *)
+(* alternation conditions on the left and right sub-permutations.  The       *)
+(* boundary slot c itself is absorbed by the union (it is unconstrained),    *)
+(* which is exactly why the count factors.                                   *)
+Lemma andre_union_eq_split (t : {perm 'I_n.+1})
+    (xL : 'I_n.+1) (HxL : xL \in image_left t s)
+    (xR : 'I_n.+1) (HxR : xR \in image_right t s) :
+  (descent_set t :|: [set c] == andre_target c)
+  = (descent_set (perm_left HxL) == [set i : 'I_c | odd i (+) odd c])
+    && (descent_set (cast_perm (esym (sub_succ andre_s_ltn)) (perm_right HxR))
+        == [set i : 'I_(n - c.+1) | odd i]).
+Proof.
+apply/eqP/andP => [Hset | [/eqP HL /eqP HR]].
+- split; apply/eqP; apply/setP => i.
+  + rewrite -(descent_left_of_t (k:=c) (Hk:=andre_split_lt) HxL).
+    set w := widen_ord _ i.
+    have Hne : (w == c) = false.
+      by rewrite -val_eqE /= ltn_eqF // ltn_ord.
+    have -> : (w \in descent_set t) = (w \in descent_set t :|: [set c]).
+      by rewrite !inE Hne orbF.
+    by rewrite Hset andre_target_lt ?inE //= ltn_ord.
+  + rewrite -(descent_right_of_t andre_s_ltn HxR).
+    set y := Ordinal _.
+    have Hcy : c < y by apply: ltn_addr.
+    have Hne : (y == c) = false by rewrite -val_eqE /= gtn_eqF.
+    have -> : (y \in descent_set t) = (y \in descent_set t :|: [set c]).
+      by rewrite !inE Hne orbF.
+    rewrite Hset andre_target_gt // inE /= oddD /=.
+    by case: (odd c); case: (odd i).
+- apply/setP => x; rewrite in_setU in_set1.
+  case: (ltngtP (val x) (val c)) => [Hlt|Hgt|Heq]; last 1 first.
+  + have -> : x = c by apply: val_inj.
+    by rewrite eqxx orbT andre_target_at.
+  + have -> : x = @widen_ord c n andre_split_lt (Ordinal Hlt).
+      by apply: val_inj.
+    rewrite (descent_left_of_t (k:=c) (Hk:=andre_split_lt) HxL) HL.
+    rewrite andre_target_lt //= !inE /=.
+    by rewrite -val_eqE /= ltn_eqF // orbF.
+  + have Hcn : c.+1 < n by exact: leq_ltn_trans Hgt (ltn_ord x).
+    have Hi : (val x) - c.+1 < n - c.+1.
+      by apply: ltn_sub2r => //; exact: ltn_ord.
+    have -> : x = Ordinal (j_plus_lt_n (j:=s) (Ordinal Hi)).
+      by apply: val_inj; rewrite /= subnKC.
+    rewrite (descent_right_of_t andre_s_ltn HxR) HR inE.
+    rewrite andre_target_gt /= ?subnKC //.
+    rewrite -val_eqE /= subnKC // gtn_eqF // orbF oddD /=.
+    by case: (odd c); case: (odd (val x - c.+1)).
+Qed.
+
+(* The two alternation conditions count eulerA factors (via beta_compl when  *)
+(* the parity selects the complemented flavour).                              *)
+Lemma beta_andre_left : beta [set i : 'I_c | odd i (+) odd c] = eulerA c.+1.
+Proof.
+case Hc: (odd c).
+- have -> : [set i : 'I_c | odd i (+) true] = alt_desc_set c.
+    by apply/setP => i; rewrite !inE addbT.
+  by [].
+- have -> : [set i : 'I_c | odd i (+) false] = ~: alt_desc_set c.
+    by apply/setP => i; rewrite !inE addbF negbK.
+  by rewrite -beta_compl.
+Qed.
+
+Lemma beta_andre_right :
+  beta [set i : 'I_(n - c.+1) | odd i] = eulerA (n - c).
+Proof.
+have -> : [set i : 'I_(n - c.+1) | odd i] = ~: alt_desc_set (n - c.+1).
+  by apply/setP => i; rewrite !inE negbK.
+rewrite -beta_compl.
+by rewrite -(subnSK (ltn_ord c)).
+Qed.
+
+(* The per-position interior count: binomial times the two Euler factors.    *)
+Lemma andre_interior_count :
+  \sum_(t : {perm 'I_n.+1})
+      ((descent_set t :|: [set c] == andre_target c) : nat)
+  = 'C(n.+1, c.+1) * (eulerA c.+1 * eulerA (n - c)).
+Proof.
+have Hs0 : 0 < s by [].
+rewrite (sum_partition_image_left s).
+transitivity (\sum_(L : {set 'I_n.+1} | #|L| == s :> nat)
+                (eulerA c.+1 * eulerA (n - c))).
+  apply: eq_bigr => L /eqP HL.
+  rewrite (sum_reindex_inner Hs0 andre_s_ltn HL).
+  transitivity (\sum_(s0 : {perm 'I_s} * {perm 'I_(n.+1 - s)})
+      (((descent_set s0.1 == [set i : 'I_c | odd i (+) odd c]) : nat)
+       * ((descent_set (cast_perm (esym (sub_succ andre_s_ltn)) s0.2)
+           == [set i : 'I_(n - c.+1) | odd i]) : nat))).
+    apply: eq_bigr => -[sL sR] _ /=.
+    rewrite (andre_union_eq_split
+               (image_left_witness_pos (assemble_perm HL sL sR) Hs0)
+               (mem_image_right (assemble_perm HL sL sR)
+                  (Ordinal (sub_gt0_n_j andre_s_ltn)))).
+    by rewrite assemble_perm_left assemble_perm_right nat_of_andb.
+  rewrite -(pair_bigA _ (fun sL sR =>
+      ((descent_set sL == [set i : 'I_c | odd i (+) odd c]) : nat)
+      * ((descent_set (cast_perm (esym (sub_succ andre_s_ltn)) sR)
+          == [set i : 'I_(n - c.+1) | odd i]) : nat))) /=.
+  transitivity
+    ((\sum_(sL : {perm 'I_s})
+        ((descent_set sL == [set i : 'I_c | odd i (+) odd c]) : nat))
+     * (\sum_(sR : {perm 'I_(n.+1 - s)})
+          ((descent_set (cast_perm (esym (sub_succ andre_s_ltn)) sR)
+            == [set i : 'I_(n - c.+1) | odd i]) : nat))).
+    by rewrite big_distrl /=; apply: eq_bigr => sL _; rewrite big_distrr.
+  congr (_ * _); first by rewrite sum_descent_set_indicator beta_andre_left.
+  rewrite (reindex (cast_perm (sub_succ andre_s_ltn))) /=; last first.
+    apply: onW_bij.
+    by exists (cast_perm (esym (sub_succ andre_s_ltn)));
+      [exact: cast_permK | exact: cast_permKV].
+  transitivity (\sum_(u : {perm 'I_(n - c.+1).+1})
+      ((descent_set u == [set i : 'I_(n - c.+1) | odd i]) : nat)).
+    by apply: eq_bigr => u _; rewrite cast_permK.
+  by rewrite sum_descent_set_indicator beta_andre_right.
+rewrite (eq_bigl (fun L : {set 'I_n.+1} =>
+    L \in [set A : {set 'I_n.+1} | #|A| == c.+1])); last first.
+  by move=> A; rewrite inE.
+by rewrite sum_nat_const card_draws card_ord.
+Qed.
+
+End AndreInterior.
+
+(* The boundary cancellation in its set_is_alt-indicator form: the inner     *)
+(* p-sum splits into the three insert positions (ord0, interior, ord_max);   *)
+(* the boundary positions each contribute eulerA n.+1 (the k = n.+1 and      *)
+(* k = 0 terms of the André sum) and interior position c contributes the     *)
+(* k = c.+1 term, by andre_interior_count.                                   *)
 Lemma sum_set_is_alt_eq_andre_sum n :
   \sum_(t : {perm 'I_n.+1}) \sum_(p : 'I_n.+2)
        set_is_alt (descent_set (insert_max_perm t p))
   = \sum_(k < n.+2) 'C(n.+1, k) * eulerA k * eulerA (n.+1 - k).
 Proof.
-Admitted.
+transitivity (\sum_(t : {perm 'I_n.+1})
+   (set_is_alt (descent_set (insert_max_perm t ord0))
+    + set_is_alt (descent_set (insert_max_perm t (ord_max : 'I_n.+2)))
+    + \sum_(j < n) ((descent_set t :|: [set j] == andre_target j) : nat))).
+  apply: eq_bigr => t _.
+  rewrite big_ord_recl big_ord_recr /=.
+  have lom : lift ord0 (ord_max : 'I_n.+1) = (ord_max : 'I_n.+2).
+    by apply/val_inj.
+  rewrite lom addnA addnAC.
+  congr (_ + _).
+  by apply: eq_bigr => j _; rewrite interior_set_is_alt.
+rewrite big_split /= big_split /=.
+rewrite sum_set_is_alt_ord0 sum_set_is_alt_ord_max.
+rewrite exchange_big /=.
+rewrite (eq_bigr (fun j : 'I_n =>
+    'C(n.+1, (val j).+1) * eulerA (val j).+1 * eulerA (n - val j)));
+  last by move=> j _; rewrite andre_interior_count mulnA.
+rewrite big_ord_recl big_ord_recr /=.
+rewrite bin0 /bump !leq0n !add1n !add0n binn subnn muln1 !mul1n.
+rewrite (eq_bigr (fun i : 'I_n =>
+    'C(n.+1, (val i).+1) * euler (val i) * eulerA (n - val i))) //.
+have -> : eulerA 0 = 1 by [].
+rewrite muln1.
+by rewrite addnA addnAC.
+Qed.
 
-(* The packaged boundary cancellation lemma — derived from the inner form    *)
-(* via the unconditional alt_plus_nalt_as_set_is_alt_sum lemma.               *)
+(* The packaged boundary cancellation lemma — the inner form combined with   *)
+(* the unconditional alt_plus_nalt_as_set_is_alt_sum lemma.                   *)
 Lemma boundary_cancellation_alt n :
   beta (alt_desc_set n.+1) + beta (~: alt_desc_set n.+1)
   = \sum_(k < n.+2) 'C(n.+1, k) * eulerA k * eulerA (n.+1 - k).
@@ -1730,8 +2013,8 @@ Proof. exact: euler_rec. Qed.
 (* Example euler_rec_n1 :                                                     *)
 (*   2 * eulerA 3 = \sum_(k < 3) 'C(2, k) * eulerA k * eulerA (2 - k).        *)
 
-(* Sanity: the n=0 case of the recurrence is provable directly (does NOT use   *)
-(* the boundary admit), since both sides reduce to 2.                          *)
+(* Sanity: the n=0 case of the recurrence is also provable directly (without  *)
+(* the boundary cancellation lemma), since both sides reduce to 2.             *)
 Example euler_rec_n0_direct :
   2 * eulerA 2 = \sum_(k < 2) 'C(1, k) * eulerA k * eulerA (1 - k).
 Proof.
@@ -1739,8 +2022,8 @@ rewrite eulerA_2 muln1 big_ord_recl big_ord_recr big_ord0 /=.
 by rewrite /bump /= !add0n euler_0.
 Qed.
 
-(* The n=1, n=2 cases require eulerA 3 = 2 and eulerA 4 = 5 (which depend on  *)
-(* the boundary admit via euler_rec); we therefore state them via euler_rec.   *)
+(* The n=1, n=2 cases require eulerA 3 = 2 and eulerA 4 = 5; we state them    *)
+(* via euler_rec.                                                              *)
 Example euler_rec_n1_via :
   2 * eulerA 3 = \sum_(k < 3) 'C(2, k) * eulerA k * eulerA (2 - k).
 Proof. exact: euler_rec. Qed.
