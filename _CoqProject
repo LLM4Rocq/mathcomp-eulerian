@@ -51,6 +51,8 @@ worpitzky.v
 qbin.v
 # q-Eulerian (maj,des) insertion recurrence (axiom-free... 1 stub WIP).
 qeul_rec.v
+# Carlitz q-Worpitzky identity (axiom-free combinatorial core).
+qworpitzky.v
 # reflection.v: André's reflection method (Stanley §1.6.4); euler_rec.
 # The former named admit (sum_set_is_alt_eq_andre_sum) is now fully
 # proved — 0 admits, 0 axioms.
