@@ -19,7 +19,23 @@ the truncation bootstrap to `\Po`), `fps/fps_explog.v` (exp/log group
 laws over com-unit-rings with invertible naturals; demo #1
 `exp(log (1−x)⁻¹) = (1−x)⁻¹`), `stirling_egf.v` (demo #2,
 `stirling_cycle_egf : Σ (Σ c(n,k)tᵏ) xⁿ/n! = (1−x)^(−t)` over
-`{fps {poly rat}}`). Next: phase 4 (Carlitz q-Worpitzky).
+`{fps {poly rat}}`).
+**PHASE 4 PART 1 COMPLETE** — `qbin.v` (Gaussian binomials, axiom-free,
+q-Pascal + q=1 specialization) and `carlitz.v` (`q_staircase`: the
+Carlitz denominator `Π(1−qⁱx)` inverted by the Gaussian-binomial gf,
+over `{fps {poly int}}`).
+**PHASE 4 PART 2 (remaining)** — the numerator: a q-Eulerian
+(maj,des)-insertion recurrence for `q_eul_pol`.  Finding: `qeul.v` has
+only the definition + specializations, and Foata transfers inv→maj
+WITHOUT preserving des, so the recurrence is genuinely new work.  The
+viable route: compute `maj (insert_max_perm t p)` from the descent-SET
+lemmas `descent_set_insert_max_{ord0,interior,ord_max}` (reflection.v)
+— maj is the sum of descent positions, and the insertion lemmas give
+the descent set exactly — then mirror `eulerian_rec`'s bijection proof
+with `q^maj·t^des` weights (the gap-sum produces the `[k+1]_q` and
+`q^k[n+1−k]_q` factors).  Estimate 450–800 LOC.  Then q-Worpitzky by
+induction (mirroring `worpitzky.v` with q-weights) and the Carlitz
+packaging in `carlitz.v`.
 
 **Phase-1 headline.** Stanley EC1, **Proposition 1.6.1**: the exponential
 generating function of the Euler numbers,

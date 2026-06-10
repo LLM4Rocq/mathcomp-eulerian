@@ -18,7 +18,7 @@ admits.
 
 ## Status
 
-- **45 / 45** maintained `.v` files compile to full `.vo`.
+- **47 / 47** maintained `.v` files compile to full `.vo`.
 - **0 `Admitted`** in the active build chain.
 - **Axiom policy, per layer**: the combinatorial core (everything under
   `mathcomp_eulerian` except `stanley_egf.v`) uses **0 axioms** beyond

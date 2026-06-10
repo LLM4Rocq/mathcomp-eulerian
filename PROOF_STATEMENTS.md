@@ -68,7 +68,7 @@ and not in `_CoqProject`.
 | `beta_swap.v` | ✅ | **`beta_alt_max`** (the headline theorem, Stanley Cor 1.6.5) |
 | `reflection.v` | ✅ | **`euler_rec`** (André recurrence, Stanley §1.6.4) |
 
-All 45 maintained files compile to `.vo` (the table lists the
+All 47 maintained files compile to `.vo` (the table lists the
 §1.4/§1.6 cd-index chain; see `_CoqProject` for the full list). The headline theorems —
 Stanley Prop 1.6.4 (`omega_proper_beta_lt`) and Cor 1.6.5
 (`beta_alt_max`) — are kernel-validated and closed under the global
@@ -673,6 +673,26 @@ files) says the row polynomials satisfy `s_{n+1} = (n+t)·s_n`, i.e. the
 egf satisfies the formal ODE `(1−x)·y' = t·y`, `y(0)=1`; so does
 `(1−x)^(−t)` (chain rule + `log' = 1/(1−x)` + `geom' = geom²`); linear-ODE
 uniqueness closes it.  Note the coefficient ring `ℚ[t]` is *not* a field.
+
+## 21. Gaussian binomials and the q-staircase ✅ `qbin.v`, `carlitz.v`
+
+[toward Carlitz's q-analogue of §1.4]
+
+**`qbin n k`** (`qbin.v`, **axiom-free**): the Gaussian binomial
+`[n choose k]_q : {poly int}` by the q-Pascal recurrence
+`[n+1,k+1] = [n,k] + q^(k+1)·[n,k+1]`, with boundary lemmas and the
+specialization `q = 1` recovering `'C(n,k)` (`qbin_horner1`).
+
+**Theorem ✅ `q_staircase`** (`carlitz.v`), over `{fps {poly int}}`:
+
+> `Π_(i ≤ N) (1 − qⁱx) · Σ_m [m+N choose N]_q xᵐ = 1` — the generating
+> function of the Gaussian binomials inverts the Carlitz denominator.
+
+This is the denominator half of Carlitz's identity
+`Σ_m ([m+1]_q)^(n+1) xᵐ = (Σ_w q^maj(w) x^des(w)) / Π_(i≤n+1)(1−qⁱx)`;
+the numerator half needs the q-Eulerian (maj,des)-insertion recurrence
+(see the plan — `qeul.v` has the polynomial but not the recurrence, and
+Foata transfers inv→maj without preserving des).
 
 ---
 
