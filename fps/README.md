@@ -53,8 +53,8 @@ Highlights:
 | `fps_trig.v` | `expf`, `sinf`, `cosf`, `secf`, `tanf`; derivative rules; `sin2cos2`; `sec2f`; the quadratic ODE `sectan_ode` for sec + tan |
 | `fps_ode.v` | `fps_quad_ode_uniq`: solutions of `2y' = c + y^2` are determined by their constant coefficient (char 0) |
 | `fps_ogf.v` | OGF toolkit: negative-binomial coefficients of `fps_geom ^+ k.+1`, `(1-x)^N · geom^N = 1` |
-
-(Coming per the plan: `fps_comp.v`, `fps_explog.v`.)
+| `fps_comp.v` | composition `fps_comp f g` (g with zero constant term): ring laws, `fps_compM`, inverses, and the chain rule `(f \o g)' = (f' \o g) g'` |
+| `fps_explog.v` | `fps_exp` / `fps_log` over any com-unit-ring with invertible naturals: `exp(f+g) = exp f exp g`, `log (exp f) = f`, `exp (log u) = u`, linear-ODE uniqueness |
 
 ## Axioms
 

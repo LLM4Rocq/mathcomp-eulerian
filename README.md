@@ -18,7 +18,7 @@ admits.
 
 ## Status
 
-- **42 / 42** maintained `.v` files compile to full `.vo`.
+- **45 / 45** maintained `.v` files compile to full `.vo`.
 - **0 `Admitted`** in the active build chain.
 - **Axiom policy, per layer**: the combinatorial core (everything under
   `mathcomp_eulerian` except `stanley_egf.v`) uses **0 axioms** beyond
@@ -38,6 +38,9 @@ admits.
 - `worpitzky` (`worpitzky.v`, axiom-free) and `stanley_1_4`
   (`stanley_ogf.v`): **Worpitzky's identity** and its Stanley §1.4
   packaging `sum (m+1)^(n+1) x^m = A_n(x)/(1-x)^(n+2)` over `{fps int}`.
+- `stirling_cycle_egf` (`stirling_egf.v`): the **Stirling-cycle egf**
+  `sum_n (sum_k c(n,k) t^k) x^n/n! = (1-x)^(-t)` over `{fps {poly rat}}`,
+  via the new composition / exp / log layer of [`fps/`](fps/).
 
 ## Build
 

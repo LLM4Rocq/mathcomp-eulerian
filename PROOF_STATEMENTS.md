@@ -68,7 +68,7 @@ and not in `_CoqProject`.
 | `beta_swap.v` | ✅ | **`beta_alt_max`** (the headline theorem, Stanley Cor 1.6.5) |
 | `reflection.v` | ✅ | **`euler_rec`** (André recurrence, Stanley §1.6.4) |
 
-All 42 maintained files compile to `.vo` (the table lists the
+All 45 maintained files compile to `.vo` (the table lists the
 §1.4/§1.6 cd-index chain; see `_CoqProject` for the full list). The headline theorems —
 Stanley Prop 1.6.4 (`omega_proper_beta_lt`) and Cor 1.6.5
 (`beta_alt_max`) — are kernel-validated and closed under the global
@@ -648,6 +648,32 @@ Note `int` is not a field: this exercises the `mathcomp_fps` units
 theory over general `comUnitRingType`s.  The GF layer carries the
 classical trio; the Worpitzky identity itself is axiom-free.
 
+## 20. Composition, exp/log, and the Stirling-cycle egf ✅ `fps/`, `stirling_egf.v`
+
+[Stanley §1.3.2 for the application]
+
+**Library** (`fps_comp.v`, `fps_explog.v`): composition `f ∘ g` (for `g`
+with zero constant term) with multiplicativity and the **chain rule**
+`(f ∘ g)' = (f' ∘ g)·g'` — both inherited from `{poly R}`'s `\Po` by the
+truncation bootstrap; formal `exp`/`log` over any com-unit-ring with
+invertible positive naturals, with the group laws
+`exp(f+g) = exp f · exp g`, `log(exp f) = f`, `exp(log u) = u` (all by
+ODE-uniqueness arguments), and the sanity identity
+`exp(log (1−x)⁻¹) = (1−x)⁻¹`.
+
+**Theorem ✅ `stirling_cycle_egf`** (`stirling_egf.v`) — Stanley §1.3.2 as
+generating functions, over `{fps {poly rat}}` (series in `x` with
+coefficients in `ℚ[t]`):
+
+> `Σ_n (Σ_k c(n,k) tᵏ) xⁿ/n! = (1−x)^(−t)`, where
+> `(1−x)^(−t) := exp(t·log((1−x)⁻¹))` and `c(n,k) = stirling_c n k`.
+
+**Proof.** The cycle recurrence `stirling_c_rec` (§it's in the cycles
+files) says the row polynomials satisfy `s_{n+1} = (n+t)·s_n`, i.e. the
+egf satisfies the formal ODE `(1−x)·y' = t·y`, `y(0)=1`; so does
+`(1−x)^(−t)` (chain rule + `log' = 1/(1−x)` + `geom' = geom²`); linear-ODE
+uniqueness closes it.  Note the coefficient ring `ℚ[t]` is *not* a field.
+
 ---
 
 # Stanley correspondence summary
@@ -683,6 +709,7 @@ which we don't formalize.)
 | §1.6.4, **Proposition 1.6.1** | `∑ E_n x^n/n! = sec x + tan x` (formal) | `stanley_1_6_1` (`stanley_egf.v` + `fps/`) | ✅ |
 | §1.4 (Worpitzky) | `(m+1)^(n+1) = ∑_k A(n,k)·C(m+n+1−k,n+1)` | `worpitzky` (`worpitzky.v`, axiom-free) | ✅ |
 | §1.4 (Eulerian OGF) | `∑_m (m+1)^(n+1) x^m = A_n(x)/(1−x)^(n+2)` | `stanley_1_4` (`stanley_ogf.v`) | ✅ |
+| §1.3.2 (Stirling-cycle EGF) | `∑_n (∑_k c(n,k)tᵏ) xⁿ/n! = (1−x)^(−t)` | `stirling_cycle_egf` (`stirling_egf.v`) | ✅ |
 
 **Our companion / housekeeping results** (not in Stanley but needed):
 `mm_pos_lt_pred` (the root of M(w) is internal); `cde_total_width_phi_w_all`

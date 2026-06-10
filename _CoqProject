@@ -55,6 +55,8 @@ reflection.v
 stanley_egf.v
 # Stanley §1.4 OGF (Worpitzky packaged as generating functions).
 stanley_ogf.v
+# Stirling-cycle EGF demo (phase 3, demo #2).
+stirling_egf.v
 cycles.v
 cycles_rec.v
 stirling_fiber.v

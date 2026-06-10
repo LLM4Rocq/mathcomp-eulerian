@@ -13,8 +13,13 @@ fps_egf.v, fps_trig.v, fps_ode.v) and `stanley_egf.v` all land with 0
 admits; `Print Assumptions stanley_1_6_1` = the classical trio.
 **PHASE 2 COMPLETE** (same day) — `worpitzky.v` (axiom-free Worpitzky +
 `coef_eul_pol`), `fps/fps_ogf.v` (negative binomial), `stanley_ogf.v`
-(`stanley_1_4`, the §1.4 Eulerian OGF over `{fps int}`). Next: phase 3
-(composition + exp/log; demos #1 and #2).
+(`stanley_1_4`, the §1.4 Eulerian OGF over `{fps int}`).
+**PHASE 3 COMPLETE** — `fps/fps_comp.v` (composition + chain rule, via
+the truncation bootstrap to `\Po`), `fps/fps_explog.v` (exp/log group
+laws over com-unit-rings with invertible naturals; demo #1
+`exp(log (1−x)⁻¹) = (1−x)⁻¹`), `stirling_egf.v` (demo #2,
+`stirling_cycle_egf : Σ (Σ c(n,k)tᵏ) xⁿ/n! = (1−x)^(−t)` over
+`{fps {poly rat}}`). Next: phase 4 (Carlitz q-Worpitzky).
 
 **Phase-1 headline.** Stanley EC1, **Proposition 1.6.1**: the exponential
 generating function of the Euler numbers,
