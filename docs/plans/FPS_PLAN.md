@@ -24,18 +24,18 @@ laws over com-unit-rings with invertible naturals; demo #1
 q-Pascal + q=1 specialization) and `carlitz.v` (`q_staircase`: the
 Carlitz denominator `Π(1−qⁱx)` inverted by the Gaussian-binomial gf,
 over `{fps {poly int}}`).
-**PHASE 4 PART 2 (remaining)** — the numerator: a q-Eulerian
-(maj,des)-insertion recurrence for `q_eul_pol`.  Finding: `qeul.v` has
-only the definition + specializations, and Foata transfers inv→maj
-WITHOUT preserving des, so the recurrence is genuinely new work.  The
-viable route: compute `maj (insert_max_perm t p)` from the descent-SET
-lemmas `descent_set_insert_max_{ord0,interior,ord_max}` (reflection.v)
-— maj is the sum of descent positions, and the insertion lemmas give
-the descent set exactly — then mirror `eulerian_rec`'s bijection proof
-with `q^maj·t^des` weights (the gap-sum produces the `[k+1]_q` and
-`q^k[n+1−k]_q` factors).  Estimate 450–800 LOC.  Then q-Worpitzky by
-induction (mirroring `worpitzky.v` with q-weights) and the Carlitz
-packaging in `carlitz.v`.
+**PHASE 4 PART 2 COMPLETE** — `qeul_rec.v` (axiom-free: maj of an
+insertion from the descent-set lemmas, rank sums producing q-integers,
+`q_eulerian n k` and the Carlitz recurrence
+`B(n+1,k+1) = [k+2]_q B(n,k+1) + q^(k+1)[n+1-k]_q B(n,k)` via the
+insert-max bijection with `q^maj` weights), `qworpitzky.v` (axiom-free:
+q-integer/Gaussian-binomial calculus incl. the complementary absorption
+`[k+1][n,k+1] = [n-k][n,k]`, the q-Pascal splitting step, `q_worpitzky`,
+`coef_q_eul_pol`), and the final packaging in `carlitz.v`:
+`carlitz : (Σ_m ([m+1]_q)^(n+1) x^m) · Π_(i<n+2)(1−qⁱx) = q_eul_pol n`
+over `{fps {poly int}}` (+ division/inverse forms).  **The FPS plan is
+fully delivered**; remaining ideas (Lagrange inversion, library
+split-out, truncated companion) are stretch items below.
 
 **Phase-1 headline.** Stanley EC1, **Proposition 1.6.1**: the exponential
 generating function of the Euler numbers,

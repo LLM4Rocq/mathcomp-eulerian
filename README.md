@@ -18,7 +18,7 @@ admits.
 
 ## Status
 
-- **47 / 47** maintained `.v` files compile to full `.vo`.
+- **49 / 49** maintained `.v` files compile to full `.vo`.
 - **0 `Admitted`** in the active build chain.
 - **Axiom policy, per layer**: the combinatorial core (everything under
   `mathcomp_eulerian` except `stanley_egf.v`) uses **0 axioms** beyond
@@ -41,6 +41,12 @@ admits.
 - `stirling_cycle_egf` (`stirling_egf.v`): the **Stirling-cycle egf**
   `sum_n (sum_k c(n,k) t^k) x^n/n! = (1-x)^(-t)` over `{fps {poly rat}}`,
   via the new composition / exp / log layer of [`fps/`](fps/).
+- `q_eulerian_rec` (`qeul_rec.v`), `q_worpitzky` (`qworpitzky.v`) — both
+  axiom-free — and `carlitz` (`carlitz.v`): **Carlitz's q-analogue of
+  Stanley §1.4**, `sum_m ([m+1]_q)^(n+1) x^m
+  = (sum_w q^maj(w) x^des(w)) / prod_(i<n+2) (1-q^i x)` over
+  `{fps {poly int}}`, from the q-Eulerian (maj,des)-insertion recurrence
+  and the q-staircase.
 
 ## Build
 

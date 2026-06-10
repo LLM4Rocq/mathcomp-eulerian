@@ -11,16 +11,23 @@
 (*    q_staircase : \prod_(i < N.+1) (1 - q^i *: x) * \sum_m [m+N, N]_q x^m   *)
 (*                  = 1.                                                      *)
 (*                                                                            *)
-(* The numerator half needs the q-Eulerian (maj, des) insertion recurrence    *)
-(* for q_eul_pol (qeul.v), which is future work — see the plan.  Note Z[q]   *)
-(* is not a field: the inverses exist by the mathcomp_fps unit theory         *)
-(* (constant coefficient 1).                                                  *)
+(* and the FULL identity [carlitz], combining the q-staircase with the        *)
+(* q-Worpitzky identity (qworpitzky.v, itself powered by the q-Eulerian       *)
+(* insertion recurrence of qeul_rec.v):                                       *)
+(*                                                                            *)
+(*    carlitz : (\sum_m ([m+1]_q)^(n+1) x^m) * \prod_(i < n+2) (1 - q^i x)   *)
+(*              = q_eul_pol n.                                                *)
+(*                                                                            *)
+(* Note Z[q] is not a field: the inverses exist by the mathcomp_fps unit      *)
+(* theory (constant coefficient 1).                                           *)
 
 From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra fingroup perm.
 From mathcomp Require Import boolp.
 From mathcomp_fps Require Import fps fps_ogf.
-From mathcomp_eulerian Require Import qbin.
+From mathcomp_eulerian Require Import ordinal_reindex perm_compress descent.
+From mathcomp_eulerian Require Import eulerian reflection inversions.
+From mathcomp_eulerian Require Import qfact qeul qbin qeul_rec qworpitzky.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -93,3 +100,51 @@ Proof.
 apply: (mulrI (q_onesub_prod_unit N)).
 by rewrite q_staircase divrr // q_onesub_prod_unit.
 Qed.
+
+(* ========================================================================= *)
+(* Carlitz's q-analogue of Stanley §1.4                                       *)
+(* ========================================================================= *)
+
+(** The OGF of the (n+1)-st powers of the q-integers: coefficient m is        *)
+(* ([m+1]_q)^(n+1), a polynomial in q.                                        *)
+Definition q_pow_ogf (n : nat) : {fps {poly int}} :=
+  \fps (q_int m.+1 ^+ n.+1) .x^m.
+
+(** Division form: q_eul_pol n times the q-staircase series.  Coefficient-    *)
+(* wise this is exactly the q-Worpitzky identity, padded on both sides.       *)
+Theorem carlitz_div n :
+  poly_fps (q_eul_pol n) * q_stair n.+1 = q_pow_ogf n.
+Proof.
+apply/fpsP => m; rewrite coef_fpsM.
+under eq_bigr => j _ do rewrite coef_poly_fps coef_q_eul_pol /=.
+rewrite [(q_pow_ogf n)``_m]/= q_worpitzky.
+pose G j := q_eulerian n j * qbin (m + n.+1 - j)%N n.+1.
+have sumF (q : nat) (H : nat -> {poly int}) : (q < (m + n).+2)%N ->
+    (forall j, (q < j)%N -> H j = 0) ->
+    \sum_(j < q.+1) H j = \sum_(j < (m + n).+2) H j.
+  move=> le_q Hz; rewrite (big_ord_widen _ H le_q) big_mkcond /=.
+  apply: eq_bigr => j _; case: ltnP => // lt_qj.
+  by rewrite Hz.
+under eq_bigr => i _ do
+  rewrite (addnBAC _ (ltn_ord i : (i <= m)%N)).
+rewrite (sumF m G); first last.
+- move=> j lt_mj; rewrite /G qbin_small ?mulr0 //.
+  rewrite ltnS (leq_trans (leq_sub2l (m + n.+1) lt_mj)) //.
+  by rewrite addnS subSS addnC addnK.
+- by rewrite ltnS (leq_trans (leq_addr n m)) ?leqnSn.
+rewrite (sumF n G) //; first last.
+- by move=> j lt_nj; rewrite /G q_eulerian_out_of_range // mul0r.
+by rewrite !ltnS (leq_trans (leq_addl m n)) ?leqnSn.
+Qed.
+
+(** Multiplied-out form (no division): Carlitz's q-analogue of Stanley §1.4.  *)
+Theorem carlitz n :
+  q_pow_ogf n * q_onesub_prod n.+1 = poly_fps (q_eul_pol n).
+Proof.
+by rewrite -carlitz_div -mulrA [q_stair _ * _]mulrC q_staircase mulr1.
+Qed.
+
+(** Display form with the explicit inverse of the Carlitz denominator. *)
+Corollary carlitz_inv n :
+  q_pow_ogf n = poly_fps (q_eul_pol n) / q_onesub_prod n.+1.
+Proof. by rewrite -q_stairE carlitz_div. Qed.

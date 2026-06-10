@@ -688,11 +688,51 @@ specialization `q = 1` recovering `'C(n,k)` (`qbin_horner1`).
 > `Π_(i ≤ N) (1 − qⁱx) · Σ_m [m+N choose N]_q xᵐ = 1` — the generating
 > function of the Gaussian binomials inverts the Carlitz denominator.
 
-This is the denominator half of Carlitz's identity
-`Σ_m ([m+1]_q)^(n+1) xᵐ = (Σ_w q^maj(w) x^des(w)) / Π_(i≤n+1)(1−qⁱx)`;
-the numerator half needs the q-Eulerian (maj,des)-insertion recurrence
-(see the plan — `qeul.v` has the polynomial but not the recurrence, and
-Foata transfers inv→maj without preserving des).
+This is the denominator half of Carlitz's identity; the numerator half
+and the full identity follow.
+
+## 22. Carlitz's q-analogue of Stanley §1.4 ✅ `qeul_rec.v`, `qworpitzky.v`, `carlitz.v`
+
+**`q_eulerian n k`** (`qeul_rec.v`, **axiom-free**): the q-Eulerian number
+`Σ_(σ ∈ S_{n+1}, des σ = k) q^(maj σ) : {poly int}`, with
+`coef_q_eul_pol` (`qworpitzky.v`) identifying it as the k-th coefficient
+of `q_eul_pol n` (`qeul.v`).
+
+**Theorem ✅ `q_eulerian_rec`** (`qeul_rec.v`, **axiom-free**) — the
+(maj, des)-insertion recurrence (Carlitz):
+
+> `B(n+1, k+1) = [k+2]_q · B(n, k+1) + q^(k+1) · [n+1−k]_q · B(n, k)`.
+
+**Proof.** The insert-max bijection of `eulerian_rec`, re-weighted by
+`q^maj`: the descent-set lemmas `descent_set_insert_max_*`
+(`reflection.v`) determine `maj` of an insertion exactly (front: `+des+1`;
+end: unchanged; gap after slot j: `+c_j+1`, plus `j+1` more on an ascent,
+where `c_j` counts descents above `j`); ranking the descent gaps from
+above and the ascent gaps from below turns the gap sums into the
+q-integers `[des+1]_q` and `q^(des+1)·[n−des+1]_q` (`sum_rank_lt/gt`).
+
+**Theorem ✅ `q_worpitzky`** (`qworpitzky.v`, **axiom-free**) — the
+q-Worpitzky identity:
+
+> `([m+1]_q)^(n+1) = Σ_(k ≤ n) B(n,k) · [m+n+1−k choose n+1]_q`.
+
+**Proof.** Induction on `n` from `q_eulerian_rec`, mirroring
+`worpitzky.v`; the splitting step `q_bin_step` rests on the complementary
+absorption identity `[k+1]_q·[n,k+1]_q = [n−k]_q·[n,k]_q`
+(`qbin_absorbC`) and the q-integer splitting `[a+b] = [a] + q^a[b]`
+(`q_intD`).
+
+**Theorem ✅ `carlitz`** (`carlitz.v`), over `{fps {poly int}}`:
+
+> `(Σ_m ([m+1]_q)^(n+1) xᵐ) · Π_(i<n+2) (1 − qⁱx) = q_eul_pol n`
+> — equivalently (`carlitz_inv`)
+> `Σ_m ([m+1]_q)^(n+1) xᵐ = (Σ_w q^maj(w) x^des(w)) / Π_(i<n+2)(1−qⁱx)`.
+
+**Proof.** Coefficientwise, `carlitz_div` is exactly `q_worpitzky` padded
+on both sides (the same `sumF` widening as `stanley_1_4_div`), with the
+q-staircase `q_staircase` providing the inverse of the denominator.
+Specializing `q = 1` recovers `stanley_1_4` (coefficient rings related by
+`qbin_horner1` and `q_eul_pol_q1`).
 
 ---
 
@@ -709,6 +749,7 @@ which we don't formalize.)
 | §1.4 (Eulerian row sum) | `∑_k A(n+1,k) = n!` | `eulerian_row_sum_fact` (`eulerian.v:31`) | ✅ |
 | §1.4 partition by descent set | `∑_S βn(S) = n!` | `sum_beta_eq_fact` (`beta.v:112`) | ✅ |
 | §1.4 partition by descent count | `∑_{|S|=k} βn(S) = A(n+1, k+1)` | `beta_eulerian` (`beta.v:124`) | ✅ |
+| §1.4 (Carlitz q-analogue) | `∑_m ([m+1]_q)^{n+1} x^m = A_n(q,x)/∏_{i≤n+1}(1−qⁱx)` | `carlitz` (`carlitz.v`), from `q_eulerian_rec` + `q_worpitzky` | ✅ |
 | §1.6.3, p. 56 (M(w) construction) | Min-max tree + in-order traversal | `mmtree` + `mmtree_of_seqK` (`mmtree.v`) | ✅ |
 | §1.6.3, p. 57 (ψᵢ definition) | Window-flip on labels | `psi` operator (`psi_core.v`) | ✅ |
 | §1.6.3, p. 57, **Fact #1** (commutativity) | "ψᵢ are commuting involutions, generate `(ℤ/2)^{ι(w)}`" | `psi_comm_disjoint` (`psi_comm.v:431`) | ✅ |
