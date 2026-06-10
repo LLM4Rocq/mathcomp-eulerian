@@ -10,8 +10,11 @@ dropped.
 
 **Status (2026-06-10): PHASE 1 COMPLETE** — `fps/` (fps.v, fps_deriv.v,
 fps_egf.v, fps_trig.v, fps_ode.v) and `stanley_egf.v` all land with 0
-admits; `Print Assumptions stanley_1_6_1` = the classical trio. Next:
-phase 2 (Worpitzky).
+admits; `Print Assumptions stanley_1_6_1` = the classical trio.
+**PHASE 2 COMPLETE** (same day) — `worpitzky.v` (axiom-free Worpitzky +
+`coef_eul_pol`), `fps/fps_ogf.v` (negative binomial), `stanley_ogf.v`
+(`stanley_1_4`, the §1.4 Eulerian OGF over `{fps int}`). Next: phase 3
+(composition + exp/log; demos #1 and #2).
 
 **Phase-1 headline.** Stanley EC1, **Proposition 1.6.1**: the exponential
 generating function of the Euler numbers,

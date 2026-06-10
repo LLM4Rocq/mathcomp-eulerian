@@ -68,7 +68,7 @@ and not in `_CoqProject`.
 | `beta_swap.v` | ✅ | **`beta_alt_max`** (the headline theorem, Stanley Cor 1.6.5) |
 | `reflection.v` | ✅ | **`euler_rec`** (André recurrence, Stanley §1.6.4) |
 
-All 33 maintained files compile to `.vo` (the table lists the
+All 42 maintained files compile to `.vo` (the table lists the
 §1.4/§1.6 cd-index chain; see `_CoqProject` for the full list). The headline theorems —
 Stanley Prop 1.6.4 (`omega_proper_beta_lt`) and Cor 1.6.5
 (`beta_alt_max`) — are kernel-validated and closed under the global
@@ -624,6 +624,30 @@ Coefficient form: `stanley_1_6_1_coef : E_n = n! · [xⁿ](sec x + tan x)`.
 `mathcomp-classical`; `Print Assumptions stanley_1_6_1` lists exactly
 those three.
 
+## 19. Worpitzky and the Eulerian OGF ✅ `worpitzky.v`, `stanley_ogf.v`
+
+[Stanley §1.4]
+
+**Theorem ✅ `worpitzky`** (`worpitzky.v`, **axiom-free**):
+
+> `(m+1)^(n+1) = Σ_{k≤n} A(n,k) · C(m+n+1−k, n+1)` — every power is a
+> positive combination of binomials weighted by Eulerian numbers.
+
+Proved by induction from `eulerian_rec` (§9) with a Pascal-style
+splitting (`worpitzky_bin_step`).  Also `coef_eul_pol`: the coefficients
+of `eul_pol` (§q-files) are the Eulerian numbers at every index.
+
+**Theorem ✅ `stanley_1_4`** (`stanley_ogf.v`): the generating-function
+packaging over `{fps int}`,
+
+> `Σ_m (m+1)^(n+1) x^m · (1−x)^(n+2) = A_n(x)` — equivalently
+> `Σ_m (m+1)^(n+1) x^m = A_n(x)/(1−x)^(n+2)` (`stanley_1_4_inv`),
+
+using the negative-binomial expansion `coef_fps_geomXn` of `fps_ogf.v`.
+Note `int` is not a field: this exercises the `mathcomp_fps` units
+theory over general `comUnitRingType`s.  The GF layer carries the
+classical trio; the Worpitzky identity itself is axiom-free.
+
 ---
 
 # Stanley correspondence summary
@@ -657,6 +681,8 @@ which we don't formalize.)
 | §1.6.3, p. 61, **Corollary 1.6.5** | `βn(S) ≤ En`, equality iff S alternating | `beta_alt_max` (`beta_swap.v`) | ✅ |
 | §1.6.4 (Euler numbers) | André recurrence `2·A_{n+2} = ∑_k C(n+1,k)·A_k·A_{n+1−k}` | `euler_rec` (`reflection.v`) | ✅ |
 | §1.6.4, **Proposition 1.6.1** | `∑ E_n x^n/n! = sec x + tan x` (formal) | `stanley_1_6_1` (`stanley_egf.v` + `fps/`) | ✅ |
+| §1.4 (Worpitzky) | `(m+1)^(n+1) = ∑_k A(n,k)·C(m+n+1−k,n+1)` | `worpitzky` (`worpitzky.v`, axiom-free) | ✅ |
+| §1.4 (Eulerian OGF) | `∑_m (m+1)^(n+1) x^m = A_n(x)/(1−x)^(n+2)` | `stanley_1_4` (`stanley_ogf.v`) | ✅ |
 
 **Our companion / housekeeping results** (not in Stanley but needed):
 `mm_pos_lt_pred` (the root of M(w) is internal); `cde_total_width_phi_w_all`

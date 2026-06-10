@@ -1364,6 +1364,52 @@ of the formalization,
 requires the toggle-action machinery of \S1.6.3 and is the subject
 of a future chapter.
 
+% =====================================================================
+\section{Worpitzky's identity and the Eulerian generating function}
+% =====================================================================
+
+\begin{theorem}[Worpitzky]
+  For all $m, n \geq 0$,
+  \[
+    (m+1)^{n+1} \;=\; \sum_{k=0}^{n} A(n,k) \binom{m+n+1-k}{n+1},
+  \]
+  where $A(n,k)$ counts the permutations of $n+1$ letters with $k$
+  descents.
+\end{theorem}
+
+\rocqsource{worpitzky.v}{56}
+\begin{lstlisting}[language=Rocq]
+Theorem worpitzky (n m : nat) :
+  ((m.+1) ^ n.+1
+   = \sum_(k < n.+1) eulerian n k * 'C(m + n.+1 - k, n.+1))%N.
+\end{lstlisting}
+
+\decoded{A pure statement about natural numbers — axiom-free, in the
+combinatorial core.  Proved by induction on $n$ from the Eulerian
+recurrence \texttt{eulerian\_rec}, with a Pascal-style splitting of
+$(m+1)\binom{m+n+1-k}{n+1}$ at each step.}
+
+\noindent Packaged as generating functions (Stanley \S1.4): with
+$A_n(x) = \texttt{eul\_pol}\ n$ the Eulerian polynomial,
+\[
+  \sum_{m \geq 0} (m+1)^{n+1} x^m \;=\; \frac{A_n(x)}{(1-x)^{n+2}}.
+\]
+
+\rocqsource{stanley_ogf.v}{69}
+\begin{lstlisting}[language=Rocq]
+Theorem stanley_1_4 n :
+  pow_ogf n * ((1 - 'Xf) ^+ n.+2) = poly_fps (eul_pol n).
+\end{lstlisting}
+
+\decoded{An identity in \texttt{\{fps int\}} — note the coefficient
+ring: $\mathbb{Z}$ is not a field, and the inverse of $(1-x)^{n+2}$
+exists because the \texttt{mathcomp\_fps} unit theory only asks for an
+invertible constant coefficient.  The coefficient-level content is
+exactly Worpitzky's identity combined with the negative-binomial
+expansion $(1-x)^{-(k+1)} = \sum_m \binom{m+k}{k} x^m$
+(\texttt{coef\_fps\_geomXn}).  This layer uses the classical axioms of
+\texttt{mathcomp-classical}; the Worpitzky identity itself does not.}
+
 \clearpage
 
 % =====================================================================

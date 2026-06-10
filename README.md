@@ -18,7 +18,7 @@ admits.
 
 ## Status
 
-- **39 / 39** maintained `.v` files compile to full `.vo`.
+- **42 / 42** maintained `.v` files compile to full `.vo`.
 - **0 `Admitted`** in the active build chain.
 - **Axiom policy, per layer**: the combinatorial core (everything under
   `mathcomp_eulerian` except `stanley_egf.v`) uses **0 axioms** beyond
@@ -35,6 +35,9 @@ admits.
   `sum E_n x^n/n! = sec x + tan x` as formal power series over `rat`,
   built on the new reusable FPS sub-library [`fps/`](fps/) and the
   André recurrence `euler_rec` (`reflection.v`).
+- `worpitzky` (`worpitzky.v`, axiom-free) and `stanley_1_4`
+  (`stanley_ogf.v`): **Worpitzky's identity** and its Stanley §1.4
+  packaging `sum (m+1)^(n+1) x^m = A_n(x)/(1-x)^(n+2)` over `{fps int}`.
 
 ## Build
 

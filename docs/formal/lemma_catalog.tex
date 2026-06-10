@@ -6,7 +6,7 @@
 % =====================================================================
 
 This appendix lists \emph{every} named result in the active build
-chain --- 990 entries across 37 files. Each entry shows the kind
+chain --- 1000 entries across 40 files. Each entry shows the kind
 (\texttt{Definition}, \texttt{Lemma}, \dots), the file:line
 location (clickable to GitHub), and the \texttt{coqdoc}
 docstring extracted from the source. Entries narrated in the
@@ -1318,6 +1318,22 @@ the deployed coqdoc HTML at the same time.
 \begin{description}
 \item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{fps/fps_ode.v}\#L32}{\texttt{\detokenize{fps_quad_ode_uniq}}}] \emph{Lemma, line 32}. \textsf{[aux]} \\
   Solutions of 2 y' = c + y\textasciicircum{}2 are determined by their constant term.
+
+\end{description}
+
+% --------------------------------------------
+\section*{\texttt{fps/fps\_ogf.v}}
+\addcontentsline{toc}{section}{\texttt{fps/fps\_ogf.v}}
+
+\begin{description}
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{fps/fps_ogf.v}\#L30}{\texttt{\detokenize{sum_bin_stair}}}] \emph{Lemma, line 30}. \textsf{[aux]} \\
+  \textbackslash{}sum\_(j <= m) 'C(m - j + k, k) = 'C(m + k + 1, k + 1).
+
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{fps/fps_ogf.v}\#L48}{\texttt{\detokenize{coef_fps_geomXn}}}] \emph{Lemma, line 48}. \textsf{[aux]} \\
+  The negative binomial expansion: 1/(1-x)\textasciicircum{}(k+1) = sum\_m C(m+k,k) x\textasciicircum{}m.
+
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{fps/fps_ogf.v}\#L59}{\texttt{\detokenize{onesubXn_mul_geomn}}}] \emph{Lemma, line 59}. \textsf{[aux]} \\
+  Powers of 1 - x and of the geometric series are mutually inverse.
 
 \end{description}
 
@@ -3195,6 +3211,25 @@ the deployed coqdoc HTML at the same time.
 \end{description}
 
 % --------------------------------------------
+\section*{\texttt{stanley\_ogf.v}}
+\addcontentsline{toc}{section}{\texttt{stanley\_ogf.v}}
+
+\begin{description}
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{stanley_ogf.v}\#L29}{\texttt{\detokenize{pow_ogf}}}] \emph{Definition, line 29}. \textsf{[aux]} \\
+  The OGF of the (n+1)-st powers: coefficient m is (m+1)\textasciicircum{}(n+1).
+
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{stanley_ogf.v}\#L39}{\texttt{\detokenize{stanley_1_4_div}}}] \emph{Theorem, line 39}. \textsf{[aux]} \\
+  (no docstring)
+
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{stanley_ogf.v}\#L67}{\texttt{\detokenize{stanley_1_4}}}] \emph{Theorem, line 67}. \textsf{[aux]} \\
+  (no docstring)
+
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{stanley_ogf.v}\#L75}{\texttt{\detokenize{stanley_1_4_inv}}}] \emph{Corollary, line 75}. \textsf{[aux]} \\
+  Display form with the explicit inverse of 1 - x.
+
+\end{description}
+
+% --------------------------------------------
 \section*{\texttt{stirling\_fiber.v}}
 \addcontentsline{toc}{section}{\texttt{stirling\_fiber.v}}
 
@@ -3243,5 +3278,21 @@ the deployed coqdoc HTML at the same time.
 
 \item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{stirling_fiber.v}\#L364}{\texttt{\detokenize{stirling_c_rec}}}] \emph{Lemma, line 364}. \textsf{[Ch 2 §2.2]} \\
   Stirling cycle-number recurrence:     \texttt{\detokenize{c(n+1, k+1) = n * c(n, k+1) + c(n, k)}} (Stanley EC1 \textbackslash{}S\{\}1.3.2).     Final assembly from \texttt{\detokenize{card_neq_ord_max_fiber}} and     \texttt{\detokenize{card_eq_ord_max_fiber}}.
+
+\end{description}
+
+% --------------------------------------------
+\section*{\texttt{worpitzky.v}}
+\addcontentsline{toc}{section}{\texttt{worpitzky.v}}
+
+\begin{description}
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{worpitzky.v}\#L33}{\texttt{\detokenize{worpitzky_bin_step}}}] \emph{Lemma, line 33}. \textsf{[aux]} \\
+  (no docstring)
+
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{worpitzky.v}\#L56}{\texttt{\detokenize{worpitzky}}}] \emph{Theorem, line 56}. \textsf{[aux]} \\
+  (no docstring)
+
+\item[\href{https://github.com/LLM4Rocq/mathcomp-eulerian/blob/main/\detokenize{worpitzky.v}\#L92}{\texttt{\detokenize{coef_eul_pol}}}] \emph{Lemma, line 92}. \textsf{[aux]} \\
+  (no docstring)
 
 \end{description}
