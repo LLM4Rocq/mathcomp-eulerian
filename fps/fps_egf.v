@@ -50,6 +50,10 @@ move/fpsP => H n; have := H n; rewrite !coef_egf.
 by move/(mulIf (invr_neq0 (factf_neq0 n))).
 Qed.
 
+(** egf respects pointwise equality (via functional extensionality). *)
+Lemma eq_egf a b : a =1 b -> egf a = egf b.
+Proof. by move/funext->. Qed.
+
 Lemma egfD a b : egf a + egf b = egf (fun n => a n + b n).
 Proof. by apply/fpsP => n /=; rewrite mulrDl. Qed.
 

@@ -40,3 +40,4 @@ PROOF_STATEMENTS.pdf
 *.idx
 *.ind
 *.ilg
+.DS_Store

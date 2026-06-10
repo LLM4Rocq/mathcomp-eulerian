@@ -594,6 +594,36 @@ descent is unconstrained. Counting (`andre_interior_count`) gives
 `assemble_perm` bijection (`sum_reindex_inner`). Summing the three groups
 of slots is `sum_set_is_alt_eq_andre_sum`.
 
+## 18. Generating functions: sec + tan ✅ `fps/`, `stanley_egf.v`
+
+[Stanley §1.6.4, **Proposition 1.6.1**]
+
+**The FPS sub-library** (`fps/`, namespace `mathcomp_fps`, reusable,
+imports only mathcomp + mathcomp-classical): `{fps R}` carries the full
+mathcomp algebra hierarchy (com-unit-ring for any `comUnitRingType`
+coefficient ring, units = invertible constant coefficient), formal
+derivative with the Leibniz rule, and the EGF calculus whose workhorse is
+
+> **`egf_mul`** ✅: `egf a * egf b = egf (n ↦ Σ_k C(n,k) a_k b_{n−k})` —
+> products of egfs are egfs of binomial convolutions.
+
+**Theorem ✅ `stanley_1_6_1`** (`stanley_egf.v`) — **Stanley Prop 1.6.1**:
+
+> `Σ_n E_n x^n / n! = sec x + tan x` as formal power series over `rat`,
+> with `E_n = eulerA n` (the alternating-permutation counts of §17).
+
+**Proof.** The André recurrence `euler_rec` (§17) translates verbatim into
+the formal ODE `2A' = 1 + A²`, `A(0) = 1` for `A = egf eulerA`
+(`euler_egf_ode`); `sec + tan` satisfies the same ODE (`sectan_ode`, via
+`sin² + cos² = 1` proved by the derivative trick); and solutions of that
+quadratic ODE are determined by their constant coefficient
+(`fps_quad_ode_uniq`, coefficient induction in characteristic 0).
+Coefficient form: `stanley_1_6_1_coef : E_n = n! · [xⁿ](sec x + tan x)`.
+
+*Axioms:* this layer (and only this layer) uses the classical trio of
+`mathcomp-classical`; `Print Assumptions stanley_1_6_1` lists exactly
+those three.
+
 ---
 
 # Stanley correspondence summary
@@ -626,6 +656,7 @@ which we don't formalize.)
 | §1.6.3, p. 60, **Proposition 1.6.4** | `ω(S) ⊂ ω(T) ⇒ βn(S) < βn(T)` | `omega_proper_beta_lt` (`perm_seq_bridge.v`) | ✅ |
 | §1.6.3, p. 61, **Corollary 1.6.5** | `βn(S) ≤ En`, equality iff S alternating | `beta_alt_max` (`beta_swap.v`) | ✅ |
 | §1.6.4 (Euler numbers) | André recurrence `2·A_{n+2} = ∑_k C(n+1,k)·A_k·A_{n+1−k}` | `euler_rec` (`reflection.v`) | ✅ |
+| §1.6.4, **Proposition 1.6.1** | `∑ E_n x^n/n! = sec x + tan x` (formal) | `stanley_1_6_1` (`stanley_egf.v` + `fps/`) | ✅ |
 
 **Our companion / housekeeping results** (not in Stanley but needed):
 `mm_pos_lt_pred` (the root of M(w) is internal); `cde_total_width_phi_w_all`

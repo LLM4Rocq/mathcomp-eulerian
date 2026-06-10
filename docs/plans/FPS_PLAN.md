@@ -8,6 +8,11 @@ phase 1 is **2 → 3 → 4**; phase-3 demos are **#1 (exp/log round-trip on
 the geometric series) and #2 (Stirling-cycle EGF)** — Bell numbers
 dropped.
 
+**Status (2026-06-10): PHASE 1 COMPLETE** — `fps/` (fps.v, fps_deriv.v,
+fps_egf.v, fps_trig.v, fps_ode.v) and `stanley_egf.v` all land with 0
+admits; `Print Assumptions stanley_1_6_1` = the classical trio. Next:
+phase 2 (Worpitzky).
+
 **Phase-1 headline.** Stanley EC1, **Proposition 1.6.1**: the exponential
 generating function of the Euler numbers,
 

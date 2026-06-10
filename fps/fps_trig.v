@@ -155,3 +155,9 @@ by rewrite [1 + 1 + tanf * secf + tanf ^+ 2]addrAC.
 Qed.
 
 End Trig.
+
+Arguments expf {F}.
+Arguments sinf {F}.
+Arguments cosf {F}.
+Arguments secf {F}.
+Arguments tanf {F}.

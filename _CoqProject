@@ -46,6 +46,8 @@ beta_swap.v
 # The former named admit (sum_set_is_alt_eq_andre_sum) is now fully
 # proved — 0 admits, 0 axioms.
 reflection.v
+# Stanley Prop 1.6.1: bridge between reflection.v and mathcomp_fps.
+stanley_egf.v
 cycles.v
 cycles_rec.v
 stirling_fiber.v

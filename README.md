@@ -18,13 +18,23 @@ admits.
 
 ## Status
 
-- **33 / 33** maintained `.v` files compile to full `.vo`.
-- **0 axioms** (beyond Rocq's standard core), **0 `Admitted`** in the
-  active build chain.
+- **39 / 39** maintained `.v` files compile to full `.vo`.
+- **0 `Admitted`** in the active build chain.
+- **Axiom policy, per layer**: the combinatorial core (everything under
+  `mathcomp_eulerian` except `stanley_egf.v`) uses **0 axioms** beyond
+  Rocq's standard core; the generating-function layer (`fps/`, namespace
+  `mathcomp_fps`, plus the bridge `stanley_egf.v`) uses exactly the
+  standard classical axioms of `mathcomp-classical` (functional/
+  propositional extensionality + indefinite description), as does
+  mathcomp-analysis.
 - `coqchk` validates the entire library.
 - The headline theorems `beta_alt_max` (Stanley Cor 1.6.5) and
   `omega_proper_beta_lt` (Stanley Prop 1.6.4) both report
   "Closed under the global context" via `Print Assumptions`.
+- `stanley_1_6_1` (`stanley_egf.v`): **Stanley Prop 1.6.1**,
+  `sum E_n x^n/n! = sec x + tan x` as formal power series over `rat`,
+  built on the new reusable FPS sub-library [`fps/`](fps/) and the
+  André recurrence `euler_rec` (`reflection.v`).
 
 ## Build
 
