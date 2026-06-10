@@ -18,7 +18,7 @@ admits.
 
 ## Status
 
-- **23 / 23** maintained `.v` files compile to full `.vo`.
+- **33 / 33** maintained `.v` files compile to full `.vo`.
 - **0 axioms** (beyond Rocq's standard core), **0 `Admitted`** in the
   active build chain.
 - `coqchk` validates the entire library.
@@ -52,7 +52,7 @@ mathematician-facing docs in this order:
 
 | Document | What it gives you |
 |----------|-------------------|
-| **The formal companion PDF** at https://llm4rocq.github.io/mathcomp-eulerian/eulerian_formal.pdf (source: [`docs/formal/`](docs/formal/)) | An 80-page Stanley-style reading. 9 narrative chapters covering all of §1.3, §1.4, §1.6.2, §1.6.3 (the project headline), and §1.6.4 (partial). Every formal block carries a clickable GitHub link and a "Decoded" line in plain math. Appendix A is an auto-generated catalog of all 831 named results in the build chain. **Best single artifact for a Stanley reader.** |
+| **The formal companion PDF** at https://llm4rocq.github.io/mathcomp-eulerian/eulerian_formal.pdf (source: [`docs/formal/`](docs/formal/)) | A 92-page Stanley-style reading. 9 narrative chapters covering all of §1.3, §1.4, §1.6.2, §1.6.3 (the project headline), and §1.6.4 (André's reflection method, fully proved). Every formal block carries a clickable GitHub link and a "Decoded" line in plain math. Appendix A is an auto-generated catalog of all 870 named results in the build chain. **Best single artifact for a Stanley reader.** |
 | [`docs/READING_GUIDE.md`](docs/READING_GUIDE.md) | A shorter 10-minute orientation: index conventions, type translations, a worked example walking through Stanley's `[3,1,4,2]` in our formal types. Also a markdown alternative if you'd rather not read the PDF. |
 | [`docs/DEFINITIONS_AUDIT.md`](docs/DEFINITIONS_AUDIT.md) | Side-by-side audit of every formal definition vs. Stanley's informal one, with file:line citations and a 1-line verdict per definition. The trust artifact in markdown form. |
 | The **blueprint** at https://llm4rocq.github.io/mathcomp-eulerian/ (source: [`blueprint/`](blueprint/)) | Interactive paper-style document with a clickable dependency graph. Every theorem links back to its Rocq lemma. |

@@ -10,7 +10,7 @@ source.
 
 ## Contents
 
-The PDF is 80 pages, structured as:
+The PDF is 92 pages, structured as:
 
 | Chapter / Appendix | Stanley | Pages |
 |---|---|---|
@@ -22,8 +22,8 @@ The PDF is 80 pages, structured as:
 | 6. The $q$-analogues | §1.4 | 21-22 |
 | 7. Longest alternating subsequence | §1.6.2 | 23-25 |
 | 8. Toggle action and Stanley's Corollary 1.6.5 (project headline) | §1.6.3 | 26-28 |
-| 9. André's reflection method (partial) | §1.6.4 | 29 |
-| **A. Comprehensive lemma catalog (831 entries, auto-generated)** | — | 30-76 |
+| 9. André's reflection method | §1.6.4 | 29 |
+| **A. Comprehensive lemma catalog (870 entries, auto-generated)** | — | 30-88 |
 | B. Glossary of mathcomp primitives | — | 77-78 |
 | C. Source map | — | 79 |
 
