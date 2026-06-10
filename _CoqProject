@@ -1,7 +1,13 @@
 -R . mathcomp_eulerian
+-R fps mathcomp_fps
 
 -arg -w -arg -deprecated-library-file
 -arg -w -arg -notation-overridden
+
+# mathcomp_fps: self-contained formal power series sub-library
+# (depends on mathcomp + mathcomp-classical only; see fps/README.md
+# and docs/plans/FPS_PLAN.md).
+fps/fps.v
 
 mmtree.v
 psi_core.v
