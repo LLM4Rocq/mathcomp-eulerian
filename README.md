@@ -67,6 +67,22 @@ echo 'From mathcomp_eulerian Require Import beta_swap. \
   | rocq top -R . mathcomp_eulerian
 ```
 
+## Installation (opam)
+
+The library is packaged for opam. Install it directly from git, pinned to a
+tagged release for reproducibility:
+
+```bash
+opam pin add rocq-mathcomp-eulerian \
+  git+https://github.com/LLM4Rocq/mathcomp-eulerian.git#v0.1.0
+```
+
+This builds with `coq_makefile` and installs the `mathcomp_eulerian` and
+`mathcomp_fps` libraries under `user-contrib/`, so downstream developments can
+`From mathcomp_eulerian Require Import beta_swap.` (and `From mathcomp_fps
+Require Import …`) with no `-R` flag. Dependencies: `rocq-mathcomp-ssreflect`,
+`rocq-mathcomp-algebra`, `rocq-mathcomp-classical`.
+
 ## Where to read
 
 A mathematician familiar with Stanley EC1 should start with the
